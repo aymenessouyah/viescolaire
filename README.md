@@ -152,14 +152,14 @@ de secours, utilisable sans connexion.
 1. **Créer le projet** : <https://supabase.com> → *Start your project* (connexion avec votre compte GitHub
    possible) → **New project** : nom `espace-sti`, un mot de passe de base de données (à conserver),
    région **Europe (Frankfurt)**.
-2. **Créer la table** : dans le projet, **SQL Editor** → *New query* → ouvrir
-   <https://github.com/aymenessouyah/viescolaire/blob/main/supabase/schema.sql>, copier tout le contenu,
-   le coller, **remplacer les trois occurrences de `PROF@EXEMPLE.TN` par votre adresse électronique**,
-   puis cliquer **Run**.
+2. **Créer la table** : dans le projet, **SQL Editor** → *New query* → copier tout le contenu de
+   `supabase/schema.sql` (fichier fourni dans ce dépôt), le coller, puis cliquer **Run**.
+   Aucune modification du texte n'est nécessaire.
 3. **Créer votre compte** : **Authentication** → **Users** → *Add user* → *Create new user* —
    votre adresse + un mot de passe, et cocher **Auto Confirm User**.
-4. **Fermer les inscriptions** : **Authentication** → *Sign In / Providers* → désactiver
-   **Allow new users to sign up** (ainsi, personne d'autre ne peut créer de compte).
+4. **Fermer les inscriptions — ne pas oublier cette étape** : **Authentication** → *Sign In / Providers*
+   → désactiver **Allow new users to sign up**. C'est ce réglage qui garantit que votre compte est le
+   seul autorisé : sans lui, n'importe qui pourrait créer un compte sur le projet.
 5. **Relever les deux valeurs** : **Project Settings** → **API** →
    * **Project URL** — par exemple `https://abcdefghijkl.supabase.co`
    * **anon / publishable key** (la clé *publique* uniquement).
@@ -199,9 +199,11 @@ La configuration reste alors dans le navigateur de cet appareil.
 
 ### 5.4 Sécurité
 
-* La base n'accepte que le compte créé à l'étape 3 : les règles RLS comparent l'adresse du jeton de
-  session à celle inscrite dans `schema.sql`. Toute autre personne — même avec l'URL du projet et la
-  clé publique — ne peut ni lire ni écrire.
+* La base n'accepte que les **comptes connectés** (règles RLS `to authenticated`) et les inscriptions
+  sont fermées : seul le compte créé à l'étape 3 peut lire ou écrire. Une personne qui connaîtrait l'URL
+  du projet et la clé publique ne verrait aucune donnée.
+* Pour un verrou encore plus strict, la section 5 de `schema.sql` (à décommenter) limite l'accès à
+  **votre seule adresse électronique**.
 * N'utilisez **jamais** la clé `service_role` dans l'application : elle contourne les règles d'accès.
 * Le dépôt GitHub peut rester public : la protection ne dépend pas du secret de l'adresse du site,
   mais du mot de passe du compte Supabase.
