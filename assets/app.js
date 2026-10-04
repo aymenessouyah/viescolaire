@@ -1674,6 +1674,13 @@ function installApp(){
     "Une fois installée, l'application s'ouvre depuis l'icône, démarre plus vite, fonctionne sans connexion et affiche vos documents hors ligne."
   );
 }
+/* confirmation une fois l'application réellement installée */
+window.addEventListener("appinstalled", () => {
+  installEvt = null;
+  const btn = document.getElementById("btn-install");
+  if (btn) btn.style.display = "none";
+  if (typeof toast === "function") toast("Application installée — retrouvez son icône sur l'écran d'accueil ou dans le menu Démarrer");
+});
 function registerSW(){
   if (!("serviceWorker" in navigator)) return;
   if (location.protocol !== "http:" && location.protocol !== "https:") return; /* évite l'échec en ouverture locale */
