@@ -1375,7 +1375,7 @@ function openCloudSettings(){
   const b = document.getElementById("cloud-modal");
   b.querySelector("#cfg-url").value = c.url;
   b.querySelector("#cfg-key").value = c.key;
-  b.querySelector("#cfg-table").value = c.table;
+  b.querySelector("#cfg-table").value = (c.table && !c.table.includes("@")) ? c.table : "espace_pedagogique";
   b.querySelector("#cfg-device").value = (c.device && !c.device.includes("@")) ? c.device : "Poste principal — Prof. Aymen";
   b.querySelector("#cfg-auto").checked = !!c.auto;
   const ca = b.querySelector("#cfg-auth"); if (ca) ca.checked = !!c.auth;
@@ -1391,6 +1391,12 @@ function saveCloudSettings(){
     auto: b.querySelector("#cfg-auto").checked,
     auth: b.querySelector("#cfg-auth") ? b.querySelector("#cfg-auth").checked : false
   };
+  if (cfg.table.includes("@")) {
+    if (confirm("Le champ « Table » doit contenir le nom de la table SQL créée par schema.sql :\n\n    espace_pedagogique\n\npas une adresse électronique (l'adresse, elle, se saisit dans la fenêtre « Connexion »).\n\nOK : je corrige automatiquement. — Annuler : vous le corrigez vous-même.")) {
+      cfg.table = "espace_pedagogique";
+      b.querySelector("#cfg-table").value = cfg.table;
+    } else return;
+  }
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
   b.classList.remove("on");
   toast(cfg.url && cfg.key ? "Configuration enregistrée — test de la connexion…" : "Sauvegarde locale uniquement");
