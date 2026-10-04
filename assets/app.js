@@ -1330,7 +1330,7 @@ function openCloudSettings(){
   b.querySelector("#cfg-url").value = c.url;
   b.querySelector("#cfg-key").value = c.key;
   b.querySelector("#cfg-table").value = c.table;
-  b.querySelector("#cfg-device").value = c.device;
+  b.querySelector("#cfg-device").value = (c.device && !c.device.includes("@")) ? c.device : "Poste principal — Prof. Aymen";
   b.querySelector("#cfg-auto").checked = !!c.auto;
   const ca = b.querySelector("#cfg-auth"); if (ca) ca.checked = !!c.auth;
   b.classList.add("on");
@@ -1349,7 +1349,15 @@ function saveCloudSettings(){
   b.classList.remove("on");
   toast(cfg.url && cfg.key ? "Configuration enregistrée — test de la connexion…" : "Sauvegarde locale uniquement");
   renderCloudBar();
-  if (cfg.url && cfg.key) { if (cloudHasLocalData()) cloudPush(true); else cloudPull(); }
+  if (cfg.url && cfg.key) {
+    if (authNeeded() && !authSession()) {
+      /* accès protégé : on demande la connexion tout de suite, sans attendre */
+      window.__afterLogin = cloudHasLocalData() ? "push" : "pull";
+      openAuth();
+    }
+    else if (cloudHasLocalData()) cloudPush(true);
+    else cloudPull();
+  }
 }
 
 function renderRef(){
