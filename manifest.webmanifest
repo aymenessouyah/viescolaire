@@ -1,0 +1,26 @@
+{
+  "name": "Espace pédagogique STI — Prof. Aymen Essouyah",
+  "short_name": "Espace STI",
+  "description": "Emploi du temps, calendrier scolaire tunisien 2026-2027, répartition du 1er trimestre, annexes HTML5 / CSS3 / JavaScript / PHP / SQL et cahier de textes — Lycée Rafèha Ariana.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "any",
+  "background_color": "#f1f6fb",
+  "theme_color": "#0b2545",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ],
+  "shortcuts": [
+    { "name": "Emploi du temps", "short_name": "Emploi du temps", "url": "./index.html#v-edt", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Répartition du trimestre", "short_name": "Répartition", "url": "./index.html#v-rep", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Annexes et mémo", "short_name": "Annexes", "url": "./index.html#v-ref", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
