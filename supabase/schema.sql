@@ -25,7 +25,7 @@ create table if not exists public.espace_pedagogique (
 create index if not exists espace_pedagogique_created_at_idx
   on public.espace_pedagogique (created_at desc);
 
--- 2) Sécurité niveau ligne : accès réservé aux comptes connectés -----------
+-- 2) Sécurité niveau ligne : accès réservé au compte du professeur --------
 alter table public.espace_pedagogique enable row level security;
 
 drop policy if exists "lecture authentifiee"   on public.espace_pedagogique;
@@ -35,24 +35,22 @@ drop policy if exists "ecriture proprietaire"  on public.espace_pedagogique;
 drop policy if exists "lecture espace"         on public.espace_pedagogique;
 drop policy if exists "ecriture espace"        on public.espace_pedagogique;
 
-create policy "lecture authentifiee"
+create policy "lecture proprietaire"
   on public.espace_pedagogique for select
   to authenticated
-  using (true);
+  using (lower(auth.jwt() ->> 'email') = 'aymenessouyah@gmail.com');
 
-create policy "ecriture authentifiee"
+create policy "ecriture proprietaire"
   on public.espace_pedagogique for insert
   to authenticated
-  with check (true);
+  with check (lower(auth.jwt() ->> 'email') = 'aymenessouyah@gmail.com');
 
--- Sans connexion (clé publique seule), la table reste totalement inaccessible.
+-- Sans connexion, la table est totalement inaccessible ; et même connecté,
+-- seule l'adresse aymenessouyah@gmail.com peut lire ou écrire.
 
--- 3) IMPORTANT — fermer les inscriptions ----------------------------------
+-- 3) Protection complémentaire (recommandée) ------------------------------
 -- Dans le tableau de bord : Authentication → Sign In / Providers →
 -- décocher « Allow new users to sign up ».
--- Tant que cette option reste active, n'importe qui pourrait se créer un
--- compte sur ce projet ; après l'avoir décochée, seul le compte créé à
--- l'étape 3 du README peut accéder aux données.
 
 -- 4) (Facultatif) Purge automatique ---------------------------------------
 -- Conserver seulement les 200 derniers instantanés :
