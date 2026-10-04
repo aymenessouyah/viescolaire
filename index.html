@@ -54,7 +54,7 @@
       </div>
     </div>
     <div class="head-actions no-print">
-      <button class="btn btn-ghost" onclick="openCloudSettings()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg> Cloud</button>
+      <button class="btn btn-ghost" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg> Cloud</button>
       <button class="btn btn-ghost" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimer</button>
       <button class="btn btn-ghost" onclick="exportJSON()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Exporter</button>
       <button class="btn btn-ghost" id="btn-install" style="display:none" onclick="installApp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Installer l'application</button>
@@ -130,6 +130,10 @@
       <div style="margin-bottom:10px"><label class="f">Mot de passe</label>
         <input type="password" id="auth-pass" autocomplete="current-password" placeholder="••••••••"></div>
       <div id="auth-err" class="tiny" style="color:#b02a3a;min-height:16px"></div>
+      <p class="tiny muted" style="margin:4px 0 0">Ici on saisit <strong>votre identité</strong> (adresse + mot de passe).
+      L'URL du projet, la clé, la table et le nom de l'appareil se règlent dans
+      <a href="#" onclick="closeAuth(); openCloudSettings(); return false" style="color:inherit;text-decoration:underline">Réglages avancés</a>
+      — normalement déjà remplis.</p>
       <p class="tiny muted" style="margin:2px 0 0">Première utilisation ? Remplissez les deux champs puis cliquez sur <strong>Créer le compte</strong>. Les fois suivantes : <strong>Se connecter</strong>.</p>
       <div class="note tiny" style="margin-top:6px">
         Vous pouvez fermer cette fenêtre et travailler <strong>hors ligne</strong> : les données de cet appareil sont
@@ -151,7 +155,7 @@
 <div class="modal" id="cloud-modal">
   <div class="box">
     <div class="box-h">
-      <h3 style="font-size:16px">Configuration de la sauvegarde distante</h3>
+      <h3 style="font-size:16px">Réglages avancés — sauvegarde distante</h3>
       <button class="btn btn-xs btn-line" onclick="document.getElementById('cloud-modal').classList.remove('on')">Fermer</button>
     </div>
     <div class="box-b">
