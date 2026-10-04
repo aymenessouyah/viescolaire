@@ -204,13 +204,29 @@ La configuration reste alors dans le navigateur de cet appareil.
 ### 5.4 Sécurité
 
 * La base n'accepte que les **comptes connectés** (règles RLS `to authenticated`) et les inscriptions
-  sont fermées : seul le compte créé à l'étape 3 peut lire ou écrire. Une personne qui connaîtrait l'URL
-  du projet et la clé publique ne verrait aucune donnée.
-* Pour un verrou encore plus strict, la section 5 de `schema.sql` (à décommenter) limite l'accès à
-  **votre seule adresse électronique**.
-* N'utilisez **jamais** la clé `service_role` dans l'application : elle contourne les règles d'accès.
-* Le dépôt GitHub peut rester public : la protection ne dépend pas du secret de l'adresse du site,
-  mais du mot de passe du compte Supabase.
+  sont fermées : seul un compte créé par l'administrateur peut lire ou écrire. Une personne qui connaîtrait
+  l'URL du projet et la clé publique ne verrait aucune donnée.
+
+### 5.5 Plusieurs professeurs (comptes multiples)
+
+Le site accueille plusieurs professeurs, chacun avec **son propre espace privé** :
+
+| Élément | Partage |
+|---|---|
+| Calendrier tunisien, répartitions officielles, annexes, aide pédagogique | **communs** (lecture pour tous) |
+| Classes libres, élèves, numéros de PC, présences, épreuves, notes, fiches de séance | **privés** (chaque professeur ne voit que les siens) |
+
+**Créer le compte d'un collègue (1 minute, par l'administrateur du projet) :**
+
+1. Supabase → **Authentication** → **Users** → *Add user* → *Create new user* ;
+2. adresse électronique du collègue + un mot de passe provisoire → cocher **Auto Confirm User** → *Create user* ;
+3. transmettre à votre collègue : l'adresse du site, son adresse et ce mot de passe ;
+4. à sa première connexion, il renseigne son nom et sa matière (fenêtre *Votre profil*), puis tout ce
+   qu'il enregistre est rangé dans **son** espace — isolé du vôtre par la règle `prof_id = auth.uid()`.
+
+> Si le projet a été créé avant cette mise à jour, exécutez une fois
+> `supabase/migration-multi-profs.sql` (SQL Editor → Run) pour activer l'isolation par professeur.
+> Les installations neuves utilisent directement `supabase/schema.sql`.
 
 ## 6. Mettre à jour le contenu
 
