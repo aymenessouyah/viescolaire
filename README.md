@@ -150,8 +150,8 @@ de secours, utilisable sans connexion.
 ### 5.1 Créer la base et le compte (une seule fois, ~8 minutes)
 
 1. **Créer le projet** : <https://supabase.com> → *Start your project* (connexion avec votre compte GitHub
-   possible) → **New project** : nom `espace-sti`, un mot de passe de base de données (à conserver),
-   région **Europe (Frankfurt)**.
+   possible) → **New project** : **nom au choix** (le nom n'a aucune incidence sur l'application —
+   par exemple `suivi-scolaire`), un mot de passe de base de données (à conserver), région **Europe (Frankfurt)**.
 2. **Créer la table** : dans le projet, **SQL Editor** → *New query* → copier tout le contenu de
    `supabase/schema.sql` (fichier fourni dans ce dépôt), le coller, puis cliquer **Run**.
    Aucune modification du texte n'est nécessaire.
