@@ -1174,7 +1174,12 @@ async function doLogin(){
       method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
       body: JSON.stringify({ email: email, password: pass })
     });
-    if (!r.ok) throw new Error((r.status === 400 || r.status === 401) ? "Adresse ou mot de passe incorrect." : "HTTP " + r.status);
+    if (!r.ok) {
+      const m = await r.json().catch(() => ({}));
+      const msg = m.msg || m.error_description || m.error || "";
+      if (/email not confirmed/i.test(msg)) throw new Error("Adresse non confirmée : ouvrez le courriel « Confirm your signup » envoyé par Supabase et cliquez sur le lien, puis reconnectez-vous.");
+      throw new Error((r.status === 400 || r.status === 401) ? "Adresse ou mot de passe incorrect." : (msg || "HTTP " + r.status));
+    }
     authApply(await r.json());
     b.querySelector("#auth-pass").value = "";
     closeAuth();
@@ -1183,6 +1188,41 @@ async function doLogin(){
   } catch (e) {
     err.textContent = "Échec de la connexion : " + (e.message || e);
   }
+}
+/* première utilisation : création du compte directement depuis l'application */
+async function doSignup(){
+  const b = document.getElementById("auth-modal");
+  const email = b.querySelector("#auth-email").value.trim();
+  const pass  = b.querySelector("#auth-pass").value;
+  const err   = b.querySelector("#auth-err");
+  err.textContent = "";
+  if (!cloudReady()){ err.textContent = "Commencez par renseigner l'URL et la clé du projet (bouton Configuration)."; return; }
+  if (!email || !pass){ err.textContent = "Renseignez l'adresse électronique et le mot de passe (6 caractères au moins)."; return; }
+  if (pass.length < 6){ err.textContent = "Le mot de passe doit contenir au moins 6 caractères."; return; }
+  try {
+    const c = cloudCfg();
+    const r = await fetch(c.url.replace(/\/$/, "") + "/auth/v1/signup", {
+      method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: pass })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok){
+      const msg = data.msg || data.error_description || data.error || ("HTTP " + r.status);
+      if (/signups? not allowed/i.test(msg)) throw new Error("Les inscriptions sont fermées sur ce projet : créez le compte dans Supabase (Authentication → Users → Add user), puis revenez ici.");
+      if (/already registered|already exists/i.test(msg)) throw new Error("Un compte existe déjà avec cette adresse : cliquez sur « Se connecter » (le mot de passe se règle dans Supabase → Authentication → Users).");
+      throw new Error(msg);
+    }
+    if (data.access_token){
+      authApply(data);
+      b.querySelector("#auth-pass").value = "";
+      closeAuth();
+      toast("Compte créé et connecté — " + email);
+      await afterLogin();
+    } else {
+      err.style.color = "#0a7a70";
+      err.textContent = "Compte créé ✔ — ouvrez le courriel « Confirm your signup » envoyé par Supabase, cliquez sur le lien de confirmation, puis revenez ici pour vous connecter.";
+    }
+  } catch(e){ err.textContent = "Création impossible : " + (e.message || e); }
 }
 async function doLogout(){
   const c = cloudCfg(), s = authSession();
@@ -1745,7 +1785,7 @@ window.cloudFirstRunRestore = cloudFirstRunRestore;
 window.cloudInvite = cloudInvite;
 window.authSession = authSession; window.authToken = authToken; window.authUser = authUser;
 window.authNeeded = authNeeded; window.openAuth = openAuth; window.closeAuth = closeAuth;
-window.doLogin = doLogin; window.doLogout = doLogout; window.afterLogin = afterLogin;
+window.doLogin = doLogin; window.doSignup = doSignup; window.doLogout = doLogout; window.afterLogin = afterLogin;
 window.cloudWho = cloudWho;
 window.openCloudSettings = openCloudSettings;
 window.saveCloudSettings = saveCloudSettings;

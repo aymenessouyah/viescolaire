@@ -130,6 +130,7 @@
       <div style="margin-bottom:10px"><label class="f">Mot de passe</label>
         <input type="password" id="auth-pass" autocomplete="current-password" placeholder="••••••••"></div>
       <div id="auth-err" class="tiny" style="color:#b02a3a;min-height:16px"></div>
+      <p class="tiny muted" style="margin:2px 0 0">Première utilisation ? Remplissez les deux champs puis cliquez sur <strong>Créer le compte</strong>. Les fois suivantes : <strong>Se connecter</strong>.</p>
       <div class="note tiny" style="margin-top:6px">
         Vous pouvez fermer cette fenêtre et travailler <strong>hors ligne</strong> : les données de cet appareil sont
         conservées et seront synchronisées à la prochaine connexion.
@@ -137,6 +138,7 @@
     </div>
     <div class="box-f">
       <button class="btn btn-line" onclick="closeAuth()">Travailler hors ligne</button>
+      <button class="btn btn-line" onclick="doSignup()" title="Première utilisation : crée ici le compte qui protègera tes données">Créer le compte</button>
       <button class="btn btn-blue" onclick="doLogin()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
         Se connecter

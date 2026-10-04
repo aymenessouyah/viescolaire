@@ -154,12 +154,16 @@ de secours, utilisable sans connexion.
    par exemple `suivi-scolaire`), un mot de passe de base de données (à conserver), région **Europe (Frankfurt)**.
 2. **Créer la table** : dans le projet, **SQL Editor** → *New query* → copier tout le contenu de
    `supabase/schema.sql` (fichier fourni dans ce dépôt), le coller, puis cliquer **Run**.
-   Aucune modification du texte n'est nécessaire.
-3. **Créer votre compte** : **Authentication** → **Users** → *Add user* → *Create new user* —
-   votre adresse + un mot de passe, et cocher **Auto Confirm User**.
-4. **Fermer les inscriptions — ne pas oublier cette étape** : **Authentication** → *Sign In / Providers*
-   → désactiver **Allow new users to sign up**. C'est ce réglage qui garantit que votre compte est le
-   seul autorisé : sans lui, n'importe qui pourrait créer un compte sur le projet.
+   Aucune modification du texte n'est nécessaire : l'accès est automatiquement verrouillé sur
+   l'adresse **aymenessouyah@gmail.com**.
+3. **Créer votre compte** — deux façons :
+   * **directement dans l'application** (le plus simple) : fenêtre *Connexion à la sauvegarde distante*
+     → adresse + mot de passe → **Créer le compte** ; ou
+   * dans le tableau de bord : **Authentication** → **Users** → *Add user* → *Create new user* —
+     votre adresse + un mot de passe, en cochant **Auto Confirm User**.
+4. **Fermer les inscriptions (recommandé)** : **Authentication** → *Sign In / Providers* → désactiver
+   **Allow new users to sign up**. La base est déjà verrouillée sur votre adresse ; ce réglage empêche
+   en plus la création de comptes superflus.
 5. **Relever les deux valeurs** : **Project Settings** → **API** →
    * **Project URL** — par exemple `https://abcdefghijkl.supabase.co`
    * **anon / publishable key** (la clé *publique* uniquement).
