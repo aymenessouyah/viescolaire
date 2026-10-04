@@ -126,51 +126,87 @@ si le navigateur ne déclenche pas l'invite automatiquement.
 
 ---
 
-## 5. Sauvegarde distante (Supabase)
+## 5. Sauvegarde distante (Supabase) — mode cloud protégé
 
-Les fiches de séance et les horaires sont enregistrés dans le navigateur (`localStorage`) et peuvent être
-envoyés à une base distante **Supabase** (PostgreSQL + API REST), afin de retrouver les mêmes données sur
-le téléphone, la tablette et le poste du lycée. Un **export / import JSON** reste disponible à tout moment
-(bouton *Exporter* de l'en-tête) : c'est la sauvegarde de secours, utilisable sans compte.
+La sauvegarde distante est le **mode de travail principal** : les fiches de séance et les horaires sont
+enregistrés dans la base **Supabase** (PostgreSQL + API REST) et l'application les retrouve sur le
+téléphone, la tablette et le poste du lycée. Le navigateur ne sert plus que de cache de travail hors ligne.
+La base est **protégée par un compte unique** : seule votre adresse électronique peut lire et écrire.
+Un **export / import JSON** reste disponible à tout moment (bouton *Exporter* de l'en-tête) comme copie
+de secours, utilisable sans connexion.
 
-### 5.1 Créer la base (une seule fois, ~5 minutes)
+### Comportement en mode cloud
 
-1. Créer un compte sur **supabase.com** → *New project* (nom, mot de passe de base de données, région Europe).
-2. Dans le projet : **SQL Editor** → *New query* → coller tout le contenu de `supabase/schema.sql` → **Run**.
-   La table `public.espace_pedagogique` est créée avec ses règles de sécurité (RLS).
-3. **Project Settings → API** : relever
-   * **Project URL** (par exemple `https://abcdefghijkl.supabase.co`)
-   * **anon public** / **publishable key** (la clé *publique* uniquement).
+| Situation | Ce que fait l'application |
+|---|---|
+| Enregistrement d'une fiche, d'un horaire, d'un état d'avancement | **envoi automatique** vers la base (rien à cliquer) |
+| Ouverture sur un **nouvel appareil** (téléphone, poste du lycée) | demande la connexion, puis **reprend la dernière sauvegarde du cloud** avant toute saisie locale |
+| Connexion | une fois par appareil ; la session reste ouverte et le jeton se renouvelle tout seul |
+| Coupure réseau | travail normal en local ; **reprise automatique** de l'envoi dès le retour de la connexion |
+| Plusieurs appareils | chacun envoie un instantané horodaté ; « Restaurer » propose le plus récent |
+| Aucun projet configuré | bandeau sur le tableau de bord pour activer la sauvegarde distante |
+| Envoi en échec (URL, clé, table ou mot de passe) | message détaillé + badge « Configuration à vérifier », données conservées localement |
+
+### 5.1 Créer la base et le compte (une seule fois, ~8 minutes)
+
+1. **Créer le projet** : <https://supabase.com> → *Start your project* (connexion avec votre compte GitHub
+   possible) → **New project** : **nom au choix** (le nom n'a aucune incidence sur l'application —
+   par exemple `suivi-scolaire`), un mot de passe de base de données (à conserver), région **Europe (Frankfurt)**.
+2. **Créer la table** : dans le projet, **SQL Editor** → *New query* → copier tout le contenu de
+   `supabase/schema.sql` (fichier fourni dans ce dépôt), le coller, puis cliquer **Run**.
+   Aucune modification du texte n'est nécessaire.
+3. **Créer votre compte** : **Authentication** → **Users** → *Add user* → *Create new user* —
+   votre adresse + un mot de passe, et cocher **Auto Confirm User**.
+4. **Fermer les inscriptions — ne pas oublier cette étape** : **Authentication** → *Sign In / Providers*
+   → désactiver **Allow new users to sign up**. C'est ce réglage qui garantit que votre compte est le
+   seul autorisé : sans lui, n'importe qui pourrait créer un compte sur le projet.
+5. **Relever les deux valeurs** : **Project Settings** → **API** →
+   * **Project URL** — par exemple `https://abcdefghijkl.supabase.co`
+   * **anon / publishable key** (la clé *publique* uniquement).
 
 ### 5.2 Configurer l'application
 
-Deux possibilités, au choix :
+**Le plus simple — dans le fichier `supabase/config.js`** (configuration commune à tous les appareils) :
 
-* **Depuis l'application** (le plus simple) : bouton **Cloud** de l'en-tête → coller l'URL et la clé →
-  nommer l'appareil → cocher éventuellement « Envoyer automatiquement » → **Enregistrer et tester**.
-  La configuration est mémorisée dans le navigateur de *cet* appareil.
-* **Depuis le fichier** `supabase/config.js` (pratique pour que tous les appareils partagent la même
-  configuration) : renseigner `url`, `anonKey`, `table`, `device`, puis publier sur GitHub.
+```js
+window.STI_SUPABASE = {
+  url:   "https://abcdefghijkl.supabase.co",
+  anonKey: "eyJhbGciOi... ou sb_publishable_...",
+  table: "espace_pedagogique",
+  device: "Poste principal — Prof. Aymen",
+  auto:  true,     // envoi automatique à chaque enregistrement
+  auth:  true      // accès protégé par mot de passe (compte unique)
+};
+```
 
-Boutons disponibles dans l'onglet « Programme & compétences » → carte *Sauvegarde distante*, et dans la
-fenêtre **Cloud** de l'en-tête :
+Puis publier sur GitHub : tous les appareils se connectent à la même base sans rien saisir,
+hors la connexion (une fois par appareil).
+
+**Variante — dans l'application** (si vous ne souhaitez pas écrire les valeurs dans le dépôt) :
+bouton **Cloud** de l'en-tête → coller l'URL et la clé → **Enregistrer et tester**.
+La configuration reste alors dans le navigateur de cet appareil.
+
+### 5.3 Utilisation au quotidien
 
 | Bouton | Effet |
 |---|---|
+| **Se connecter** | adresse + mot de passe ; la session reste ouverte sur l'appareil |
+| **Se déconnecter** | ferme la session ; les données locales restent sur l'appareil |
 | **Envoyer maintenant** | ajoute un instantané complet (horaires + fiches de séance) dans la table |
 | **Restaurer** | propose la dernière sauvegarde distante et remplace les données de l'appareil après confirmation |
-| **Configuration** | URL du projet, clé publique, table, nom de l'appareil, envoi automatique |
+| **Configuration** | URL du projet, clé publique, table, nom de l'appareil, envoi automatique, accès protégé |
+| *(automatique)* | envoi à chaque enregistrement, reprise après coupure réseau, restauration proposée sur un nouvel appareil |
 
-### 5.3 Sécurité
+### 5.4 Sécurité
 
-* N'utilisez **jamais** la clé `service_role` : elle contourne les règles d'accès. Seule la clé publique
-  est nécessaire.
-* Le script SQL fournit par défaut des règles ouvertes à la clé publique, ce qui convient à un espace
-  personnel dont l'adresse n'est pas diffusée. Si vous rendez le dépôt public, appliquez la variante
-  « compte unique » décrite à la fin de `supabase/schema.sql` (création d'un utilisateur Supabase Auth
-  puis règles `auth.uid()`), et gardez l'accès au site pour vous.
-
----
+* La base n'accepte que les **comptes connectés** (règles RLS `to authenticated`) et les inscriptions
+  sont fermées : seul le compte créé à l'étape 3 peut lire ou écrire. Une personne qui connaîtrait l'URL
+  du projet et la clé publique ne verrait aucune donnée.
+* Pour un verrou encore plus strict, la section 5 de `schema.sql` (à décommenter) limite l'accès à
+  **votre seule adresse électronique**.
+* N'utilisez **jamais** la clé `service_role` dans l'application : elle contourne les règles d'accès.
+* Le dépôt GitHub peut rester public : la protection ne dépend pas du secret de l'adresse du site,
+  mais du mot de passe du compte Supabase.
 
 ## 6. Mettre à jour le contenu
 

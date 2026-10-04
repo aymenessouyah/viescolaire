@@ -172,7 +172,9 @@ const ICONS = {
   edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
   flag:'<path d="M4 15s1.5-1 4-1 5 2 8 2 4-1 4-1V4s-1.5 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
   cloud:'<path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/>',
-  install:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
+  install:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.4"/>',
+  out:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 12H8"/><path d="m12 9 3 3-3 3"/><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>'
 };
 function ic(n, cls){ return '<svg class="'+(cls||'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[n]||"")+'</svg>'; }
 
@@ -229,6 +231,17 @@ function kpiDone(cls, tri){
   const done = list.filter(s => { const st = seanceState(s); return st==="faite" || st==="passee"; }).length;
   return { done:done, total:list.length, pct: Math.round(done/list.length*100) };
 }
+/* invitation à activer la sauvegarde distante — affichée seulement si nécessaire */
+function cloudInvite(){
+  if (cloudReady()) return "";
+  return `<div class="note warn" style="margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <span>${ic("cloud")} <strong>Sauvegarde locale seulement.</strong> Vos fiches de séance ne vivent que dans le navigateur de cet appareil.
+    Activez la sauvegarde distante pour les retrouver sur votre téléphone, votre tablette et le poste du lycée.</span>
+    <span class="row no-print" style="gap:8px">
+      <button class="btn btn-xs btn-blue" onclick="openCloudSettings()">${ic("cloud")} Activer la sauvegarde distante</button>
+      <button class="btn btn-xs btn-line" onclick="go('v-ref')">${ic("book")} En savoir plus</button>
+    </span></div>`;
+}
 function renderDash(){
   const t = todayISO();
   const todaySessions = [];
@@ -246,6 +259,7 @@ function renderDash(){
 
   const dash = document.getElementById("v-dash");
   dash.innerHTML = `
+  ${cloudInvite()}
   <div class="card" style="background:linear-gradient(120deg,#0b2545,#14456f 60%,#0e6f8f);color:#fff;border:none;margin-bottom:16px">
     <div class="card-b">
       <div class="spread">
@@ -1103,6 +1117,96 @@ function filterRef(v){
   if (info) info.textContent = q ? (n + " résultat(s) pour « " + v + " »") : "Recherche sur le mémo et les 5 annexes";
 }
 
+/* ---------- compte unique (Supabase Auth) : accès protégé par mot de passe ---------- */
+const SESSION_KEY = "sti_cloud_session";
+function authSession(){ try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch(e){ return null; } }
+function authSave(sess){ try { localStorage.setItem(SESSION_KEY, JSON.stringify(sess)); } catch(e){} }
+function authClear(){ try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
+function authUser(){ const s = authSession(); return (s && s.user && s.user.email) ? s.user.email : ""; }
+function authValid(){ const s = authSession(); return !!s && Date.now() < ((s.expires_at || 0) * 1000) - 30000; }
+function authApply(d){
+  const old = authSession() || {};
+  const sess = {
+    access_token: d.access_token,
+    refresh_token: d.refresh_token || old.refresh_token || "",
+    expires_at: Math.floor(Date.now()/1000) + (d.expires_in || 3600),
+    user: d.user || old.user || null
+  };
+  authSave(sess); return sess.access_token;
+}
+/* jeton valide ; renouvellement automatique quand il arrive à expiration */
+async function authToken(){
+  const s = authSession();
+  if (!s) return null;
+  if (authValid()) return s.access_token;
+  if (!s.refresh_token || !cloudReady()) { authClear(); return null; }
+  try {
+    const c = cloudCfg();
+    const r = await fetch(c.url.replace(/\/$/, "") + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return authApply(await r.json());
+  } catch (e) { authClear(); return null; }
+}
+function authNeeded(){ return cloudReady() && cloudCfg().auth; }
+function openAuth(){
+  const b = document.getElementById("auth-modal");
+  if (!b) return;
+  b.querySelector("#auth-email").value = authUser();
+  b.querySelector("#auth-err").textContent = "";
+  b.classList.add("on");
+  setTimeout(() => { const f = b.querySelector(authUser() ? "#auth-pass" : "#auth-email"); if (f) f.focus(); }, 60);
+}
+function closeAuth(){ const b = document.getElementById("auth-modal"); if (b) b.classList.remove("on"); }
+async function doLogin(){
+  const b = document.getElementById("auth-modal");
+  const email = b.querySelector("#auth-email").value.trim();
+  const pass  = b.querySelector("#auth-pass").value;
+  const err   = b.querySelector("#auth-err");
+  err.textContent = "";
+  if (!cloudReady()){ err.textContent = "Commencez par renseigner l'URL et la clé du projet (bouton Configuration)."; return; }
+  if (!email || !pass){ err.textContent = "Renseignez l'adresse électronique et le mot de passe."; return; }
+  try {
+    const c = cloudCfg();
+    const r = await fetch(c.url.replace(/\/$/, "") + "/auth/v1/token?grant_type=password", {
+      method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email, password: pass })
+    });
+    if (!r.ok) throw new Error((r.status === 400 || r.status === 401) ? "Adresse ou mot de passe incorrect." : "HTTP " + r.status);
+    authApply(await r.json());
+    b.querySelector("#auth-pass").value = "";
+    closeAuth();
+    toast("Connexion réussie — " + email);
+    await afterLogin();
+  } catch (e) {
+    err.textContent = "Échec de la connexion : " + (e.message || e);
+  }
+}
+async function doLogout(){
+  const c = cloudCfg(), s = authSession();
+  if (s && c.url) {
+    try {
+      await fetch(c.url.replace(/\/$/, "") + "/auth/v1/logout", {
+        method: "POST", headers: { "apikey": c.key, "Authorization": "Bearer " + s.access_token }
+      });
+    } catch (e) {}
+  }
+  authClear();
+  window.__afterLogin = null;
+  toast("Déconnecté — les données restent sur cet appareil");
+  renderAll(true); renderCloudBar();
+}
+/* après une connexion réussie : synchronisation dans le bon sens */
+async function afterLogin(){
+  const a = window.__afterLogin; window.__afterLogin = null;
+  if (a === "push") { await cloudPush(true); }
+  else if (cloudHasLocalData()) { await cloudPush(true); }
+  else { await cloudPull(true); }
+  renderAll(true); renderCloudBar();
+}
+
 /* ---------- synchronisation distante (Supabase) ---------- */
 const CLOUD_KEY = "sti_cloud_cfg";
 function cloudCfg(){
@@ -1114,11 +1218,16 @@ function cloudCfg(){
     key: cfg.key || w.anonKey || "",
     table: cfg.table || w.table || "espace_pedagogique",
     device: cfg.device || w.device || (SCHOOL.prof + " — appareil principal"),
-    auto: cfg.auto !== undefined ? cfg.auto : false
+    auto: cfg.auto !== undefined ? cfg.auto : true,  /* sauvegarde distante par défaut dès qu'un projet est configuré */
+    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false)   /* accès protégé par mot de passe */
   };
 }
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
-function cloudHeaders(){ const c = cloudCfg(); return { "apikey": c.key, "Authorization": "Bearer " + c.key, "Content-Type": "application/json", "Prefer": "return=minimal" }; }
+async function cloudHeaders(){
+  const c = cloudCfg();
+  const tok = c.auth ? await authToken() : null;
+  return { "apikey": c.key, "Authorization": "Bearer " + (tok || c.key), "Content-Type": "application/json", "Prefer": "return=minimal" };
+}
 function cloudTime(){
   const s = store.cloud && store.cloud.at;
   if (!s) return "jamais";
@@ -1126,7 +1235,13 @@ function cloudTime(){
 }
 function cloudBadge(){
   if (!cloudReady()) return '<span class="badge b-amber">Sauvegarde locale seulement</span>';
+  if (authNeeded() && !authSession()) return '<span class="badge b-amber">Déconnecté — connexion requise pour le cloud</span>';
   return store.cloud && store.cloud.ok ? '<span class="badge b-green">Synchronisé le ' + cloudTime() + '</span>' : '<span class="badge b-rose">Configuration à vérifier</span>';
+}
+function cloudWho(){
+  const u = authUser();
+  if (authNeeded()) return u ? "connecté : " + escapeHtml(u) : "non connecté";
+  return "accès sans mot de passe";
 }
 function payLoad(){
   return {
@@ -1136,11 +1251,15 @@ function payLoad(){
 }
 async function cloudPush(silent){
   if (!cloudReady()){ if (!silent) openCloudSettings(); return; }
+  if (authNeeded() && !(await authToken())) {
+    if (!silent){ window.__afterLogin = "push"; openAuth(); }
+    return;
+  }
   const c = cloudCfg();
   store.cloud = store.cloud || {};
   try {
     const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table, {
-      method: "POST", headers: cloudHeaders(), body: JSON.stringify([payLoad()])
+      method: "POST", headers: await cloudHeaders(), body: JSON.stringify([payLoad()])
     });
     if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 160));
     store.cloud = { ok:true, at:new Date().toISOString() };
@@ -1154,19 +1273,22 @@ async function cloudPush(silent){
     renderCloudBar();
   }
 }
-async function cloudPull(){
+async function cloudPull(silent){
   if (!cloudReady()){ openCloudSettings(); return; }
+  if (authNeeded() && !(await authToken())) {
+    window.__afterLogin = "pull"; openAuth(); return;
+  }
   const c = cloudCfg();
   try {
-    const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table + "?select=*&order=created_at.desc&limit=1", { headers: cloudHeaders() });
+    const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table + "?select=*&order=created_at.desc&limit=1", { headers: await cloudHeaders() });
     if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 160));
     const rows = await r.json();
-    if (!rows.length){ alert("Aucune sauvegarde trouvée dans la base distante."); return; }
+    if (!rows.length){ if (!silent) alert("Aucune sauvegarde trouvée dans la base distante."); return; }
     const snap = rows[0];
     const local = (store.seances ? Object.keys(store.seances).length : 0);
     const remote = snap.payload && snap.payload.seances ? Object.keys(snap.payload.seances).length : 0;
     const quand = snap.created_at ? snap.created_at.slice(0,16).replace("T"," ") : "date inconnue";
-    if (!confirm("Sauvegarde distante du " + quand + "\n" + remote + " fiche(s) enregistrée(s) — cette session en contient " + local + ".\n\nRemplacer les données de cet appareil par la version distante ?")) return;
+    if (!silent && !confirm("Sauvegarde distante du " + quand + "\n" + remote + " fiche(s) enregistrée(s) — cette session en contient " + local + ".\n\nRemplacer les données de cet appareil par la version distante ?")) return;
     store.times = snap.payload.times || store.times;
     store.seances = snap.payload.seances || {};
     if (typeof snap.payload.saved === "string") store.saved = snap.payload.saved;
@@ -1178,6 +1300,29 @@ async function cloudPull(){
     alert("Échec de la restauration :\n" + (e.message || e) + "\n\nVérifiez l'URL, la clé, la table et les règles d'accès (voir README).");
   }
 }
+function cloudHasLocalData(){
+  return !!(store.saved ||
+    (store.seances && Object.keys(store.seances).length) ||
+    (store.times && Object.keys(store.times).length));
+}
+/* Premier démarrage sur cet appareil (téléphone, tablette, poste du lycée) :
+   si rien n'est encore enregistré localement, on propose d'abord la version
+   du cloud, pour que la sauvegarde distante soit la source de vérité. */
+async function cloudFirstRunRestore(){
+  if (!cloudReady() || cloudHasLocalData()) return false;
+  if (authNeeded() && !(await authToken())) {
+    /* nouvel appareil : demande de connexion une fois par session de navigation */
+    if (!sessionStorage.getItem("sti_auth_asked")) {
+      sessionStorage.setItem("sti_auth_asked", "1");
+      window.__afterLogin = "pull";
+      openAuth();
+    }
+    return false;
+  }
+  window.__cloudFirstRun = true;
+  await cloudPull(true);
+  return true;
+}
 function cloudAutoPush(){ if (cloudCfg().auto && cloudReady()) cloudPush(true); }
 function openCloudSettings(){
   const c = cloudCfg();
@@ -1187,6 +1332,7 @@ function openCloudSettings(){
   b.querySelector("#cfg-table").value = c.table;
   b.querySelector("#cfg-device").value = c.device;
   b.querySelector("#cfg-auto").checked = !!c.auto;
+  const ca = b.querySelector("#cfg-auth"); if (ca) ca.checked = !!c.auth;
   b.classList.add("on");
 }
 function saveCloudSettings(){
@@ -1196,13 +1342,14 @@ function saveCloudSettings(){
     key: b.querySelector("#cfg-key").value.trim(),
     table: b.querySelector("#cfg-table").value.trim() || "espace_pedagogique",
     device: b.querySelector("#cfg-device").value.trim() || SCHOOL.prof,
-    auto: b.querySelector("#cfg-auto").checked
+    auto: b.querySelector("#cfg-auto").checked,
+    auth: b.querySelector("#cfg-auth") ? b.querySelector("#cfg-auth").checked : false
   };
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
   b.classList.remove("on");
   toast(cfg.url && cfg.key ? "Configuration enregistrée — test de la connexion…" : "Sauvegarde locale uniquement");
   renderCloudBar();
-  if (cfg.url && cfg.key) cloudPush(true);
+  if (cfg.url && cfg.key) { if (cloudHasLocalData()) cloudPush(true); else cloudPull(); }
 }
 
 function renderRef(){
@@ -1415,14 +1562,19 @@ function cloudCard(){
         <div class="spread"><span class="tiny muted">Dernier envoi</span><span class="tiny">${cloudTime()}</span></div>
         <div class="spread"><span class="tiny muted">Fiches enregistrées</span><span class="tiny">${Object.keys(store.seances || {}).length}</span></div>
         <div class="spread"><span class="tiny muted">Envoi automatique</span><span class="tiny">${c.auto ? "activé" : "désactivé"}</span></div>
+        <div class="spread"><span class="tiny muted">Connexion</span><span class="tiny">${cloudWho()}</span></div>
       </div>
       <div class="row no-print" style="margin-top:12px;gap:8px">
         <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Envoyer maintenant</button>
         <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Restaurer</button>
+        ${authNeeded() ? (authSession()
+            ? '<button class="btn btn-xs btn-line" onclick="doLogout()">' + ic("out") + ' Se déconnecter</button>'
+            : '<button class="btn btn-xs btn-blue" onclick="openAuth()">' + ic("lock") + ' Se connecter</button>') : ""}
         <button class="btn btn-xs btn-line" onclick="openCloudSettings()">${ic("edit")} Configuration</button>
         <button class="btn btn-xs btn-line" onclick="exportJSON()">${ic("file")} Export JSON</button>
       </div>
       <div class="note tiny" style="margin-top:10px">${ic("pin")}
+        ${authNeeded() && !authSession() ? 'Accès protégé par mot de passe : connectez-vous pour envoyer et restaurer les données du cloud. ' : ""}
         ${cloudReady()
           ? 'Base distante configurée. En cas d\'échec, vérifiez la table <code>' + c.table + '</code>, la clé publique et les règles RLS décrites dans le <code>README.md</code>.'
           : 'Aucune base distante configurée : les données restent dans ce navigateur (et dans l\'export JSON). Cliquez sur <strong>Configuration</strong> et renseignez l\'URL du projet Supabase et la clé publique — la table SQL est fournie dans <code>supabase/schema.sql</code>.'}
@@ -1479,7 +1631,11 @@ function registerSW(){
   }).catch(() => {});
 }
 function applyUpdate(){ if (window.__newSW) window.__newSW.postMessage({ type: "SKIP_WAITING" }); location.reload(); }
-window.addEventListener("online", () => { const e = document.getElementById("net-state"); if (e){ e.textContent = "En ligne"; e.className = "badge b-green"; } });
+window.addEventListener("online", () => {
+  const e = document.getElementById("net-state"); if (e){ e.textContent = "En ligne"; e.className = "badge b-green"; }
+  /* reprise automatique : un envoi qui avait échoué (hors ligne) est retenté */
+  if (cloudReady() && store.cloud && store.cloud.ok === false) cloudPush(true);
+});
 window.addEventListener("offline", () => { const e = document.getElementById("net-state"); if (e){ e.textContent = "Hors ligne — données locales"; e.className = "badge b-amber"; } });
 
 (function init(){
@@ -1489,6 +1645,7 @@ window.addEventListener("offline", () => { const e = document.getElementById("ne
   if (hash && /^v-/.test(hash) && document.getElementById(hash)) currentTab = hash;
   renderAll(true);
   renderCloudBar();
+  cloudFirstRunRestore();
   registerSW();
   const e = document.getElementById("net-state");
   if (e){ const on = navigator.onLine; e.textContent = on ? "En ligne" : "Hors ligne — données locales"; e.className = "badge " + (on ? "b-green" : "b-amber"); }
@@ -1575,6 +1732,13 @@ window.cloudTime = cloudTime;
 window.cloudBadge = cloudBadge;
 window.payLoad = payLoad;
 window.cloudAutoPush = cloudAutoPush;
+window.cloudHasLocalData = cloudHasLocalData;
+window.cloudFirstRunRestore = cloudFirstRunRestore;
+window.cloudInvite = cloudInvite;
+window.authSession = authSession; window.authToken = authToken; window.authUser = authUser;
+window.authNeeded = authNeeded; window.openAuth = openAuth; window.closeAuth = closeAuth;
+window.doLogin = doLogin; window.doLogout = doLogout; window.afterLogin = afterLogin;
+window.cloudWho = cloudWho;
 window.openCloudSettings = openCloudSettings;
 window.saveCloudSettings = saveCloudSettings;
 window.renderRef = renderRef;

@@ -3,22 +3,36 @@
    -------------------------------------------------------------------------
    Deux façons de configurer la sauvegarde distante :
 
-   1) Depuis l'application (recommandé, aucune modification de fichier) :
-      bouton « Cloud » dans l'en-tête → renseigner l'URL du projet et la clé
-      publique, puis « Enregistrer et tester ». La configuration est mémorisée
-      dans le navigateur de l'appareil.
+   1) En modifiant ce fichier (recommandé) : renseigner `url` et `anonKey`
+      ci-dessous puis publier sur GitHub. Tous les appareils — téléphone,
+      tablette, poste du lycée — utilisent alors la même base, sans rien
+      saisir sur chacun d'eux.
 
-   2) En modifiant ce fichier (pratique pour un déploiement sur plusieurs
-      appareils : la configuration est alors commune à tous).
+   2) Depuis l'application : bouton « Cloud » de l'en-tête → coller l'URL et
+      la clé → « Enregistrer et tester ». La configuration est alors mémorisée
+      dans le navigateur de cet appareil seulement.
 
-   Remplacer les valeurs ci-dessous puis publier sur GitHub.
-   La clé attendue est la clé PUBLIQUE du projet (« anon / publishable »),
-   jamais la clé « service_role » qui contourne les règles de sécurité.
+   La clé attendue est la clé PUBLIQUE du projet (« anon / publishable »).
+   Elle est prévue pour être visible ; ce sont les règles de sécurité (RLS)
+   créées par supabase/schema.sql qui protègent réellement la base.
+   Ne jamais utiliser la clé « service_role », qui contourne ces règles.
+
+   Mode de fonctionnement une fois configuré :
+     • envoi automatique à chaque enregistrement (auto: true) ;
+     • sur un nouvel appareil, l'application propose de reprendre la dernière
+       sauvegarde du cloud avant toute saisie locale ;
+     • coupure réseau : travail local, puis reprise automatique de l'envoi.
+
+   Accès protégé (auth: true) : la base n'accepte que le compte unique créé
+   dans Supabase (Authentication → Users). L'application demande alors la
+   connexion (fenêtre « Connexion à la sauvegarde distante ») sur chaque
+   appareil et garde la session ouverte ensuite.
    ========================================================================= */
 window.STI_SUPABASE = {
-  url:   "",                          // ex. "https://abcdefghijkl.supabase.co"
-  anonKey: "",                        // clé publique du projet
+  url:   "https://oaahxobzbnmaohcmdrbu.supabase.co",   // projet « aymenessouyah-vie-scolaire »
+  anonKey: "sb_publishable_KGkxMJx_IEZz5RhTxvmf7w_kMVN6uLh",   // clé publique (publishable) du projet
   table: "espace_pedagogique",        // table créée par supabase/schema.sql
   device: "Poste principal — Prof. Aymen",
-  auto:  false                        // true : envoi automatique à chaque enregistrement
+  auto:  true,                        // envoi automatique à chaque enregistrement
+  auth:  true                         // accès protégé par mot de passe (compte unique)
 };

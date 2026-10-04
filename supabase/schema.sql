@@ -1,9 +1,14 @@
 -- =========================================================================
---  Espace pédagogique STI — schéma de base de données (Supabase / PostgreSQL)
---  Prof. Aymen Essouyah — Lycée Rafèha Ariana — année 2026/2027
+--  Espace pédagogique STI — base de sauvegarde des données
+--  Supabase (PostgreSQL) — Prof. Aymen Essouyah — année 2026/2027
 --
---  À exécuter une seule fois : Tableau de bord Supabase → « SQL Editor » →
---  coller ce script → « Run ».
+--  À exécuter UNE SEULE FOIS :
+--    Supabase → SQL Editor → New query → coller tout ce texte → Run
+--
+--  Aucune modification n'est nécessaire : ce script s'exécute tel quel.
+--  La protection repose sur votre compte utilisateur (créé à l'étape 3 du
+--  README) et sur la fermeture des inscriptions (« Allow new users to
+--  sign up » → désactivé, étape 4 du README).
 -- =========================================================================
 
 -- 1) Table des sauvegardes (instantanés de l'espace pédagogique) ------------
@@ -20,46 +25,54 @@ create table if not exists public.espace_pedagogique (
 create index if not exists espace_pedagogique_created_at_idx
   on public.espace_pedagogique (created_at desc);
 
--- 2) Sécurité niveau ligne (RLS) ------------------------------------------
+-- 2) Sécurité niveau ligne : accès réservé aux comptes connectés -----------
 alter table public.espace_pedagogique enable row level security;
 
--- Lecture et écriture autorisées à la clé publique du projet.
--- ⚠️ Convenable pour un espace de travail personnel dont l'adresse n'est pas
--- publiée. Pour un dépôt public, remplacer les deux règles ci-dessous par la
--- variante « compte unique » donnée à la fin de ce fichier.
-drop policy if exists "lecture espace" on public.espace_pedagogique;
-drop policy if exists "ecriture espace" on public.espace_pedagogique;
+drop policy if exists "lecture authentifiee"   on public.espace_pedagogique;
+drop policy if exists "ecriture authentifiee"  on public.espace_pedagogique;
+drop policy if exists "lecture proprietaire"   on public.espace_pedagogique;
+drop policy if exists "ecriture proprietaire"  on public.espace_pedagogique;
+drop policy if exists "lecture espace"         on public.espace_pedagogique;
+drop policy if exists "ecriture espace"        on public.espace_pedagogique;
 
-create policy "lecture espace"
+create policy "lecture authentifiee"
   on public.espace_pedagogique for select
-  to anon
+  to authenticated
   using (true);
 
-create policy "ecriture espace"
+create policy "ecriture authentifiee"
   on public.espace_pedagogique for insert
-  to anon
+  to authenticated
   with check (true);
 
--- 3) Purge automatique (facultatif) ---------------------------------------
+-- Sans connexion (clé publique seule), la table reste totalement inaccessible.
+
+-- 3) IMPORTANT — fermer les inscriptions ----------------------------------
+-- Dans le tableau de bord : Authentication → Sign In / Providers →
+-- décocher « Allow new users to sign up ».
+-- Tant que cette option reste active, n'importe qui pourrait se créer un
+-- compte sur ce projet ; après l'avoir décochée, seul le compte créé à
+-- l'étape 3 du README peut accéder aux données.
+
+-- 4) (Facultatif) Purge automatique ---------------------------------------
 -- Conserver seulement les 200 derniers instantanés :
 --   delete from public.espace_pedagogique
 --   where id not in (select id from public.espace_pedagogique order by created_at desc limit 200);
 
--- 4) Variante « compte unique » (recommandée si le dépôt GitHub est public) -
--- Étape a : Authentication → Users → « Add user » (courriel + mot de passe).
--- Étape b : exécuter les instructions suivantes en remplaçant <UID> par
---           l'identifiant de l'utilisateur créé :
+-- 5) (Facultatif) Verrou renforcé sur une seule adresse -------------------
+-- Pour n'autoriser qu'une adresse précise (en plus de la connexion) :
+-- remplacez l'adresse ci-dessous par la vôtre, décommentez ces six lignes
+-- et exécutez-les.
 --
---   drop policy if exists "lecture espace" on public.espace_pedagogique;
---   drop policy if exists "ecriture espace" on public.espace_pedagogique;
+--   drop policy if exists "lecture authentifiee"  on public.espace_pedagogique;
+--   drop policy if exists "ecriture authentifiee" on public.espace_pedagogique;
 --
 --   create policy "lecture proprietaire"
 --     on public.espace_pedagogique for select
---     to authenticated using (auth.uid() = '<UID>');
+--     to authenticated
+--     using (lower(auth.jwt() ->> 'email') = lower('votre.adresse@exemple.tn'));
 --
 --   create policy "ecriture proprietaire"
 --     on public.espace_pedagogique for insert
---     to authenticated with check (auth.uid() = '<UID>');
---
--- Le site devra alors être ouvert après connexion (Supabase Auth) : voir la
--- section « Sécuriser davantage » du README.md.
+--     to authenticated
+--     with check (lower(auth.jwt() ->> 'email') = lower('votre.adresse@exemple.tn'));
