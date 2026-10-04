@@ -1364,6 +1364,12 @@ async function cloudFirstRunRestore(){
   return true;
 }
 function cloudAutoPush(){ if (cloudCfg().auto && cloudReady()) cloudPush(true); }
+/* bouton « Cloud » de l'en-tête : ouvre la connexion quand elle est attendue,
+   sinon la fenêtre de configuration (URL, clé, table, nom de l'appareil) */
+function openCloud(){
+  if (cloudReady() && authNeeded() && !authSession()) openAuth();
+  else openCloudSettings();
+}
 function openCloudSettings(){
   const c = cloudCfg();
   const b = document.getElementById("cloud-modal");
@@ -1784,7 +1790,7 @@ window.cloudHasLocalData = cloudHasLocalData;
 window.cloudFirstRunRestore = cloudFirstRunRestore;
 window.cloudInvite = cloudInvite;
 window.authSession = authSession; window.authToken = authToken; window.authUser = authUser;
-window.authNeeded = authNeeded; window.openAuth = openAuth; window.closeAuth = closeAuth;
+window.authNeeded = authNeeded; window.openAuth = openAuth; window.closeAuth = closeAuth; window.openCloud = openCloud;
 window.doLogin = doLogin; window.doSignup = doSignup; window.doLogout = doLogout; window.afterLogin = afterLogin;
 window.cloudWho = cloudWho;
 window.openCloudSettings = openCloudSettings;
