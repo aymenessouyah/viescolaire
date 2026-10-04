@@ -113,6 +113,19 @@
   </div>
 </div>
 
+<!-- ===================== BANDEAU D'INSTALLATION (MOBILE) ===================== -->
+<div id="install-banner" class="hidden no-print" role="dialog" aria-label="Installer l'application">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;flex:none"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+  <div style="min-width:0">
+    <div class="t">Installer l'application</div>
+    <div class="s" id="install-sub">Plein écran, démarrage rapide et fonctionnement sans connexion.</div>
+  </div>
+  <div class="row" style="gap:6px;flex:none">
+    <button class="btn btn-xs" style="background:rgba(255,255,255,.14);color:#dceaf7;border-color:rgba(255,255,255,.25)" onclick="dismissInstall()">Plus tard</button>
+    <button class="btn btn-xs" style="background:#fff;color:#0b2545;border-color:#fff;font-weight:700" onclick="installApp()">Installer</button>
+  </div>
+</div>
+
 <!-- ===================== MODALE CONNEXION (SAUVEGARDE DISTANTE) ===================== -->
 <div class="modal" id="auth-modal">
   <div class="box" style="max-width:430px">
@@ -168,7 +181,7 @@
       <div style="margin-bottom:10px"><label class="f">Clé publique (anon key)</label>
         <input type="text" id="cfg-key" placeholder="eyJhbGciOi... ou sb_publishable_..."></div>
       <div class="grid g2" style="gap:10px;margin-bottom:10px">
-        <div><label class="f">Table</label><input type="text" id="cfg-table" value="espace_pedagogique"></div>
+        <div><label class="f">Table <span class="tiny muted">(nom SQL — ne pas modifier)</span></label><input type="text" id="cfg-table" value="espace_pedagogique"></div>
         <div><label class="f">Nom de cet appareil</label><input type="text" id="cfg-device" placeholder="Téléphone — Prof. Aymen"></div>
       </div>
       <label class="badge b-blue" style="cursor:pointer;display:inline-flex;gap:6px">
