@@ -44,7 +44,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
       </div>
       <div>
-        <h1><span id="hero-prof">Prof. Aymen Essouyah</span></h1>
+        <h1><span id="hero-prof" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier" onclick="openProfil()">Prof. Aymen Essouyah</span></h1>
         <div class="sub">
           <span><strong id="hero-lycee">Lycée Rafèha Ariana</strong></span>
           <span class="chip">Matière : STI</span>
@@ -80,6 +80,7 @@
   <section id="v-cal" class="view"></section>
   <section id="v-rep" class="view"></section>
   <section id="v-prog" class="view"></section>
+  <section id="v-eleves" class="view"></section>
   <section id="v-cahier" class="view"></section>
   <section id="v-ref" class="view"></section>
 </main>
@@ -87,7 +88,7 @@
 <footer>
   <div class="wrap">
     <div>
-      <strong style="color:var(--ink)">Espace pédagogique — Prof. Aymen Essouyah</strong> &bull; Lycée Rafèha Ariana (Tunisie) &bull; Matière STI
+      <strong style="color:var(--ink)">Espace pédagogique — Prof. Aymen Essouyah</strong> &bull; Lycée Rafèha Ariana (Tunisie) &bull; <span id="ft-prof">Matière STI</span>
     </div>
     <div>
       Année scolaire 2026-2027 &bull; Données locales + sauvegarde distante Supabase &bull; <span id="ft-year"></span>
@@ -123,6 +124,32 @@
   <div class="row" style="gap:6px;flex:none">
     <button class="btn btn-xs" style="background:rgba(255,255,255,.14);color:#dceaf7;border-color:rgba(255,255,255,.25)" onclick="dismissInstall()">Plus tard</button>
     <button class="btn btn-xs" style="background:#fff;color:#0b2545;border-color:#fff;font-weight:700" onclick="installApp()">Installer</button>
+  </div>
+</div>
+
+<!-- ===================== MODALE PROFIL PROFESSEUR ===================== -->
+<div class="modal" id="profil-modal">
+  <div class="box" style="max-width:430px">
+    <div class="box-h">
+      <h3 style="font-size:16px">Votre profil de professeur</h3>
+      <button class="btn btn-xs btn-line" onclick="closeProfil()">Fermer</button>
+    </div>
+    <div class="box-b">
+      <p class="small" style="color:var(--ink-2);margin-bottom:12px">
+        Chaque professeur dispose de son propre espace protégé par son compte :
+        ses classes, ses élèves, ses notes et ses présences restent <strong>privés</strong>.
+        Ce nom s'affiche en en-tête du site et signe vos sauvegardes.
+      </p>
+      <div style="margin-bottom:10px"><label class="f">Nom et prénom</label>
+        <input type="text" id="pf-nom" placeholder="Aymen Essouyah"></div>
+      <div style="margin-bottom:10px"><label class="f">Matière enseignée</label>
+        <input type="text" id="pf-mat" placeholder="STI"></div>
+      <div class="note tiny" style="margin-top:6px">Compte connecté : <span id="pf-email" class="tiny">—</span></div>
+    </div>
+    <div class="box-f">
+      <button class="btn btn-line" onclick="closeProfil()">Annuler</button>
+      <button class="btn btn-blue" onclick="saveProfil()">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -217,5 +244,6 @@
 
 <!-- ===================== APPLICATION ===================== -->
 <script src="assets/app.js"></script>
+<script src="assets/eleves.js"></script>
 </body>
 </html>

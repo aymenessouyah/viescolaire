@@ -119,7 +119,8 @@ const KEY = "sti_espace_aymen_2026_2027";  /* version 2 du schéma */
 let store = load();
 
 function load(){
-  const base = { times: JSON.parse(JSON.stringify(HORAIRES_DEFAUT)), seances:{}, saved:null };
+  const base = { times: JSON.parse(JSON.stringify(HORAIRES_DEFAUT)), seances:{}, saved:null,
+                 profil:null, classes:null, eleves:{}, epreuves:{}, notes:{}, presences:{} };
   try{
     const raw = localStorage.getItem(KEY);
     if (raw){
@@ -151,6 +152,7 @@ const ICONS = {
   home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 10v10h14V10"/>',
   calendar:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
   list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
@@ -187,6 +189,7 @@ const TABS = [
   { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
   { id:"v-rep",    t:"Répartition 1<sup>er</sup> trim.", ico:"list" },
   { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
+  { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
   { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
   { id:"v-ref",    t:"Annexes &amp; mémo", ico:"book" }
 ];
@@ -206,6 +209,8 @@ function renderAll(silent){
   renderCal();
   renderRep();
   renderProg();
+  if (typeof renderEleves === "function") renderEleves();
+  if (typeof applyProfil === "function") applyProfil();
   renderCahier();
   renderRef();
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
@@ -268,7 +273,7 @@ function renderDash(){
       <div class="spread">
         <div style="min-width:260px">
           <div class="badge b-navy" style="background:rgba(255,255,255,.16);color:#dff1ff;border-color:rgba(255,255,255,.25)">Année scolaire ${SCHOOL.annee}</div>
-          <h2 style="font-size:22px;margin-top:10px">Bienvenue, M. ${SCHOOL.prof}</h2>
+          <h2 style="font-size:22px;margin-top:10px" id="bienvenue-prof">Bienvenue, M. ${SCHOOL.prof}</h2>
           <p class="small" style="color:#c9def0;margin-top:4px">${SCHOOL.matiere} — ${SCHOOL.lycee}</p>
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18)">
             <div class="tiny" style="text-transform:uppercase;letter-spacing:.06em;color:#9dc4e0;font-weight:800">${todaySessions.length ? "Séance(s) du jour" : "Aujourd’hui"}</div>
@@ -1211,7 +1216,7 @@ async function doSignup(){
     const data = await r.json().catch(() => ({}));
     if (!r.ok){
       const msg = data.msg || data.error_description || data.error || ("HTTP " + r.status);
-      if (/signups? not allowed/i.test(msg)) throw new Error("Les inscriptions sont fermées sur ce projet : créez le compte dans Supabase (Authentication → Users → Add user), puis revenez ici.");
+      if (/signups? not allowed/i.test(msg)) throw new Error("Les inscriptions sont fermées sur ce projet : chaque professeur reçoit son compte de l'administrateur (Supabase → Authentication → Users → Add user). Demandez-lui de créer le vôtre, puis cliquez sur « Se connecter ».");
       if (/already registered|already exists/i.test(msg)) throw new Error("Un compte existe déjà avec cette adresse : cliquez sur « Se connecter » (le mot de passe se règle dans Supabase → Authentication → Users).");
       throw new Error(msg);
     }
@@ -1248,6 +1253,8 @@ async function afterLogin(){
   else if (cloudHasLocalData()) { await cloudPush(true); }
   else { await cloudPull(true); }
   renderAll(true); renderCloudBar();
+  /* première connexion de ce professeur : on demande son nom et sa matière */
+  if (!store.profil || !store.profil.nom) { if (typeof openProfil === "function") openProfil(); }
 }
 
 /* ---------- synchronisation distante (Supabase) ---------- */
@@ -1288,8 +1295,13 @@ function cloudWho(){
 }
 function payLoad(){
   return {
-    prof: SCHOOL.prof, lycee: SCHOOL.lycee, annee: SCHOOL.annee, device: cloudCfg().device,
-    payload: { times: store.times, seances: store.seances, saved: store.saved }
+    prof: (store.profil && store.profil.nom) ? store.profil.nom : SCHOOL.prof,
+    lycee: SCHOOL.lycee, annee: SCHOOL.annee, device: cloudCfg().device,
+    payload: {
+      times: store.times, seances: store.seances, saved: store.saved,
+      profil: store.profil, classes: store.classes, eleves: store.eleves,
+      epreuves: store.epreuves, notes: store.notes, presences: store.presences
+    }
   };
 }
 async function cloudPush(silent){
@@ -1335,6 +1347,9 @@ async function cloudPull(silent){
     store.times = snap.payload.times || store.times;
     store.seances = snap.payload.seances || {};
     if (typeof snap.payload.saved === "string") store.saved = snap.payload.saved;
+    ["profil","classes","eleves","epreuves","notes","presences"].forEach(k => {
+      if (snap.payload[k] !== undefined && snap.payload[k] !== null) store[k] = snap.payload[k];
+    });
     store.cloud = { ok:true, at:new Date().toISOString() };
     try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){}
     toast("Données restaurées depuis la base distante");
@@ -1654,8 +1669,9 @@ function renderCloudBar(){
 
 /* ---------- installation en mode application (PWA) ---------- */
 let installEvt = null;
-function standaloneMode(){ return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone; }
-function onMobileLike(){ return window.matchMedia("(max-width: 820px)").matches || window.matchMedia("(pointer: coarse)").matches; }
+function mmSafe(q){ try { return typeof window.matchMedia === "function" ? window.matchMedia(q).matches : false; } catch(e){ return false; } }
+function standaloneMode(){ return mmSafe("(display-mode: standalone)") || window.navigator.standalone; }
+function onMobileLike(){ return mmSafe("(max-width: 820px)") || mmSafe("(pointer: coarse)"); }
 function installDismissed(){ try { return Date.now() < (+(localStorage.getItem("sti_install_hide") || 0)); } catch(e){ return true; } }
 function showInstallBanner(txt){
   const b = document.getElementById("install-banner");
@@ -1762,6 +1778,7 @@ window.between = between;
 window.inRange = inRange;
 window.fmtLong = fmtLong;
 window.fmtShort = fmtShort;
+window.SCHOOL = SCHOOL; window.JALONS = JALONS; window.CLASSES = CLASSES; window.VACANCES = VACANCES; window.DATA = DATA;
 window.fmtJM = fmtJM;
 window.jour = jour;
 window.jourS = jourS;
