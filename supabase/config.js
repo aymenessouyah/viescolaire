@@ -30,7 +30,7 @@
    ========================================================================= */
 window.STI_SUPABASE = {
   url:   "https://oaahxobzbnmaohcmdrbu.supabase.co",   // projet « aymenessouyah-vie-scolaire »
-  anonKey: "",                        // ← clé publique du projet (anon / publishable) : à coller
+  anonKey: "sb_publishable_KGkxMJx_IEZz5RhTxvmf7w_kMVN6uLh",   // clé publique (publishable) du projet
   table: "espace_pedagogique",        // table créée par supabase/schema.sql
   device: "Poste principal — Prof. Aymen",
   auto:  true,                        // envoi automatique à chaque enregistrement
