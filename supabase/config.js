@@ -8,12 +8,19 @@
       publique, puis « Enregistrer et tester ». La configuration est mémorisée
       dans le navigateur de l'appareil.
 
-   2) En modifiant ce fichier (pratique pour un déploiement sur plusieurs
-      appareils : la configuration est alors commune à tous).
+   2) En modifiant ce fichier (recommandé : la configuration devient commune à
+      tous les appareils — téléphone, tablette, poste du lycée — sans rien
+      saisir sur chacun d'eux).
 
    Remplacer les valeurs ci-dessous puis publier sur GitHub.
-   La clé attendue est la clé PUBLIQUE du projet (« anon / publishable »),
-   jamais la clé « service_role » qui contourne les règles de sécurité.
+   La clé attendue est la clé PUBLIQUE du projet (« anon / publishable ») :
+   elle est prévue pour être visible et reste protégée par les règles de
+   sécurité (RLS) créées par supabase/schema.sql.
+   Ne jamais utiliser la clé « service_role », qui contourne ces règles.
+
+   Une fois ces deux valeurs renseignées : l'envoi automatique est actif, et à
+   l'ouverture sur un nouvel appareil l'application propose de reprendre la
+   dernière sauvegarde du cloud avant toute saisie locale.
    ========================================================================= */
 window.STI_SUPABASE = {
   url:   "",                          // ex. "https://abcdefghijkl.supabase.co"

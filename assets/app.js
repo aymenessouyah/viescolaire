@@ -229,6 +229,17 @@ function kpiDone(cls, tri){
   const done = list.filter(s => { const st = seanceState(s); return st==="faite" || st==="passee"; }).length;
   return { done:done, total:list.length, pct: Math.round(done/list.length*100) };
 }
+/* invitation à activer la sauvegarde distante — affichée seulement si nécessaire */
+function cloudInvite(){
+  if (cloudReady()) return "";
+  return `<div class="note warn" style="margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <span>${ic("cloud")} <strong>Sauvegarde locale seulement.</strong> Vos fiches de séance ne vivent que dans le navigateur de cet appareil.
+    Activez la sauvegarde distante pour les retrouver sur votre téléphone, votre tablette et le poste du lycée.</span>
+    <span class="row no-print" style="gap:8px">
+      <button class="btn btn-xs btn-blue" onclick="openCloudSettings()">${ic("cloud")} Activer la sauvegarde distante</button>
+      <button class="btn btn-xs btn-line" onclick="go('v-ref')">${ic("book")} En savoir plus</button>
+    </span></div>`;
+}
 function renderDash(){
   const t = todayISO();
   const todaySessions = [];
@@ -246,6 +257,7 @@ function renderDash(){
 
   const dash = document.getElementById("v-dash");
   dash.innerHTML = `
+  ${cloudInvite()}
   <div class="card" style="background:linear-gradient(120deg,#0b2545,#14456f 60%,#0e6f8f);color:#fff;border:none;margin-bottom:16px">
     <div class="card-b">
       <div class="spread">
@@ -1114,7 +1126,7 @@ function cloudCfg(){
     key: cfg.key || w.anonKey || "",
     table: cfg.table || w.table || "espace_pedagogique",
     device: cfg.device || w.device || (SCHOOL.prof + " — appareil principal"),
-    auto: cfg.auto !== undefined ? cfg.auto : false
+    auto: cfg.auto !== undefined ? cfg.auto : true   /* sauvegarde distante par défaut dès qu'un projet est configuré */
   };
 }
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
@@ -1178,6 +1190,20 @@ async function cloudPull(){
     alert("Échec de la restauration :\n" + (e.message || e) + "\n\nVérifiez l'URL, la clé, la table et les règles d'accès (voir README).");
   }
 }
+function cloudHasLocalData(){
+  return !!(store.saved ||
+    (store.seances && Object.keys(store.seances).length) ||
+    (store.times && Object.keys(store.times).length));
+}
+/* Premier démarrage sur cet appareil (téléphone, tablette, poste du lycée) :
+   si rien n'est encore enregistré localement, on propose d'abord la version
+   du cloud, pour que la sauvegarde distante soit la source de vérité. */
+async function cloudFirstRunRestore(){
+  if (!cloudReady() || cloudHasLocalData()) return false;
+  window.__cloudFirstRun = true;
+  await cloudPull();
+  return true;
+}
 function cloudAutoPush(){ if (cloudCfg().auto && cloudReady()) cloudPush(true); }
 function openCloudSettings(){
   const c = cloudCfg();
@@ -1202,7 +1228,7 @@ function saveCloudSettings(){
   b.classList.remove("on");
   toast(cfg.url && cfg.key ? "Configuration enregistrée — test de la connexion…" : "Sauvegarde locale uniquement");
   renderCloudBar();
-  if (cfg.url && cfg.key) cloudPush(true);
+  if (cfg.url && cfg.key) { if (cloudHasLocalData()) cloudPush(true); else cloudPull(); }
 }
 
 function renderRef(){
@@ -1479,7 +1505,11 @@ function registerSW(){
   }).catch(() => {});
 }
 function applyUpdate(){ if (window.__newSW) window.__newSW.postMessage({ type: "SKIP_WAITING" }); location.reload(); }
-window.addEventListener("online", () => { const e = document.getElementById("net-state"); if (e){ e.textContent = "En ligne"; e.className = "badge b-green"; } });
+window.addEventListener("online", () => {
+  const e = document.getElementById("net-state"); if (e){ e.textContent = "En ligne"; e.className = "badge b-green"; }
+  /* reprise automatique : un envoi qui avait échoué (hors ligne) est retenté */
+  if (cloudReady() && store.cloud && store.cloud.ok === false) cloudPush(true);
+});
 window.addEventListener("offline", () => { const e = document.getElementById("net-state"); if (e){ e.textContent = "Hors ligne — données locales"; e.className = "badge b-amber"; } });
 
 (function init(){
@@ -1489,6 +1519,7 @@ window.addEventListener("offline", () => { const e = document.getElementById("ne
   if (hash && /^v-/.test(hash) && document.getElementById(hash)) currentTab = hash;
   renderAll(true);
   renderCloudBar();
+  cloudFirstRunRestore();
   registerSW();
   const e = document.getElementById("net-state");
   if (e){ const on = navigator.onLine; e.textContent = on ? "En ligne" : "Hors ligne — données locales"; e.className = "badge " + (on ? "b-green" : "b-amber"); }
@@ -1575,6 +1606,9 @@ window.cloudTime = cloudTime;
 window.cloudBadge = cloudBadge;
 window.payLoad = payLoad;
 window.cloudAutoPush = cloudAutoPush;
+window.cloudHasLocalData = cloudHasLocalData;
+window.cloudFirstRunRestore = cloudFirstRunRestore;
+window.cloudInvite = cloudInvite;
 window.openCloudSettings = openCloudSettings;
 window.saveCloudSettings = saveCloudSettings;
 window.renderRef = renderRef;

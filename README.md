@@ -126,12 +126,27 @@ si le navigateur ne déclenche pas l'invite automatiquement.
 
 ---
 
-## 5. Sauvegarde distante (Supabase)
+## 5. Sauvegarde distante (Supabase) — mode cloud
 
-Les fiches de séance et les horaires sont enregistrés dans le navigateur (`localStorage`) et peuvent être
-envoyés à une base distante **Supabase** (PostgreSQL + API REST), afin de retrouver les mêmes données sur
-le téléphone, la tablette et le poste du lycée. Un **export / import JSON** reste disponible à tout moment
-(bouton *Exporter* de l'en-tête) : c'est la sauvegarde de secours, utilisable sans compte.
+La sauvegarde distante est le **mode de travail principal** : dès qu'un projet Supabase est configuré,
+les fiches de séance et les horaires sont enregistrés dans la base **Supabase** (PostgreSQL + API REST)
+et l'application les retrouve sur le téléphone, la tablette et le poste du lycée. Le navigateur ne sert
+plus que de cache de travail hors ligne. Un **export / import JSON** reste disponible à tout moment
+(bouton *Exporter* de l'en-tête) comme copie de secours, utilisable sans compte.
+
+### Comportement en mode cloud
+
+| Situation | Ce que fait l'application |
+|---|---|
+| Enregistrement d'une fiche, d'un horaire, d'un état d'avancement | **envoi automatique** vers la base (rien à cliquer) |
+| Ouverture sur un **nouvel appareil** (téléphone, tablette, poste du lycée) | propose de **reprendre la dernière sauvegarde du cloud** avant toute saisie locale |
+| Coupure réseau | travail normal en local ; **reprise automatique** de l'envoi dès le retour de la connexion |
+| Plusieurs appareils | chacun envoie un instantané horodaté ; « Restaurer » propose le plus récent |
+| Aucun projet configuré | un bandeau sur le tableau de bord propose de l'activer |
+| Envoi en échec (URL, clé ou table erronée) | message détaillé + badge « Configuration à vérifier », données conservées localement |
+
+> Astuce : la configuration placée dans `supabase/config.js` est **commune à tous les appareils** —
+> après publication, plus rien à saisir sur le téléphone ni sur le poste du lycée.
 
 ### 5.1 Créer la base (une seule fois, ~5 minutes)
 
@@ -146,11 +161,12 @@ le téléphone, la tablette et le poste du lycée. Un **export / import JSON** r
 
 Deux possibilités, au choix :
 
-* **Depuis l'application** (le plus simple) : bouton **Cloud** de l'en-tête → coller l'URL et la clé →
-  nommer l'appareil → cocher éventuellement « Envoyer automatiquement » → **Enregistrer et tester**.
-  La configuration est mémorisée dans le navigateur de *cet* appareil.
-* **Depuis le fichier** `supabase/config.js` (pratique pour que tous les appareils partagent la même
-  configuration) : renseigner `url`, `anonKey`, `table`, `device`, puis publier sur GitHub.
+* **Depuis le fichier** `supabase/config.js` *(recommandé)* : renseigner `url` et `anonKey`, puis publier
+  sur GitHub. Tous les appareils — téléphone, tablette, poste du lycée — utilisent alors la même base sans
+  aucune saisie. L'envoi automatique est actif par défaut.
+* **Depuis l'application** : bouton **Cloud** de l'en-tête → coller l'URL et la clé → nommer l'appareil →
+  **Enregistrer et tester**. La configuration est mémorisée dans le navigateur de *cet* appareil (à utiliser
+  si l'on ne souhaite pas écrire les valeurs dans le dépôt).
 
 Boutons disponibles dans l'onglet « Programme & compétences » → carte *Sauvegarde distante*, et dans la
 fenêtre **Cloud** de l'en-tête :
@@ -160,6 +176,7 @@ fenêtre **Cloud** de l'en-tête :
 | **Envoyer maintenant** | ajoute un instantané complet (horaires + fiches de séance) dans la table |
 | **Restaurer** | propose la dernière sauvegarde distante et remplace les données de l'appareil après confirmation |
 | **Configuration** | URL du projet, clé publique, table, nom de l'appareil, envoi automatique |
+| *(automatique)* | envoi à chaque enregistrement, reprise après coupure réseau, restauration proposée sur un nouvel appareil |
 
 ### 5.3 Sécurité
 
