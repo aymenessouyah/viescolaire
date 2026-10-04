@@ -101,6 +101,9 @@ function triOf(iso){
 }
 const SESSIONS = { "3SI1": generateSessions("3SI1"), "4SI2": generateSessions("4SI2") };
 function sessionsOf(cls, tri){ return SESSIONS[cls].filter(s => !tri || s.tri === tri); }
+/* identité visuelle des classes : 3SI1 = bleu, 4SI2 = violet */
+function clsChip(c){ return c === "3SI1" ? "b-3si1" : "b-4si2"; }
+function clsCoul(c){ return c === "3SI1" ? "var(--c-3si1)" : "var(--c-4si2)"; }
 function titleOf(s, store){
   const ov = (store && store.seances[s.cls+"|"+s.n] || {}).title;
   if (ov) return ov;
@@ -252,7 +255,7 @@ function renderDash(){
   const nextVac = VACANCES.find(v => v.to >= t);
 
   const heroToday = todaySessions.length
-    ? todaySessions.map(s => '<div class="row" style="gap:8px;margin-top:6px"><span class="badge b-teal" style="background:#fff;color:#0a7a70">'+s.cls+'</span><strong>'+titleOf(s,store)+'</strong><span class="muted">— séance n°'+s.n+' ('+(CLASSES[s.cls].heures)+' h)</span></div>').join("")
+    ? todaySessions.map(s => '<div class="row" style="gap:8px;margin-top:6px"><span class="badge" style="background:#fff;color:'+clsCoul(s.cls)+';border-color:#fff">'+s.cls+'</span><strong>'+titleOf(s,store)+'</strong><span class="muted">— séance n°'+s.n+' ('+(CLASSES[s.cls].heures)+' h)</span></div>').join("")
     : '<p class="tiny" style="margin-top:6px;opacity:.85">Aucune séance aujourd’hui. Prochaines séances : <strong>'+
         (nextSessions("3SI1",1)[0] ? fmtLong(nextSessions("3SI1",1)[0].iso) + ' (3SI1)' : "—") + '</strong> et <strong>' +
         (nextSessions("4SI2",1)[0] ? fmtLong(nextSessions("4SI2",1)[0].iso) + ' (4SI2)' : "—") + '</strong>.</p>';
@@ -345,7 +348,7 @@ function renderDash(){
           <div class="grid g2">
             ${["3SI1","4SI2"].map(c => `
               <div>
-                <div class="badge ${c==="3SI1"?"b-blue":"b-teal"}" style="margin-bottom:8px">${CLASSES[c].short}</div>
+                <div class="badge ${clsChip(c)}" style="margin-bottom:8px">${CLASSES[c].short}</div>
                 ${nextSessions(c,4).map(s => `
                   <div class="li">
                     <div class="ico">${ic(s.blk && s.blk.k!=="cours" ? (s.blk.k==="dc"?"flag":"check") : "clock")}</div>
@@ -415,7 +418,7 @@ function renderDash(){
         <div class="card-b tight">
           ${["3SI1","4SI2"].map(c => `
             <div style="margin-bottom:10px">
-              <div class="badge ${c==="3SI1"?"b-blue":"b-teal"}" style="margin-bottom:6px">${CLASSES[c].short}</div>
+              <div class="badge ${clsChip(c)}" style="margin-bottom:6px">${CLASSES[c].short}</div>
               ${PROGRAMME[c].domaines.map(dm => `
                 <div class="tiny" style="font-weight:800;color:var(--ink-2);margin:6px 0 4px">${dm.nom}</div>
                 ${dm.comps.map(cp => `
@@ -642,7 +645,7 @@ function renderCal(){
       <div class="dn"><span>${D(iso).getDate()}</span>${vac?'<span class="tiny muted">vac.</span>':''}</div>
       ${fer?`<div class="ev ev-h">🎌 ${fer.label.split("(")[0].trim()}</div>`:""}
       ${sus?`<div class="ev ev-e">📕 ${sus.classes?sus.classes.join("/")+" — ":""}suspension</div>`:""}
-      ${list.map(s => `<div class="ev ev-s ${s.cls==="4SI2"?"b4":""}" title="${escapeHtml(titleOf(s,store))}">${s.cls} • S${s.n}</div>`).join("")}
+      ${list.map(s => `<div class="ev ${s.cls==="3SI1"?"ev-3si1":"ev-4si2"}" title="${escapeHtml(titleOf(s,store))}">${s.cls} • S${s.n}</div>`).join("")}
       ${jal.filter(j=>j.type!=="info"&&j.type!=="start").slice(0,1).map(j => `<div class="ev ev-e">${j.label.replace(/<[^>]+>/g,"").slice(0,38)}</div>`).join("")}
     </div>`;
   }).join("");
@@ -781,7 +784,7 @@ function renderRep(){
       k==="dc" ? '<span class="badge b-navy">devoir de contrôle</span>' : "",
       k==="corr" ? '<span class="badge b-navy">correction</span>' : ""
     ].filter(Boolean).join(" ");
-    return `<tr class="${st==="avenir"?"":(st==="faite"||st==="passee")?"is-past ":""}${s.iso===t?"is-today":""}${k!=="cours"?" is-eval":""}">
+    return `<tr class="${st==="avenir"?"":(st==="faite"||st==="passee")?"is-past ":""}${s.iso===t?"is-today":""}${k!=="cours"?" is-eval":""} ${cls==="3SI1"?"acc-3si1":"acc-4si2"}">
       <td class="n">${s.n}</td>
       <td style="white-space:nowrap">${jourS(s.iso)} <strong>${fmtShort(s.iso)}</strong>
         <div class="tiny muted">${s.iso < triStart || s.iso > triEnd ? "hors période" : "sem. "+s.sem}</div>
@@ -804,7 +807,7 @@ function renderRep(){
     </div>
     <div class="row no-print">
       <div class="row" style="gap:6px">
-        ${["3SI1","4SI2"].map(c => `<button class="btn btn-xs ${repCls===c?"btn-blue":"btn-line"}" onclick="setRep('${c}')">${CLASSES[c].short}</button>`).join("")}
+        ${["3SI1","4SI2"].map(c => `<button class="btn btn-xs ${repCls===c?"btn-blue":"btn-line"}" style="${repCls===c?"background:"+clsCoul(c)+";border-color:"+clsCoul(c):""}" onclick="setRep('${c}')">${CLASSES[c].short}</button>`).join("")}
       </div>
       <div class="row" style="gap:6px">
         ${[1,2,3].map(x => `<button class="btn btn-xs ${repTri===x?"btn-blue":"btn-line"}" onclick="setTri(${x})">${x}<sup>${x===1?"er":"e"}</sup> trim.</button>`).join("")}
@@ -813,7 +816,7 @@ function renderRep(){
   </div>
 
   <div class="grid g4" style="margin-bottom:16px">
-    <div class="kpi"><div class="lbl">${ic("grid")} Classe</div><div class="val" style="font-size:20px">${cfg.short}</div><div class="foo">${blocTxt(cls)} • 2 groupes de ${cfg.heures} h</div></div>
+    <div class="kpi"><div class="lbl">${ic("grid")} Classe</div><div class="val" style="font-size:20px;color:${clsCoul(cls)}">${cfg.short}</div><div class="foo">${blocTxt(cls)} • 2 groupes de ${cfg.heures} h</div></div>
     <div class="kpi k-teal"><div class="lbl">${ic("list")} Séances du trimestre</div><div class="val">${list.length}</div><div class="foo">${list.length*cfg.heures} h par groupe &bull; ${list.length*cfg.heures*cfg.groupes} h d'enseignement</div></div>
     <div class="kpi k-amber"><div class="lbl">${ic("check")} Avancement</div><div class="val">${pct}<small> %</small></div><div class="foo">${done} séance(s) réalisée(s) / échue(s)</div></div>
     <div class="kpi k-rose"><div class="lbl">${ic("flag")} Épreuves</div>
@@ -916,7 +919,7 @@ function renderProg(){
       <div class="card-h">
         <h3>${ic("target")} ${P.titre}</h3>
         <div class="row">
-          <span class="badge ${cls==="3SI1"?"b-blue":"b-teal"}">${CLASSES[cls].dayTxt}</span>
+          <span class="badge ${clsChip(cls)}">${CLASSES[cls].dayTxt}</span>
           <span class="badge b-grey">${COMPETENCES[cls].length} compétences</span>
         </div>
       </div>
@@ -1055,7 +1058,7 @@ function renderCahier(){
           return `<div class="tl-item ${flag?"t-eval":""}">
             <div class="spread">
               <div>
-                <div class="d">${fmtLong(s.iso)} • <span class="badge ${s.cls==="3SI1"?"b-blue":"b-teal"}">${s.cls}</span>
+                <div class="d">${fmtLong(s.iso)} • <span class="badge ${clsChip(s.cls)}">${s.cls}</span>
                   ${st==="faite"?'<span class="badge b-green">assurée</span>':st==="passee"?'<span class="badge b-amber">à confirmer</span>':st==="reportee"?'<span class="badge b-rose">reportée</span>':'<span class="badge b-grey">à venir</span>'}
                 </div>
                 <div class="t">Séance n°${s.n} — ${escapeHtml(titleOf(s,store))}</div>
@@ -1651,20 +1654,45 @@ function renderCloudBar(){
 
 /* ---------- installation en mode application (PWA) ---------- */
 let installEvt = null;
+function standaloneMode(){ return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone; }
+function onMobileLike(){ return window.matchMedia("(max-width: 820px)").matches || window.matchMedia("(pointer: coarse)").matches; }
+function installDismissed(){ try { return Date.now() < (+(localStorage.getItem("sti_install_hide") || 0)); } catch(e){ return true; } }
+function showInstallBanner(txt){
+  const b = document.getElementById("install-banner");
+  if (!b || standaloneMode() || installDismissed()) return;
+  if (txt){ const sub = document.getElementById("install-sub"); if (sub) sub.textContent = txt; }
+  b.classList.remove("hidden");
+}
+function dismissInstall(){
+  try { localStorage.setItem("sti_install_hide", String(Date.now() + 14*24*3600*1000)); } catch(e){}
+  const b = document.getElementById("install-banner");
+  if (b) b.classList.add("hidden");
+}
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); }
+/* affiché sur mobile : à l'ouverture, et à nouveau quand le navigateur signale
+   que l'application est installable ; jamais en mode autonome ni après « Plus tard » */
+function maybeShowInstallHint(){
+  if (!onMobileLike() || standaloneMode() || installDismissed()) return;
+  if (isIOS()) showInstallBanner("Sur iPhone / iPad : bouton Partager → « Sur l'écran d'accueil ».");
+  else showInstallBanner("Plein écran, démarrage rapide et fonctionnement sans connexion.");
+}
 window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   installEvt = e;
   const btn = document.getElementById("btn-install");
   if (btn) btn.style.display = "";
+  maybeShowInstallHint();
 });
 function installApp(){
+  const b = document.getElementById("install-banner"); if (b) b.classList.add("hidden");
   if (installEvt){
     installEvt.prompt();
     installEvt = null;
-    document.getElementById("btn-install").style.display = "none";
+    const btn = document.getElementById("btn-install");
+    if (btn) btn.style.display = "none";
     return;
   }
-  const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+  const standalone = standaloneMode();
   alert(
     "Installer l'application sur l'appareil\n\n" +
     (standalone ? "L'application est déjà installée et ouverte en mode autonome.\n\n" : "") +
@@ -1674,11 +1702,16 @@ function installApp(){
     "Une fois installée, l'application s'ouvre depuis l'icône, démarre plus vite, fonctionne sans connexion et affiche vos documents hors ligne."
   );
 }
+window.dismissInstall = dismissInstall;
+window.maybeShowInstallHint = maybeShowInstallHint;
+window.showInstallBanner = showInstallBanner;
 /* confirmation une fois l'application réellement installée */
 window.addEventListener("appinstalled", () => {
   installEvt = null;
   const btn = document.getElementById("btn-install");
   if (btn) btn.style.display = "none";
+  const b = document.getElementById("install-banner");
+  if (b) b.classList.add("hidden");
   if (typeof toast === "function") toast("Application installée — retrouvez son icône sur l'écran d'accueil ou dans le menu Démarrer");
 });
 function registerSW(){
@@ -1712,6 +1745,7 @@ window.addEventListener("offline", () => { const e = document.getElementById("ne
   if (hash && /^v-/.test(hash) && document.getElementById(hash)) currentTab = hash;
   renderAll(true);
   renderCloudBar();
+  maybeShowInstallHint();
   cloudFirstRunRestore();
   registerSW();
   const e = document.getElementById("net-state");
@@ -1821,5 +1855,5 @@ window.applyUpdate = applyUpdate;
 /* état exposé (débogage et tests) */
 window.cloudPush = cloudPush;
 window.cloudPull = cloudPull;
-window.store = store; window.SESSIONS = SESSIONS; window.KEY = KEY;
+window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.clsCoul = clsCoul; window.KEY = KEY;
 })();

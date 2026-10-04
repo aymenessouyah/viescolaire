@@ -256,3 +256,36 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
 .sec-bloc>.row{margin-top:4px}
 .memo-tbl .mono{font-size:12px}
 @media print{.update-bar{display:none !important}}
+
+/* ============================================================
+   Identité des classes — 3SI1 = bleu • 4SI2 = violet
+   (utilisée partout : badges, calendrier, tableaux, tableau de bord)
+   ============================================================ */
+:root{
+  --c-3si1:#1668b3; --c-3si1-bg:#dcecfb; --c-3si1-line:#c9e0f5; --c-3si1-ink:#0f5f9e;
+  --c-4si2:#6d28d9; --c-4si2-bg:#efe6ff; --c-4si2-line:#ddcdf7; --c-4si2-ink:#5b21b6;
+}
+.b-3si1{background:var(--c-3si1);color:#fff;border-color:var(--c-3si1)}
+.b-4si2{background:var(--c-4si2);color:#fff;border-color:var(--c-4si2)}
+.chip-3si1{background:var(--c-3si1-bg);color:var(--c-3si1-ink);border-color:var(--c-3si1-line)}
+.chip-4si2{background:var(--c-4si2-bg);color:var(--c-4si2-ink);border-color:var(--c-4si2-line)}
+tr.acc-3si1 td:first-child{box-shadow:inset 4px 0 0 var(--c-3si1)}
+tr.acc-4si2 td:first-child{box-shadow:inset 4px 0 0 var(--c-4si2)}
+.ev-3si1{background:var(--c-3si1-bg);color:var(--c-3si1-ink)}
+.ev-4si2{background:var(--c-4si2-bg);color:var(--c-4si2-ink)}
+/* les évaluations passent en neutre : le violet reste réservé à la 4SI2 */
+.ev-e{background:#e3e9f2;color:#3c5670}
+
+/* ============================================================
+   Bandeau d'installation (mobile) — invite à installer l'application
+   ============================================================ */
+#install-banner{
+  position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  z-index:90;display:flex;gap:10px;align-items:center;justify-content:space-between;
+  background:linear-gradient(120deg,var(--navy),var(--navy-2));color:#fff;
+  border-radius:14px;padding:12px 14px;box-shadow:var(--sh-lg);
+  max-width:560px;margin:0 auto;border:1px solid rgba(255,255,255,.08);
+}
+#install-banner .t{font-weight:700;font-size:14px;line-height:1.2}
+#install-banner .s{font-size:12px;opacity:.85;line-height:1.35}
+#install-banner.hidden{display:none}
