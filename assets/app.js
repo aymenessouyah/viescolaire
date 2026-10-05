@@ -200,7 +200,7 @@ let repCls = "3SI1", repTri = 1;
 function renderAll(silent){
   document.getElementById("tabs").innerHTML = TABS.map(t =>
     '<button class="tab '+(currentTab===t.id?"on":"")+'" onclick="go(\''+t.id+'\')">'+ic(t.ico)+t.t+
-    (t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].filter(s=>s.tri===1).length + SESSIONS["4SI2"].filter(s=>s.tri===1).length) +'</span>' : '') +
+    (t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].concat(SESSIONS["4SI2"]).filter(s => s.iso >= todayISO()).length) +'</span>' : '') +
     '</button>').join("");
   document.getElementById("tb-today").innerHTML = "Nous sommes le <strong>"+fmtLong(todayISO())+"</strong>";
   document.getElementById("ft-year").textContent = "Mise à jour : " + (typeof store.saved === "string" ? fmtShort(store.saved.slice(0,10)) + " " + store.saved.slice(11,16) : "session en cours");
@@ -795,6 +795,7 @@ function renderRep(){
     const st = seanceState(s);
     const k = s.blk ? s.blk.k : "cours";
     const o = store.seances[cls+"|"+s.n] || {};
+    const fiche = (DATA.docs || []).find(f => f.se && f.cls === cls && s.n >= f.se[0] && s.n <= f.se[1]);
     const titre = titleOf(s, store);
     const det = o.contenu || (s.blk ? s.blk.det : "Contenu à définir par l'enseignant (séance générée automatiquement).");
     const inEval = jalonsForClass(s.iso, cls).some(j => j.type==="eval" || j.type==="bloc");
@@ -817,6 +818,7 @@ function renderRep(){
       <td class="hide-sm"><span class="badge b-grey">${s.blk ? s.blk.d : "—"}</span><div class="tiny muted" style="margin-top:4px">${s.blk ? s.blk.o : ""}</div></td>
       <td style="white-space:nowrap">${badges}
         <div class="row no-print" style="margin-top:6px">
+          ${fiche ? '<a class="btn btn-xs btn-soft" href="'+encodeURI(fiche.f)+'" target="_blank" title="'+escapeHtml(fiche.t)+'">📄 Préparation</a>' : ""}
           <button class="btn btn-xs btn-soft" onclick="openModal('${cls}',${s.n})">${ic("edit")} Fiche</button>
           <button class="btn btn-xs btn-line" onclick="toggleDone('${cls}',${s.n})">${st==="faite"?"Annuler":"Marquer faite"}</button>
         </div></td>
@@ -827,7 +829,7 @@ function renderRep(){
   <div class="sec-head">
     <div>
       <h2>${ic("list")} Répartition trimestrielle — contenu officiel replacé sur le calendrier 2026/2027</h2>
-      <p class="lead">Le contenu provient des documents de répartition fournis (1<sup>er</sup> trimestre). Les <strong>dates réelles</strong> sont calculées séance par séance selon les créneaux de chaque classe (chaque séance est assurée avec le Groupe 1 puis reprise avec le Groupe 2) et selon le calendrier tunisien : jours fériés, vacances et semaines bloquées sont automatiquement exclus. Cliquez sur « Fiche » pour consigner le contenu réellement traité, les devoirs donnés et vos observations.</p>
+      <p class="lead">Le contenu provient des documents de répartition officiels (les trois trimestres). Les <strong>dates réelles</strong> sont calculées séance par séance selon les créneaux de chaque classe (chaque séance est assurée avec le Groupe 1 puis reprise avec le Groupe 2) et selon le calendrier tunisien : jours fériés, vacances et semaines bloquées sont automatiquement exclus. Cliquez sur « Fiche » pour consigner le contenu réellement traité, les devoirs donnés et vos observations.</p>
     </div>
     <div class="row no-print">
       <div class="row" style="gap:6px">
@@ -844,8 +846,8 @@ function renderRep(){
     <div class="kpi k-teal"><div class="lbl">${ic("list")} Séances du trimestre</div><div class="val">${list.length}</div><div class="foo">${list.length*cfg.heures} h par groupe &bull; ${list.length*cfg.heures*cfg.groupes} h d'enseignement</div></div>
     <div class="kpi k-amber"><div class="lbl">${ic("check")} Avancement</div><div class="val">${pct}<small> %</small></div><div class="foo">${done} séance(s) réalisée(s) / échue(s)</div></div>
     <div class="kpi k-rose"><div class="lbl">${ic("flag")} Épreuves</div>
-      <div class="val" style="font-size:17px">${repTri===1 ? "DC1 "+ (dcList[0]?fmtJM(dcList[0]):"—") + " • DC2 " + (dcList[1]?fmtJM(dcList[1]):"—") : "—"}</div>
-      <div class="foo">${repTri===1 ? "DS1 : " + fmtShort(DS1[cls].main) + " (semaine bloquée)" : "Voir le calendrier officiel"}</div></div>
+      <div class="val" style="font-size:17px">${["DC1","DC2","DC3","DC4","DC5","DC6"][(repTri-1)*2] + " " + (dcList[(repTri-1)*2]?fmtJM(dcList[(repTri-1)*2]):"—") + " • " + ["DC1","DC2","DC3","DC4","DC5","DC6"][(repTri-1)*2+1] + " " + (dcList[(repTri-1)*2+1]?fmtJM(dcList[(repTri-1)*2+1]):"—")}</div>
+      <div class="foo">${repTri===1 ? "DS1 : " + fmtShort(DS1[cls].main) + " (semaine bloquée)" : repTri===2 ? "DS2 : semaine du 04 au 13 mars — jour fixé par l'établissement" : (cls==="3SI1" ? "DS3 : semaine du 24 au 29 mai (semaine bloquée)" : "Cours terminés le 14 mai — révision orientée bac")}</div></div>
   </div>
 
   <div class="card">
@@ -998,6 +1000,7 @@ function renderProg(){
                     <td><span class="badge b-grey">${s.blk.d}</span></td></tr>`).join("")}
                   </tbody></table>
                 </div>
+                ${(() => { const ns = seances.map(x => x.n); const fiches = (DATA.docs || []).filter(dd => dd.se && dd.cls === cls && dd.se.some(x => ns.includes(x))); return fiches.length ? '<div class="tiny" style="margin-bottom:10px">📄 <strong>Fiches de préparation associées :</strong> ' + fiches.map(f => '<a href="' + encodeURI(f.f) + '" target="_blank" style="text-decoration:underline;font-weight:600">' + escapeHtml(f.t) + '</a>').join(" • ") + '</div>' : ""; })()}
                 ${evals.length ? '<div class="tiny muted" style="margin-bottom:10px">Évaluation rattachée : '+evals.map(s => jourS(s.iso)+" "+fmtShort(s.iso)+" ("+s.blk.t+")").join(" • ")+'</div>' : ""}
               ` : '<div class="note warn tiny" style="margin-bottom:10px">'+ic("alert")+' Cette compétence n\'est pas traitée au 1<sup>er</sup> trimestre : '+(cp.periode||"planification ultérieure")+'. Les supports et le mémo restent disponibles dès maintenant.</div>'}
 

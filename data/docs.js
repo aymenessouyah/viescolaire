@@ -29,19 +29,19 @@ const DOCS = [
   { g:G_ANNEX, t:"Annexe SQL — élaborée par A. Essouyah", f:"docs/Annexe-SQL.pdf", s:"7 pages &bull; annexe de cours", d:"LDD détaillé (CREATE / ALTER), LMD avec agrégats, fonctions de chaînes (CONCAT, LENGTH, SUBSTRING, LEFT, RIGHT) et fonctions de dates." },
 
   /* ---------- 3. fiches de séances (dossier documents/Fiches 2026-2027) ---------- */
-  { g:G_FICHE, t:"Fiche des séances 5-6 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S5-6.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 5 et 6 : objectifs, déroulement, activités et exercices." },
-  { g:G_FICHE, t:"Fiche des séances 7-8 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S7-8.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 7 et 8." },
-  { g:G_FICHE, t:"Fiche des séances 9-10 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S9-10.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 9 et 10 (évaluations rattachées : DC1)." },
-  { g:G_FICHE, t:"Fiche des séances 11-12 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S11-12.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 11 et 12." },
-  { g:G_FICHE, t:"Fiche des séances 13-14 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S13-14.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 13 et 14 (évaluations rattachées : DC2)." },
-  { g:G_FICHE, t:"Fiche des séances 15-16 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S15-16.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 15 et 16." },
-  { g:G_FICHE, t:"Fiche des séances 5-6 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S5-6.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 5 et 6." },
-  { g:G_FICHE, t:"Fiche de la séance 7 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S7.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée de la séance 7." },
-  { g:G_FICHE, t:"Fiche des séances 8-9 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S8-9.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 8 et 9." },
-  { g:G_FICHE, t:"Fiche des séances 10-11 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S10-11.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 10 et 11 (évaluations rattachées : DC1)." },
-  { g:G_FICHE, t:"Fiche des séances 12-13 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S12-13.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 12 et 13 (évaluations rattachées : DC2)." },
-  { g:G_FICHE, t:"Fiche de la séance 14 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S14.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée de la séance 14." },
-  { g:G_FICHE, t:"Fiche des séances 15-16 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S15-16.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 15 et 16 (évaluations rattachées : DS1)." }
+  { g:G_FICHE, t:"Fiche des séances 5-6 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S5-6.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 5 et 6 : objectifs, déroulement, activités et exercices.", cls:"3SI1", se:[5,6] },
+  { g:G_FICHE, t:"Fiche des séances 7-8 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S7-8.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 7 et 8.", cls:"3SI1", se:[7,8] },
+  { g:G_FICHE, t:"Fiche des séances 9-10 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S9-10.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 9 et 10 (évaluations rattachées : DC1).", cls:"3SI1", se:[9,10] },
+  { g:G_FICHE, t:"Fiche des séances 11-12 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S11-12.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 11 et 12.", cls:"3SI1", se:[11,12] },
+  { g:G_FICHE, t:"Fiche des séances 13-14 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S13-14.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 13 et 14 (évaluations rattachées : DC2).", cls:"3SI1", se:[13,14] },
+  { g:G_FICHE, t:"Fiche des séances 15-16 — 3SI1", f:"documents/Fiches 2026-2027/3sti/S15-16.docx", s:"3SI1 &bull; Word (.docx)", d:"Préparation détaillée des séances 15 et 16.", cls:"3SI1", se:[15,16] },
+  { g:G_FICHE, t:"Fiche des séances 5-6 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S5-6.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 5 et 6.", cls:"4SI2", se:[5,6] },
+  { g:G_FICHE, t:"Fiche de la séance 7 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S7.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée de la séance 7.", cls:"4SI2", se:[7,7] },
+  { g:G_FICHE, t:"Fiche des séances 8-9 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S8-9.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 8 et 9.", cls:"4SI2", se:[8,9] },
+  { g:G_FICHE, t:"Fiche des séances 10-11 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S10-11.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 10 et 11 (évaluations rattachées : DC1).", cls:"4SI2", se:[10,11] },
+  { g:G_FICHE, t:"Fiche des séances 12-13 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S12-13.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 12 et 13 (évaluations rattachées : DC2).", cls:"4SI2", se:[12,13] },
+  { g:G_FICHE, t:"Fiche de la séance 14 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S14.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée de la séance 14.", cls:"4SI2", se:[14,14] },
+  { g:G_FICHE, t:"Fiche des séances 15-16 — 4SI2", f:"documents/Fiches 2026-2027/4sti/S15-16.docx", s:"4SI2 &bull; Word (.docx)", d:"Préparation détaillée des séances 15 et 16 (évaluations rattachées : DS1).", cls:"4SI2", se:[15,16] }
 ];
 
 root.STI_DATA = root.STI_DATA || {};
