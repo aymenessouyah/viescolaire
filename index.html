@@ -54,7 +54,20 @@
       </div>
     </div>
     <div class="head-actions no-print">
-      <button class="btn btn-ghost" id="btn-compte" onclick="openCloud()" title="Votre compte professeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> <span id="compte-txt">Connexion</span></button>
+      <div style="position:relative;display:inline-block">
+        <button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> <span id="compte-txt">Connexion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div id="menu-compte" class="hidden" style="position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
+          <div id="mc-id" class="tiny" style="padding:8px 10px;border-bottom:1px solid var(--line-2);margin-bottom:4px"></div>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('connexion')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Se connecter / Changer de compte</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('profil')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> Mon profil (nom et matière)</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('admin')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="9" cy="7" r="4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg> Gérer les professeurs</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0;color:#b02a3a" onclick="menuAction('deconnexion')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 12H8"/><path d="m12 9 3 3-3 3"/><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg> Se déconnecter</button>
+        </div>
+      </div>
       <button class="btn btn-ghost" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg> Cloud</button>
       <button class="btn btn-ghost" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimer</button>
       <button class="btn btn-ghost" onclick="exportJSON()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Exporter</button>

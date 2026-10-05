@@ -1317,6 +1317,41 @@ function renderCompte(){
   const p = (store.profil && store.profil.nom) ? store.profil.nom.split(" ")[0] : "";
   txt.textContent = (typeof estAdmin === "function" && estAdmin()) ? (p || "Admin") : (p || "Connecté");
 }
+/* menu déroulant du compte : connexion, profil, administration, déconnexion */
+function toggleCompte(ev){
+  if (ev) ev.stopPropagation();
+  const m = document.getElementById("menu-compte");
+  if (!m) return;
+  const ouvrir = m.classList.contains("hidden");
+  m.classList.toggle("hidden", !ouvrir);
+  if (ouvrir){
+    const u = authUser();
+    const p = (store.profil && store.profil.nom) ? store.profil.nom + " — " + (store.profil.matiere || "") : "";
+    document.getElementById("mc-id").innerHTML =
+      (authSession() && u ? '<strong>' + escapeHtml(u) + '</strong>' + (p ? '<br>' + escapeHtml(p) : "")
+                          : '<strong>Non connecté</strong><br>Connectez-vous pour retrouver vos données');
+    const estConnecte = !!(authSession() && u);
+    const btns = m.querySelectorAll("button");
+    /* Se connecter / profil / déconnexion : visibilité selon l'état */
+    btns[0].style.display = estConnecte ? "" : "";            /* connexion (toujours : changer de compte) */
+    btns[1].style.display = estConnecte ? "" : "none";        /* profil */
+    btns[2].style.display = (typeof estAdmin === "function" && estAdmin()) ? "" : "none";  /* gérer les profs */
+    btns[3].style.display = estConnecte ? "" : "none";        /* déconnexion */
+  }
+}
+function fermerMenuCompte(){ const m = document.getElementById("menu-compte"); if (m) m.classList.add("hidden"); }
+function menuAction(quoi){
+  fermerMenuCompte();
+  if (quoi === "connexion") openAuth();
+  else if (quoi === "profil") openProfil();
+  else if (quoi === "admin") openAdmin();
+  else if (quoi === "deconnexion") doLogout();
+}
+document.addEventListener("click", e => {
+  const m = document.getElementById("menu-compte");
+  if (m && !m.classList.contains("hidden") && !m.contains(e.target)) fermerMenuCompte();
+});
+
 function renderLoginInvite(){
   const b = document.getElementById("login-invite");
   if (!b) return;
@@ -1915,5 +1950,6 @@ window.applyUpdate = applyUpdate;
 /* état exposé (débogage et tests) */
 window.cloudPush = cloudPush;
 window.cloudPull = cloudPull;
-window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.renderCompte = renderCompte; window.renderLoginInvite = renderLoginInvite; window.clsCoul = clsCoul; window.KEY = KEY;
+window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.renderCompte = renderCompte; window.renderLoginInvite = renderLoginInvite;
+window.toggleCompte = toggleCompte; window.menuAction = menuAction; window.fermerMenuCompte = fermerMenuCompte; window.clsCoul = clsCoul; window.KEY = KEY;
 })();
