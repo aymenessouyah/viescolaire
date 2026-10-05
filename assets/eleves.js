@@ -473,19 +473,26 @@ function applyProfil(){
    SCAN D'UNE FEUILLE DE PRÉSENCE (liste des élèves par photo)
    ------------------------------------------------------------------
    La photo est lue par reconnaissance de texte (Tesseract.js, chargé
-   une seule fois à la demande) ; le résultat est proposé dans la zone
-   « ajout rapide en masse » pour RELECTURE avant import.
-   Sans réseau, la saisie manuelle reste disponible.
+   une seule fois à la demande, avec worker et noyau explicites) ;
+   le résultat est proposé dans la zone « ajout rapide en masse »
+   pour RELECTURE avant import. Sans réseau, la saisie manuelle
+   reste disponible.
    ================================================================== */
+const TESS = {
+  src:  "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
+  worker: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",
+  core:   "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1",
+  lang:   "https://tessdata.projectnaptha.com/4.0.0"
+};
 let scanCharge = null;
 function chargerTesseract(){
   if (window.Tesseract) return Promise.resolve();
   if (scanCharge) return scanCharge;
   scanCharge = new Promise((ok, ko) => {
     const sc = document.createElement("script");
-    sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    sc.src = TESS.src;
     sc.onload = () => ok();
-    sc.onerror = () => { scanCharge = null; ko(new Error("chargement impossible (hors ligne ?)")); };
+    sc.onerror = () => { scanCharge = null; ko(new Error("chargement du lecteur impossible (hors ligne ?)")); };
     document.head.appendChild(sc);
   });
   return scanCharge;
@@ -499,14 +506,18 @@ function scanFeuille(cid){
 function scanFichier(cid, inp){
   const f = inp.files && inp.files[0];
   if (!f) return;
-  toast("Lecture de la feuille…");
+  const st = document.getElementById("toast-txt");
+  toast("Lecture de la feuille… (le lecteur se prépare, comptez 10 à 30 s la première fois)");
   chargerTesseract().then(() => {
-    const st = document.getElementById("toast-txt");
-    const tick = setInterval(() => { if (st) st.textContent = "Lecture de la feuille… (reconnaissance en cours)"; }, 800);
-    return Tesseract.recognize(f, "fra", { logger: () => {} }).then(r => {
-      clearInterval(tick);
-      scanVersZone(cid, r.data.text || "");
-    });
+    /* worker + noyau + données françaises explicites : évite les échecs de chemins implicites */
+    return Tesseract.createWorker("fra", 1, {
+      workerPath: TESS.worker,
+      corePath: TESS.core,
+      langPath: TESS.lang,
+      logger: m => { if (st && m.status) st.textContent = "Lecture de la feuille… " + m.status + " " + Math.round((m.progress || 0) * 100) + "%"; }
+    }).then(worker => worker.recognize(f).then(r => worker.terminate()).then(() => r));
+  }).then(r => {
+    scanVersZone(cid, (r.data && r.data.text) || "");
   }).catch(e => {
     toast("Scanner indisponible : " + (e.message || e) + " — saisissez la liste ci-dessous");
     const d = document.getElementById("el-lot"); if (d) d.focus();
