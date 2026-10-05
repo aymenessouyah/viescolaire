@@ -54,6 +54,7 @@
       </div>
     </div>
     <div class="head-actions no-print">
+      <button class="btn btn-ghost" id="btn-compte" onclick="openCloud()" title="Votre compte professeur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> <span id="compte-txt">Connexion</span></button>
       <button class="btn btn-ghost" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg> Cloud</button>
       <button class="btn btn-ghost" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimer</button>
       <button class="btn btn-ghost" onclick="exportJSON()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Exporter</button>
@@ -112,6 +113,14 @@
       </button>
     </div>
   </div>
+</div>
+
+<!-- ===================== INVITATION À SE CONNECTER ===================== -->
+<div id="login-invite" class="note warn hidden no-print" style="margin-bottom:14px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+  <span>🔒 <strong>Vous n'êtes pas connecté.</strong> Connectez-vous pour retrouver vos données et enregistrer vos modifications dans votre espace privé.</span>
+  <span class="row no-print" style="gap:8px">
+    <button class="btn btn-xs btn-blue" onclick="openAuth()">Se connecter</button>
+  </span>
 </div>
 
 <!-- ===================== BANDEAU D'INSTALLATION (MOBILE) ===================== -->

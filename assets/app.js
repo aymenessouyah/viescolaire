@@ -213,6 +213,8 @@ function renderAll(silent){
   if (typeof applyProfil === "function") applyProfil();
   renderCahier();
   renderRef();
+  renderCompte();
+  renderLoginInvite();
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
 }
 function go(id){
@@ -1214,6 +1216,7 @@ async function doLogin(){
     b.querySelector("#auth-pass").value = "";
     closeAuth();
     toast("Connexion réussie — " + email);
+    renderCompte(); renderLoginInvite();
     await afterLogin();
   } catch (e) {
     err.textContent = "Échec de la connexion : " + (e.message || e);
@@ -1266,7 +1269,7 @@ async function doLogout(){
   authClear();
   window.__afterLogin = null;
   toast("Déconnecté — les données restent sur cet appareil");
-  renderAll(true); renderCloudBar();
+  renderAll(true); renderCloudBar(); renderCompte(); renderLoginInvite();
 }
 /* après une connexion réussie : synchronisation dans le bon sens */
 async function afterLogin(){
@@ -1305,6 +1308,19 @@ function cloudTime(){
   const s = store.cloud && store.cloud.at;
   if (!s) return "jamais";
   return fmtShort(s.slice(0,10)) + " à " + s.slice(11,16);
+}
+/* bouton « Compte » de l'en-tête : Connexion / Admin / prénom du professeur */
+function renderCompte(){
+  const txt = document.getElementById("compte-txt");
+  if (!txt) return;
+  if (!cloudReady() || !authNeeded() || !authSession()){ txt.textContent = "Connexion"; return; }
+  const p = (store.profil && store.profil.nom) ? store.profil.nom.split(" ")[0] : "";
+  txt.textContent = (typeof estAdmin === "function" && estAdmin()) ? (p || "Admin") : (p || "Connecté");
+}
+function renderLoginInvite(){
+  const b = document.getElementById("login-invite");
+  if (!b) return;
+  b.classList.toggle("hidden", !(cloudReady() && authNeeded() && !authSession() && currentTab === "v-dash"));
 }
 function cloudBadge(){
   if (!cloudReady()) return '<span class="badge b-amber">Sauvegarde locale seulement</span>';
@@ -1786,6 +1802,8 @@ window.addEventListener("offline", () => { const e = document.getElementById("ne
   if (hash && /^v-/.test(hash) && document.getElementById(hash)) currentTab = hash;
   renderAll(true);
   renderCloudBar();
+  renderCompte();
+  renderLoginInvite();
   maybeShowInstallHint();
   cloudFirstRunRestore();
   registerSW();
@@ -1897,5 +1915,5 @@ window.applyUpdate = applyUpdate;
 /* état exposé (débogage et tests) */
 window.cloudPush = cloudPush;
 window.cloudPull = cloudPull;
-window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.clsCoul = clsCoul; window.KEY = KEY;
+window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.renderCompte = renderCompte; window.renderLoginInvite = renderLoginInvite; window.clsCoul = clsCoul; window.KEY = KEY;
 })();
