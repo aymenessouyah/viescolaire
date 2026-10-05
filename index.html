@@ -127,6 +127,36 @@
   </div>
 </div>
 
+<!-- ===================== MODALE POINTAGE VOCAL ===================== -->
+<div class="modal" id="voc-modal">
+  <div class="box" style="max-width:520px">
+    <div class="box-h">
+      <h3 style="font-size:16px">Pointage à la voix</h3>
+      <button class="btn btn-xs btn-line" onclick="vocStop();document.getElementById('voc-modal').classList.remove('on')">Fermer</button>
+    </div>
+    <div class="box-b">
+      <p class="small" style="color:var(--ink-2);margin-bottom:10px">
+        Touchez <strong>l'élève</strong> à pointer (ou dictez son nom), puis appuyez sur le micro et dites
+        <strong>« absent »</strong>, <strong>« exclu »</strong>, <strong>« sorti »</strong>,
+        <strong>« entrée par billet »</strong>, « présent » ou « retard ».
+      </p>
+      <div class="row" style="gap:12px;align-items:center;margin-bottom:12px">
+        <button id="voc-mic" onclick="vocToggle()" style="width:72px;height:72px;border-radius:50%;background:var(--rose);color:#fff;border:none;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 10px 24px -10px rgba(194,44,72,.6)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:32px;height:32px"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v4"/><path d="M8 23h8"/></svg>
+        </button>
+        <div style="min-width:0">
+          <div id="voc-statut" class="small"><strong>Cible :</strong> <span id="voc-cible">—</span></div>
+          <div id="voc-entendu" class="tiny muted" style="margin-top:2px;min-height:18px"></div>
+        </div>
+      </div>
+      <div id="voc-liste" style="display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto"></div>
+    </div>
+    <div class="box-f">
+      <button class="btn btn-line" onclick="vocStop();document.getElementById('voc-modal').classList.remove('on')">Terminer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MODALE PROFIL PROFESSEUR ===================== -->
 <div class="modal" id="profil-modal">
   <div class="box" style="max-width:430px">

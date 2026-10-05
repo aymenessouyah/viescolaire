@@ -89,7 +89,7 @@ function etatPresence(cid, iso, eid){ return ((presencesDe(cid)[iso] || {})[eid]
 function cyclePresence(cid, iso, eid){
   const j = presencesDe(cid);
   j[iso] = j[iso] || {};
-  const ordre = ["", "p", "a", "r"];
+  const ordre = ["", "p", "a", "e", "s", "b", "r"];
   j[iso][eid] = ordre[(ordre.indexOf(j[iso][eid] || "") + 1) % ordre.length];
   save(true); renderEleves();
 }
@@ -296,6 +296,8 @@ function vueRoster(cid){
         <div><label class="f">Groupe</label><input id="el-grp" type="number" min="1" max="${c.groupes||2}" value="1" style="width:80px"></div>
         <div><label class="f">N° PC</label><input id="el-pc" style="width:90px" placeholder="P12"></div>
         <button class="btn btn-blue" onclick="addEleve('${cid}')">${ic("plus")} Ajouter</button>
+        <button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="scanFeuille('${cid}')" title="Photographier une feuille de présence : la liste est lue puis proposée à la relecture">📷 Scanner une feuille</button>
+        <input type="file" id="scan-input" accept="image/*" capture="environment" style="display:none" onchange="scanFichier('${cid}',this)">
       </div>
       <details class="acc" style="margin-bottom:12px"><summary>Ajout rapide en masse (une ligne par élève : Nom ; Prénom ; Groupe ; PC)</summary>
         <div style="padding:10px 0">
@@ -320,12 +322,14 @@ function vuePresence(cid){
   const iso = elDate || todayISO();
   const els = triEleves(elevesDe(cid));
   const jour = presencesDe(cid)[iso] || {};
-  const nb = { p:0, a:0, r:0 };
+  const nb = { p:0, a:0, e:0, s:0, b:0, r:0 };
   Object.values(jour).forEach(v => { if (nb[v] !== undefined) nb[v]++; });
   const dates = Object.keys(presencesDe(cid)).sort().reverse().slice(0, 8);
   return `<div class="card">
     <div class="card-h"><h3>${ic("check")} Présences — ${escapeHtml(c.nom)}</h3>
-      <div class="row" style="gap:8px"><input type="date" id="pr-date" value="${iso}" onchange="renderEleves(elDate=this.value)">
+      <div class="row" style="gap:8px">
+      <button class="btn btn-xs" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="vocOuvrir('${cid}',document.getElementById('pr-date').value)" title="Dictée des états : absent, exclu, sorti, entrée par billet, présent, retard">🎤 Pointer à la voix</button>
+      <input type="date" id="pr-date" value="${iso}" onchange="renderEleves(elDate=this.value)">
       <button class="btn btn-xs btn-blue" onclick="setAllPresent('${cid}',document.getElementById('pr-date').value)">Tous présents</button>
       <button class="btn btn-xs btn-line" onclick="clearPresence('${cid}',document.getElementById('pr-date').value)">Vider</button></div></div>
     <div class="card-b">
@@ -334,11 +338,11 @@ function vuePresence(cid){
           const st = jour[e.id] || "";
           return `<tr><td><strong>${escapeHtml(e.nom)}</strong> ${escapeHtml(e.prenom||"")} <span class="tiny muted">Gr. ${e.groupe||1}</span></td>
           <td>${e.pc ? escapeHtml(e.pc) : "—"}</td>
-          <td><button class="btn btn-xs ${st==="p"?"btn-blue":"btn-line"}" style="${st==="p"?"background:var(--green);border-color:var(--green)":""}" onclick="cyclePresence('${cid}','${iso}','${e.id}')">${st==="p"?"✓ présent":st==="a"?"✗ absent":st==="r"?"⏱ retard":"non marqué"}</button></td></tr>`;
+          <td><button class="btn btn-xs ${st?"btn-blue":"btn-line"}" style="${st==="p"?"background:var(--green);border-color:var(--green)":st==="a"?"background:var(--rose);border-color:var(--rose);color:#fff":st==="e"?"background:#a51f38;border-color:#a51f38;color:#fff":st==="s"?"background:var(--amber);border-color:var(--amber);color:#fff":st==="b"?"background:var(--blue-2);border-color:var(--blue-2);color:#fff":st==="r"?"background:var(--amber-bg);color:var(--amber);border-color:var(--amber-line)":""}" onclick="cyclePresence('${cid}','${iso}','${e.id}')">${LIB_P[st]||"non marqué"}</button></td></tr>`;
         }).join("")}
       </tbody></table></div>
       <div class="row" style="gap:8px;margin-top:10px">
-        <span class="badge b-green">${nb.p} présent(s)</span><span class="badge" style="background:var(--rose-bg);color:#a51f38;border-color:var(--rose-line)">${nb.a} absent(s)</span><span class="badge b-amber">${nb.r} retard(s)</span>
+        <span class="badge b-green">${nb.p} présent(s)</span><span class="badge" style="background:var(--rose-bg);color:#a51f38;border-color:var(--rose-line)">${nb.a} absent(s)</span>${nb.e?'<span class="badge" style="background:#a51f38;color:#fff;border-color:#a51f38">'+nb.e+' exclu(s)</span>':""}${nb.s?'<span class="badge b-amber">'+nb.s+' sorti(s)</span>':""}${nb.b?'<span class="badge b-blue">'+nb.b+' par billet</span>':""}<span class="badge b-amber">${nb.r} retard(s)</span>
       </div>` : '<p class="tiny muted">Ajoutez d\'abord des élèves (vue « Élèves »).</p>'}
       ${dates.length ? `<div class="tiny muted" style="margin-top:12px">Dernières séances pointées : ${dates.map(d => `<button class="btn btn-xs btn-line" style="margin:2px" onclick="renderEleves(elDate='${d}')">${fmtShort(d)}</button>`).join(" ")}</div>` : ""}
     </div></div>`;
@@ -465,6 +469,204 @@ function applyProfil(){
   if (f) f.textContent = "Matière " + mat;
 }
 
+/* ==================================================================
+   SCAN D'UNE FEUILLE DE PRÉSENCE (liste des élèves par photo)
+   ------------------------------------------------------------------
+   La photo est lue par reconnaissance de texte (Tesseract.js, chargé
+   une seule fois à la demande) ; le résultat est proposé dans la zone
+   « ajout rapide en masse » pour RELECTURE avant import.
+   Sans réseau, la saisie manuelle reste disponible.
+   ================================================================== */
+let scanCharge = null;
+function chargerTesseract(){
+  if (window.Tesseract) return Promise.resolve();
+  if (scanCharge) return scanCharge;
+  scanCharge = new Promise((ok, ko) => {
+    const sc = document.createElement("script");
+    sc.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    sc.onload = () => ok();
+    sc.onerror = () => { scanCharge = null; ko(new Error("chargement impossible (hors ligne ?)")); };
+    document.head.appendChild(sc);
+  });
+  return scanCharge;
+}
+function scanFeuille(cid){
+  const inp = document.getElementById("scan-input");
+  if (!inp){ toast("Entrée de scan introuvable"); return; }
+  inp.value = "";
+  inp.click();
+}
+function scanFichier(cid, inp){
+  const f = inp.files && inp.files[0];
+  if (!f) return;
+  toast("Lecture de la feuille…");
+  chargerTesseract().then(() => {
+    const st = document.getElementById("toast-txt");
+    const tick = setInterval(() => { if (st) st.textContent = "Lecture de la feuille… (reconnaissance en cours)"; }, 800);
+    return Tesseract.recognize(f, "fra", { logger: () => {} }).then(r => {
+      clearInterval(tick);
+      scanVersZone(cid, r.data.text || "");
+    });
+  }).catch(e => {
+    toast("Scanner indisponible : " + (e.message || e) + " — saisissez la liste ci-dessous");
+    const d = document.getElementById("el-lot"); if (d) d.focus();
+  });
+}
+/* nettoyage OCR → lignes « Nom ; Prénom » pour la zone d'ajout en masse */
+function scanParseTexte(txt){
+  const lignes = txt.split(/\r?\n+/).map(l => l.trim()).filter(Boolean);
+  const out = [];
+  lignes.forEach(l => {
+    let x = l.replace(/^\s*\d+\s*[).\-–—:]?\s*/, "")       /* numéro d'ordre */
+             .replace(/^[•*\-–—]+\s*/, "")                  /* puces */
+             .replace(/\([^)]*\)/g, " ")
+             .replace(/\s{2,}/g, " ").trim();
+    if (!x || x.length < 3) return;
+    if (/^(nom|prénom|prenom|liste|classe|élève|eleve|groupe|n°|no)\b/i.test(x) && !/[;]/.test(x)) return;
+    if (/[;]/.test(x)){ out.push(x); return; }
+    const mots = x.split(" ");
+    if (mots.length === 1){ out.push(mots[0] + " ;"); return; }
+    /* noms composés : Ben Ammar, Abd + …, El/Al + … → deux mots pour le nom */
+    const particules = ["ben", "bin", "abd", "abou", "el", "al", "bou", "dar", "housein", "bali"];
+    let coupe = 1;
+    if (mots.length >= 3 && particules.includes(mots[0].toLowerCase())) coupe = 2;
+    out.push(mots.slice(0, coupe).join(" ") + " ; " + mots.slice(coupe).join(" "));
+  });
+  return out.join("\n");
+}
+function scanVersZone(cid, txt){
+  const prop = scanParseTexte(txt);
+  const det = document.querySelector("#v-eleves details.acc");
+  const zone = document.getElementById("el-lot");
+  if (zone){
+    zone.value = prop;
+    if (det) det.open = true;
+    zone.focus();
+  }
+  const n = prop.split("\n").filter(Boolean).length;
+  toast(n + " ligne(s) lue(s) — relisez puis « Ajouter la liste »");
+  renderEleves();
+}
+
+/* ==================================================================
+   POINTAGE À LA VOIX (Web Speech API — intégré au navigateur)
+   États dictés : absent, exclu, sorti, entrée par billet, présent, retard.
+   ================================================================== */
+const LIB_P = { p:"✓ présent", a:"✗ absent", e:"⛔ exclu", s:"🚪 sorti", b:"🎫 entrée par billet", r:"⏱ retard" };
+const VOC_ETATS = [
+  ["entree par billet","b"], ["entre par billet","b"], ["billet","b"],
+  ["absent","a"], ["absence","a"],
+  ["exclu","e"], ["exclue","e"], ["exclure","e"],
+  ["sorti","s"], ["sortie","s"], ["sortir","s"],
+  ["present","p"], ["présent","p"],
+  ["retard","r"]
+];
+function vocNorm(t){
+  return (t || "").toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s]/g, " ").replace(/\s+/g, " ").trim();
+}
+/* analyse une phrase : trouve l'état dicté et l'élève nommé (s'il y en a un) */
+function vocAnalyse(cid, phrase){
+  const norm = vocNorm(phrase);
+  let et = "";
+  for (const [k, v] of VOC_ETATS){
+    if (norm.includes(k)){ et = v; break; }
+  }
+  let el = null;
+  const candidat = elevesDe(cid).find(e => {
+    const nomN = vocNorm(e.nom), preN = vocNorm(e.prenom || "");
+    return (nomN.length >= 3 && norm.includes(nomN)) || (preN.length >= 3 && norm.includes(preN));
+  }) || null;
+  return { et:et, e:candidat };
+}
+function setPresence(cid, iso, eid, st){
+  const j = presencesDe(cid);
+  j[iso] = j[iso] || {};
+  j[iso][eid] = st;
+  save(true); renderEleves();
+}
+let voc = { rec:null, on:false, cible:null, cid:null, iso:null };
+function vocOuvrir(cid, iso){
+  voc.cid = cid; voc.iso = iso; voc.cible = null;
+  const b = document.getElementById("voc-modal");
+  if (!b) return;
+  const liste = document.getElementById("voc-liste");
+  const els = triEleves(elevesDe(cid));
+  liste.innerHTML = els.map(e => {
+    const st = etatPresence(cid, iso, e.id);
+    return '<button id="voc-e-' + e.id + '" class="btn btn-xs ' + (st ? "btn-blue" : "btn-line") + '" style="margin:2px" onclick="vocCible(\'' + e.id + '\')">' +
+      escapeHtml(e.nom + " " + (e.prenom || "")) + (st ? " • " + LIB_P[st] : "") + '</button>';
+  }).join("") || '<span class="tiny muted">Aucun élève dans cette classe.</span>';
+  document.getElementById("voc-cible").textContent = "— (dictez le nom)";
+  document.getElementById("voc-entendu").textContent = "";
+  b.classList.add("on");
+  vocSuivantNonMarque();
+  if (!(window.SpeechRecognition || window.webkitSpeechRecognition)){
+    document.getElementById("voc-entendu").textContent = "La dictée n'est pas disponible sur ce navigateur (essayez Chrome ou Edge) — utilisez les boutons de statut.";
+  } else {
+    toast("Touchez un élève puis appuyez sur le micro");
+  }
+}
+function vocCible(eid){
+  voc.cible = eid;
+  const e = elevesDe(voc.cid).find(x => x.id === eid);
+  document.getElementById("voc-cible").textContent = e ? (e.nom + " " + (e.prenom || "")) : "—";
+  vocPeindre();
+}
+function vocSuivantNonMarque(){
+  const els = triEleves(elevesDe(voc.cid));
+  const suivant = els.find(e => !etatPresence(voc.cid, voc.iso, e.id));
+  if (suivant) vocCible(suivant.id);
+  vocPeindre();
+}
+function vocPeindre(){
+  triEleves(elevesDe(voc.cid)).forEach(e => {
+    const b = document.getElementById("voc-e-" + e.id);
+    if (!b) return;
+    const st = etatPresence(voc.cid, voc.iso, e.id);
+    b.className = "btn btn-xs " + (st ? "btn-blue" : "btn-line") + (e.id === voc.cible ? "" : "");
+    b.style.outline = e.id === voc.cible ? "2px solid var(--rose)" : "";
+    b.innerHTML = escapeHtml(e.nom + " " + (e.prenom || "")) + (st ? " • " + LIB_P[st] : "");
+  });
+}
+function vocToggle(){ voc.on ? vocStop() : vocDemarrer(); }
+function vocDemarrer(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ toast("Dictée indisponible sur ce navigateur — essayez Chrome ou Edge"); return; }
+  const rec = new SR();
+  rec.lang = "fr-FR"; rec.continuous = true; rec.interimResults = false;
+  rec.onresult = ev => {
+    const ph = ev.results[ev.results.length - 1][0].transcript;
+    document.getElementById("voc-entendu").textContent = "Entendu : « " + ph + " »";
+    vocTraiter(ph);
+  };
+  rec.onerror = ev => {
+    if (ev.error === "not-allowed") document.getElementById("voc-entendu").textContent = "Micro refusé : autorisez le microphone dans le navigateur.";
+    voc.on = false; vocPeindreMic();
+  };
+  rec.onend = () => { if (voc.on){ try { rec.start(); } catch(e){} } };
+  try { rec.start(); voc.rec = rec; voc.on = true; vocPeindreMic(); } catch(e){}
+}
+function vocStop(){
+  if (voc.rec){ voc.on = false; try { voc.rec.stop(); } catch(e){} voc.rec = null; vocPeindreMic(); }
+}
+function vocPeindreMic(){
+  const m = document.getElementById("voc-mic");
+  if (m) m.style.background = voc.on ? "var(--green)" : "var(--rose)";
+}
+/* applique une phrase entendue : « Ahmed absent », « exclu Salma », « billet pour Youssef »… */
+function vocTraiter(phrase){
+  const a = vocAnalyse(voc.cid, phrase);
+  const cible = a.e || elevesDe(voc.cid).find(e => e.id === voc.cible) || null;
+  if (!cible){ toast("Indiquez l'élève (touchez son nom ou dictez-le)"); return; }
+  if (!a.et){ toast("État non reconnu — dites : absent, exclu, sorti, billet, présent ou retard"); return; }
+  setPresence(voc.cid, voc.iso, cible.id, a.et);
+  toast(cible.nom + " — " + (LIB_P[a.et] || a.et));
+  vocPeindre();
+  vocSuivantNonMarque();
+}
+
 /* ---------- exports ---------- */
 window.mesClasses = mesClasses; window.addClasse = addClasse; window.delClasse = delClasse;
 window.addEleve = addEleve; window.addElevesLot = addElevesLot; window.delEleve = delEleve;
@@ -476,6 +678,11 @@ window.statsEleve = statsEleve; window.classementClasse = classementClasse; wind
 window.moyennesParNotion = moyennesParNotion; window.renderEleves = renderEleves;
 window.triEleves = triEleves; window.elClasseCourante = elClasseCourante;
 /* état de l'onglet, accessible aux gestionnaires inline (testés par la suite de vérification) */
-window.elVue = elVue; window.elClasse = elClasse; window.elEpreuve = elEpreuve; window.elEleve = elEleve; window.epreuvesDe = epreuvesDe; window.elevesDe = elevesDe;
+window.elVue = elVue; window.elClasse = elClasse; window.elEpreuve = elEpreuve; window.elEleve = elEleve;
+window.__voc = () => voc; window.epreuvesDe = epreuvesDe; window.elevesDe = elevesDe;
+window.scanFeuille = scanFeuille; window.scanFichier = scanFichier; window.scanParseTexte = scanParseTexte;
+window.vocOuvrir = vocOuvrir; window.vocToggle = vocToggle; window.vocStop = vocStop;
+window.vocTraiter = vocTraiter; window.vocAnalyse = vocAnalyse; window.vocCible = vocCible;
+window.setPresence = setPresence; window.vocSuivantNonMarque = vocSuivantNonMarque;
 window.openProfil = openProfil; window.closeProfil = closeProfil; window.saveProfil = saveProfil;
 window.applyProfil = applyProfil;

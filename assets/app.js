@@ -639,6 +639,23 @@ function renderCal(){
   for (let i=0;i<startDow;i++) cells.push(null);
   for (let d=1; d<=daysInMonth; d++) cells.push(ISO(new Date(calY, calM, d)));
 
+  /* examens précis : numéros de devoirs de contrôle par classe et chips DS */
+  const dcNum = {};
+  ["3SI1","4SI2"].forEach(c => {
+    let k = 0;
+    (SESSIONS[c] || []).forEach(se => { if (se.blk && se.blk.k === "dc"){ k++; dcNum[c + "|" + se.iso] = k; } });
+  });
+  const clsDs = {}, dsChips = {};
+  JALONS.forEach(j => {
+    if (j.type === "bloc" && j.from && j.from.length === 10){
+      (j.classes || ["3SI1","4SI2"]).forEach(c => {
+        clsDs[c] = (clsDs[c] || 0) + 1;
+        dsChips[j.from] = dsChips[j.from] || [];
+        dsChips[j.from].push("📕 DS" + clsDs[c] + " — " + c + " (jour fixé par l'établissement)");
+      });
+    }
+  });
+
   const cellHtml = cells.map(iso => {
     if (!iso) return '<div class="cell out"></div>';
     const vac = vacationOf(iso), fer = ferieOf(iso), sus = suspensionOf(iso);
@@ -651,6 +668,8 @@ function renderCal(){
       ${fer?`<div class="ev ev-h">🎌 ${fer.label.split("(")[0].trim()}</div>`:""}
       ${sus?`<div class="ev ev-e">📕 ${sus.classes?sus.classes.join("/")+" — ":""}suspension</div>`:""}
       ${list.map(s => `<div class="ev ${s.cls==="3SI1"?"ev-3si1":"ev-4si2"}" title="${escapeHtml(titleOf(s,store))}">${s.cls} • S${s.n}</div>`).join("")}
+      ${list.filter(s => s.blk && s.blk.k === "dc").map(s => `<div class="ev ev-e" title="Devoir de contrôle n°${dcNum[s.cls+"|"+s.iso]} — ${s.cls} (date précise)">🎯 DC${dcNum[s.cls+"|"+s.iso]} — ${s.cls}</div>`).join("")}
+      ${(dsChips[iso] || []).map(t => `<div class="ev ev-e" title="Le jour exact du devoir de synthèse est arrêté par l'établissement durant la semaine bloquée">${t}</div>`).join("")}
       ${jal.filter(j=>j.type!=="info"&&j.type!=="start").slice(0,1).map(j => `<div class="ev ev-e">${j.label.replace(/<[^>]+>/g,"").slice(0,38)}</div>`).join("")}
     </div>`;
   }).join("");
