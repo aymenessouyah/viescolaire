@@ -240,6 +240,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
 .scan-et.ok{color:var(--green)}
 .scan-et.err{color:var(--rose);font-weight:600}
 .scan-bw i{display:block;height:6px;border-radius:3px;background:var(--blue);width:0%;transition:width .25s}
+.ar-nom{direction:rtl;font-size:12.5px;color:var(--ink-2)}
 @keyframes scan-rot{to{transform:rotate(360deg)}}
 @media (max-width:920px){.scan-grid{grid-template-columns:1fr}.scan-box{position:static;order:-1}}
 @media (max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
