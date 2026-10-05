@@ -12,6 +12,7 @@
 (function () {
 'use strict';
 
+const APP_VER = "v1.1.12";
 const DATA = window.STI_DATA || {};
 if (!DATA.reference) {
   document.addEventListener("DOMContentLoaded", function(){
@@ -1330,6 +1331,8 @@ function toggleCompte(ev){
     document.getElementById("mc-id").innerHTML =
       (authSession() && u ? '<strong>' + escapeHtml(u) + '</strong>' + (p ? '<br>' + escapeHtml(p) : "")
                           : '<strong>Non connecté</strong><br>Connectez-vous pour retrouver vos données');
+    const mv = document.getElementById("mc-ver");
+    if (mv) mv.textContent = "Version " + APP_VER + " — lecteur de feuilles intégré";
     const estConnecte = !!(authSession() && u);
     const btns = m.querySelectorAll("button");
     /* Se connecter / profil / déconnexion : visibilité selon l'état */
@@ -1340,6 +1343,14 @@ function toggleCompte(ev){
   }
 }
 function fermerMenuCompte(){ const m = document.getElementById("menu-compte"); if (m) m.classList.add("hidden"); }
+/* efface le cache local et recharge : garantit l'exécution de la dernière version publiée */
+async function forceMaj(){
+  if (!confirm("Effacer le cache local et recharger l'application en dernière version ?")) return;
+  toast("Effacement du cache…");
+  try { if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch(e){}
+  try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } } catch(e){}
+  setTimeout(() => location.replace(location.href), 350);
+}
 function menuAction(quoi){
   fermerMenuCompte();
   if (quoi === "connexion") openAuth();
@@ -1951,5 +1962,6 @@ window.applyUpdate = applyUpdate;
 window.cloudPush = cloudPush;
 window.cloudPull = cloudPull;
 window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.renderCompte = renderCompte; window.renderLoginInvite = renderLoginInvite;
-window.toggleCompte = toggleCompte; window.menuAction = menuAction; window.fermerMenuCompte = fermerMenuCompte; window.clsCoul = clsCoul; window.KEY = KEY;
+window.toggleCompte = toggleCompte; window.menuAction = menuAction; window.fermerMenuCompte = fermerMenuCompte;
+window.APP_VER = APP_VER; window.forceMaj = forceMaj; window.clsCoul = clsCoul; window.KEY = KEY;
 })();
