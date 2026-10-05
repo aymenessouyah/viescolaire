@@ -127,6 +127,31 @@
   </div>
 </div>
 
+<!-- ===================== MODALE ADMINISTRATION DES PROFESSEURS ===================== -->
+<div class="modal" id="admin-modal">
+  <div class="box" style="max-width:760px">
+    <div class="box-h">
+      <h3 style="font-size:16px">Administration — professeurs</h3>
+      <button class="btn btn-xs btn-line" onclick="closeAdmin()">Fermer</button>
+    </div>
+    <div class="box-b">
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+        <div style="min-width:220px"><label class="f">Adresse électronique du collègue</label>
+          <input type="email" id="ad-email" placeholder="collegue@exemple.tn"></div>
+        <div style="min-width:180px"><label class="f">Mot de passe provisoire</label>
+          <input type="text" id="ad-pass" placeholder="6 caractères au moins"></div>
+        <button class="btn btn-blue" onclick="adminCreer()">Créer le compte</button>
+        <button class="btn btn-line" onclick="adminLister()">Rafraîchir</button>
+      </div>
+      <div id="ad-msg" class="tiny" style="min-height:18px;margin-bottom:8px"></div>
+      <div id="admin-liste"><p class="tiny muted">Chargement…</p></div>
+    </div>
+    <div class="box-f">
+      <button class="btn btn-line" onclick="closeAdmin()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== MODALE POINTAGE VOCAL ===================== -->
 <div class="modal" id="voc-modal">
   <div class="box" style="max-width:520px">
@@ -275,5 +300,6 @@
 <!-- ===================== APPLICATION ===================== -->
 <script src="assets/app.js"></script>
 <script src="assets/eleves.js"></script>
+<script src="assets/admin.js"></script>
 </body>
 </html>

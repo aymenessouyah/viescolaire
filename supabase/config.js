@@ -34,5 +34,6 @@ window.STI_SUPABASE = {
   table: "espace_pedagogique",        // table créée par supabase/schema.sql
   device: "Poste principal — Prof. Aymen",
   auto:  true,                        // envoi automatique à chaque enregistrement
-  auth:  true                         // accès protégé par mot de passe (compte unique)
+  auth:  true,                        // accès protégé par mot de passe
+  admin: "aymenessouyah@gmail.com"    // compte administrateur : gestion des professeurs
 };

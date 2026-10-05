@@ -1291,7 +1291,8 @@ function cloudCfg(){
     table: cfg.table || w.table || "espace_pedagogique",
     device: cfg.device || w.device || (SCHOOL.prof + " — appareil principal"),
     auto: cfg.auto !== undefined ? cfg.auto : true,  /* sauvegarde distante par défaut dès qu'un projet est configuré */
-    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false)   /* accès protégé par mot de passe */
+    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false),  /* accès protégé par mot de passe */
+    admin: cfg.admin || w.admin || ""   /* compte administrateur (gestion des professeurs) */
   };
 }
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
@@ -1429,7 +1430,8 @@ function saveCloudSettings(){
     table: b.querySelector("#cfg-table").value.trim() || "espace_pedagogique",
     device: b.querySelector("#cfg-device").value.trim() || SCHOOL.prof,
     auto: b.querySelector("#cfg-auto").checked,
-    auth: b.querySelector("#cfg-auth") ? b.querySelector("#cfg-auth").checked : false
+    auth: b.querySelector("#cfg-auth") ? b.querySelector("#cfg-auth").checked : false,
+    admin: cloudCfg().admin || ""
   };
   if (cfg.table.includes("@")) {
     if (confirm("Le champ « Table » doit contenir le nom de la table SQL créée par schema.sql :\n\n    espace_pedagogique\n\npas une adresse électronique (l'adresse, elle, se saisit dans la fenêtre « Connexion »).\n\nOK : je corrige automatiquement. — Annuler : vous le corrigez vous-même.")) {
@@ -1671,6 +1673,7 @@ function cloudCard(){
             ? '<button class="btn btn-xs btn-line" onclick="doLogout()">' + ic("out") + ' Se déconnecter</button>'
             : '<button class="btn btn-xs btn-blue" onclick="openAuth()">' + ic("lock") + ' Se connecter</button>') : ""}
         <button class="btn btn-xs btn-line" onclick="openCloudSettings()">${ic("edit")} Configuration</button>
+        ${typeof estAdmin === "function" && estAdmin() ? '<button class="btn btn-xs btn-blue" onclick="openAdmin()">${ic("users")} Gérer les professeurs</button>' : ""}
         <button class="btn btn-xs btn-line" onclick="exportJSON()">${ic("file")} Export JSON</button>
       </div>
       <div class="note tiny" style="margin-top:10px">${ic("pin")}
