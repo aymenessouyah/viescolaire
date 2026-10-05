@@ -41,6 +41,11 @@ button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .dot{width:7px;height:7px;border-radius:50%;background:#25d0bd;box-shadow:0 0 0 0 rgba(37,208,189,.7);animation:pulse 2.4s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,208,189,.6)}70%{box-shadow:0 0 0 8px rgba(37,208,189,0)}100%{box-shadow:0 0 0 0 rgba(37,208,189,0)}}
 
+/* les icônes SVG ont une taille par défaut : une icône hors bouton/titre
+   ne doit jamais s'étendre à toute la largeur du conteneur */
+svg{width:16px;height:16px;flex:none}
+.note svg{stroke:var(--blue);vertical-align:-3px;margin-right:3px}
+
 /* ---------- En-tête ---------- */
 .hero-head{background:linear-gradient(120deg,var(--navy) 0%,#14456f 55%,#0e6f8f 100%);color:#fff;padding:22px 0 26px}
 .hero-head .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center}
@@ -240,6 +245,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
 .scan-et.ok{color:var(--green)}
 .scan-et.err{color:var(--rose);font-weight:600}
 .scan-bw i{display:block;height:6px;border-radius:3px;background:var(--blue);width:0%;transition:width .25s}
+.ar-nom{direction:rtl;font-size:12.5px;color:var(--ink-2)}
 @keyframes scan-rot{to{transform:rotate(360deg)}}
 @media (max-width:920px){.scan-grid{grid-template-columns:1fr}.scan-box{position:static;order:-1}}
 @media (max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
