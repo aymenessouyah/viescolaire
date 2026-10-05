@@ -227,6 +227,21 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
 .no{color:var(--rose);font-weight:800}
 
 /* ---------- Responsive ---------- */
+/* scan d'une feuille : formulaire à gauche, boîte d'étapes à droite */
+.scan-grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start;margin-bottom:12px}
+.scan-box{background:var(--sky-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px 14px;position:sticky;top:66px}
+.scan-ets{list-style:none;margin:10px 0 0;padding:0}
+.scan-et{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--ink-3)}
+.scan-et .ic{width:18px;flex:none;text-align:center}
+.scan-et .scan-bw{flex:1;max-width:84px;margin-left:auto;visibility:hidden}
+.scan-et.act{color:var(--navy);font-weight:600}
+.scan-et.act .ic{display:inline-block;animation:scan-rot 1.1s linear infinite}
+.scan-et.act .scan-bw{visibility:visible}
+.scan-et.ok{color:var(--green)}
+.scan-et.err{color:var(--rose);font-weight:600}
+.scan-bw i{display:block;height:6px;border-radius:3px;background:var(--blue);width:0%;transition:width .25s}
+@keyframes scan-rot{to{transform:rotate(360deg)}}
+@media (max-width:920px){.scan-grid{grid-template-columns:1fr}.scan-box{position:static;order:-1}}
 @media (max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
 @media (max-width:760px){
   .g2,.g3,.g4{grid-template-columns:1fr}

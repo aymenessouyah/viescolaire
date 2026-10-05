@@ -290,14 +290,29 @@ function vueRoster(cid){
   return `<div class="card">
     <div class="card-h"><h3>${ic("users")} Élèves — ${escapeHtml(c.nom)}</h3><span class="badge b-grey">${els.length} inscrit(s)</span></div>
     <div class="card-b">
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
-        <div><label class="f">Nom</label><input id="el-nom" placeholder="Ben Ali"></div>
-        <div><label class="f">Prénom</label><input id="el-pre"></div>
-        <div><label class="f">Groupe</label><input id="el-grp" type="number" min="1" max="${c.groupes||2}" value="1" style="width:80px"></div>
-        <div><label class="f">N° PC</label><input id="el-pc" style="width:90px" placeholder="P12"></div>
-        <button class="btn btn-blue" onclick="addEleve('${cid}')">${ic("plus")} Ajouter</button>
-        <button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="scanFeuille('${cid}')" title="Photographier une feuille de présence : la liste est lue puis proposée à la relecture">📷 Scanner une feuille</button>
-        <input type="file" id="scan-input" accept="image/*" capture="environment" style="display:none" onchange="scanFichier('${cid}',this)">
+      <div class="scan-grid">
+        <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <div><label class="f">Nom</label><input id="el-nom" placeholder="Ben Ali"></div>
+          <div><label class="f">Prénom</label><input id="el-pre"></div>
+          <div><label class="f">Groupe</label><input id="el-grp" type="number" min="1" max="${c.groupes||2}" value="1" style="width:80px"></div>
+          <div><label class="f">N° PC</label><input id="el-pc" style="width:90px" placeholder="P12"></div>
+          <button class="btn btn-blue" onclick="addEleve('${cid}')">${ic("plus")} Ajouter</button>
+        </div>
+        <div class="scan-box" id="scan-box">
+          <div style="font-weight:700;font-size:14px;margin-bottom:2px">📷 Scan d'une feuille de présence</div>
+          <p class="tiny muted" style="margin:0 0 8px">Photographiez la liste écrite des élèves : elle est lue automatiquement, puis proposée à la relecture ci-dessous.</p>
+          <button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy);width:100%" onclick="scanFeuille('${cid}')" title="La photo est lue par reconnaissance de texte, puis proposée à la relecture">📷 Prendre / choisir la photo</button>
+          <input type="file" id="scan-input" accept="image/*" capture="environment" style="display:none" onchange="scanFichier('${cid}',this)">
+          <ol class="scan-ets" id="scan-ets">
+            <li id="scan-et-1" class="scan-et"><span class="ic">○</span><span class="t">Photo choisie</span></li>
+            <li id="scan-et-2" class="scan-et"><span class="ic">○</span><span class="t">Moteur de lecture chargé</span></li>
+            <li id="scan-et-3" class="scan-et"><span class="ic">○</span><span class="t">Démarrage du lecteur</span></li>
+            <li id="scan-et-4" class="scan-et"><span class="ic">○</span><span class="t">Langue française prête</span></li>
+            <li id="scan-et-5" class="scan-et"><span class="ic">○</span><span class="t">Lecture du texte</span><span class="scan-bw"><i id="scan-pct"></i></span></li>
+            <li id="scan-et-6" class="scan-et"><span class="ic">○</span><span class="t">Analyse de la liste</span></li>
+          </ol>
+          <div id="scan-err" class="hidden" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--rose-bg);border:1px solid var(--rose-line);color:#8f1f33;font-size:13px"></div>
+        </div>
       </div>
       <details class="acc" style="margin-bottom:12px"><summary>Ajout rapide en masse (une ligne par élève : Nom ; Prénom ; Groupe ; PC)</summary>
         <div style="padding:10px 0">
@@ -478,50 +493,121 @@ function applyProfil(){
    pour RELECTURE avant import. Sans réseau, la saisie manuelle
    reste disponible.
    ================================================================== */
+/* ==================================================================
+   SCAN D'UNE FEUILLE DE PRÉSENCE (liste des élèves par photo)
+   ------------------------------------------------------------------
+   Le moteur de lecture (Tesseract.js v5, licence Apache-2.0) est
+   EMBARQUÉ dans le site : assets/tesseract/ → plus aucun serveur
+   externe (ni CDN), mêmes origines, et lecture possible hors ligne
+   après la première utilisation (cache de l'application).
+   Chaque étape s'affiche en direct dans la boîte à droite du
+   formulaire ; en cas d'échec, le message s'y affiche et la saisie
+   manuelle reste disponible en dessous.
+   ================================================================== */
 const TESS = {
-  src:  "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",
-  worker: "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js",
-  core:   "https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1",
-  lang:   "https://tessdata.projectnaptha.com/4.0.0"
+  src:    "assets/tesseract/tesseract.min.js",
+  worker: "assets/tesseract/worker.min.js",
+  core:   "assets/tesseract/core",
+  lang:   "assets/tesseract/lang"
 };
+function tessURL(p){ return new URL(p, location.href).href; }
 let scanCharge = null;
 function chargerTesseract(){
   if (window.Tesseract) return Promise.resolve();
   if (scanCharge) return scanCharge;
   scanCharge = new Promise((ok, ko) => {
     const sc = document.createElement("script");
-    sc.src = TESS.src;
-    sc.onload = () => ok();
-    sc.onerror = () => { scanCharge = null; ko(new Error("chargement du lecteur impossible (hors ligne ?)")); };
+    const nid = setTimeout(() => { scanCharge = null; ko(new Error("chargement trop long (réseau lent ?)")); }, 25000);
+    sc.src = tessURL(TESS.src);
+    sc.onload = () => { clearTimeout(nid); ok(); };
+    sc.onerror = () => { clearTimeout(nid); scanCharge = null; ko(new Error("moteur de lecture introuvable — rechargez la page")); };
     document.head.appendChild(sc);
   });
   return scanCharge;
 }
+/* ---- boîte d'étapes (à droite du formulaire d'ajout) ---- */
+const SCAN_IC = { "-": "○", act: "◕", ok: "✓", err: "✗" };
+function scanEtape(n, etat, txt){
+  const li = document.getElementById("scan-et-" + n);
+  if (!li) return;
+  li.className = "scan-et" + (etat === "-" ? "" : " " + etat);
+  const ic = li.querySelector(".ic");
+  if (ic) ic.textContent = SCAN_IC[etat] || "○";
+  if (txt !== undefined){ const t = li.querySelector(".t"); if (t) t.textContent = txt; }
+  if (etat === "ok" || etat === "-"){
+    const b = document.getElementById("scan-pct");
+    if (b && (n !== 5 || etat === "-")) b.style.width = etat === "ok" ? "100%" : "0%";
+  }
+}
+let scanCur = 0;
+function scanBoiteReset(){
+  for (let i = 1; i <= 6; i++) scanEtape(i, "-");
+  const e = document.getElementById("scan-err");
+  if (e){ e.classList.add("hidden"); e.textContent = ""; }
+  scanCur = 0;
+}
+function scanBoiteErreur(e){
+  if (scanCur >= 1) scanEtape(scanCur, "err");
+  const b = document.getElementById("scan-err");
+  if (b){
+    b.classList.remove("hidden");
+    b.textContent = "⚠ " + (e && e.message ? e.message : e) + " — la saisie manuelle ci-dessous reste disponible.";
+  }
+}
+/* ---- déroulé du scan ---- */
 function scanFeuille(cid){
   const inp = document.getElementById("scan-input");
   if (!inp){ toast("Entrée de scan introuvable"); return; }
   inp.value = "";
+  scanBoiteReset();
   inp.click();
 }
-function scanFichier(cid, inp){
+async function scanFichier(cid, inp){
   const f = inp.files && inp.files[0];
   if (!f) return;
-  const st = document.getElementById("toast-txt");
-  toast("Lecture de la feuille… (le lecteur se prépare, comptez 10 à 30 s la première fois)");
-  chargerTesseract().then(() => {
-    /* worker + noyau + données françaises explicites : évite les échecs de chemins implicites */
-    return Tesseract.createWorker("fra", 1, {
-      workerPath: TESS.worker,
-      corePath: TESS.core,
-      langPath: TESS.lang,
-      logger: m => { if (st && m.status) st.textContent = "Lecture de la feuille… " + m.status + " " + Math.round((m.progress || 0) * 100) + "%"; }
-    }).then(worker => worker.recognize(f).then(r => worker.terminate()).then(() => r));
-  }).then(r => {
+  scanBoiteReset();
+  scanCur = 1;
+  scanEtape(1, "ok", "Photo choisie (" + Math.max(1, Math.round(f.size / 1024)) + " Ko)");
+  toast("Lecture de la feuille… suivez les étapes dans la boîte à droite (10 à 30 s la première fois)");
+  try {
+    scanCur = 2; scanEtape(2, "act");
+    await chargerTesseract();
+    scanEtape(2, "ok");
+    const wk = await Tesseract.createWorker("fra", 1, {
+      workerPath: tessURL(TESS.worker),
+      corePath: tessURL(TESS.core),
+      langPath: tessURL(TESS.lang),
+      logger: s => {
+        if (!s || !s.status) return;
+        const p = Math.round((s.progress || 0) * 100);
+        if (s.status === "loading tesseract core" || s.status === "initializing tesseract"){
+          scanCur = 3; scanEtape(3, "act");
+        } else if (s.status === "loading language traineddata"){
+          scanCur = 4; scanEtape(4, "act", p < 100 ? "Langue française — " + p + " %" : "Langue française prête");
+        } else if (s.status === "initializing api"){
+          scanCur = 4; scanEtape(4, "ok");
+          scanCur = 5; scanEtape(5, "act", "Lecture du texte — 0 %");
+        } else if (s.status === "recognizing text"){
+          scanCur = 5; scanEtape(5, "act", "Lecture du texte — " + p + " %");
+          const b = document.getElementById("scan-pct");
+          if (b) b.style.width = p + "%";
+        }
+      }
+    });
+    scanEtape(3, "ok");
+    scanEtape(4, "ok");
+    scanCur = 5; scanEtape(5, "act", "Lecture du texte — 0 %");
+    const r = await wk.recognize(f);
+    try { await wk.terminate(); } catch(_e){}
+    scanEtape(5, "ok");
+    scanCur = 6; scanEtape(6, "act");
     scanVersZone(cid, (r.data && r.data.text) || "");
-  }).catch(e => {
-    toast("Scanner indisponible : " + (e.message || e) + " — saisissez la liste ci-dessous");
-    const d = document.getElementById("el-lot"); if (d) d.focus();
-  });
+  } catch(e) {
+    scanBoiteErreur(e);
+    toast("Scanner indisponible : " + (e && e.message ? e.message : e));
+    const d = document.getElementById("el-lot");
+    if (d) d.focus();
+  }
 }
 /* nettoyage OCR → lignes « Nom ; Prénom » pour la zone d'ajout en masse */
 function scanParseTexte(txt){
@@ -534,7 +620,7 @@ function scanParseTexte(txt){
              .replace(/\s{2,}/g, " ").trim();
     if (!x || x.length < 3) return;
     if (/^(nom|prénom|prenom|liste|classe|élève|eleve|groupe|n°|no)\b/i.test(x) && !/[;]/.test(x)) return;
-    if (/[;]/.test(x)){ out.push(x); return; }
+    if (/;/.test(x)){ out.push(x); return; }
     const mots = x.split(" ");
     if (mots.length === 1){ out.push(mots[0] + " ;"); return; }
     /* noms composés : Ben Ammar, Abd + …, El/Al + … → deux mots pour le nom */
@@ -549,14 +635,19 @@ function scanVersZone(cid, txt){
   const prop = scanParseTexte(txt);
   const det = document.querySelector("#v-eleves details.acc");
   const zone = document.getElementById("el-lot");
+  /* IMPORTANT : ne pas re-rendre la vue ici — le re-rendu recrée la zone
+     de texte et EFFACERAIT le résultat du scan (bug v1.1.4) */
   if (zone){
     zone.value = prop;
     if (det) det.open = true;
     zone.focus();
   }
   const n = prop.split("\n").filter(Boolean).length;
-  toast(n + " ligne(s) lue(s) — relisez puis « Ajouter la liste »");
-  renderEleves();
+  scanCur = 6;
+  if (n) scanEtape(6, "ok", "Analyse : " + n + " ligne(s) reconnue(s)");
+  else scanEtape(6, "err", "Aucune ligne reconnue — rapprochez le cadrage et réessayez");
+  toast(n ? n + " ligne(s) lue(s) — relisez puis « Ajouter la liste »"
+          : "Aucune ligne lue — prenez la photo de plus près, bien nette");
 }
 
 /* ==================================================================
@@ -692,6 +783,8 @@ window.triEleves = triEleves; window.elClasseCourante = elClasseCourante;
 window.elVue = elVue; window.elClasse = elClasse; window.elEpreuve = elEpreuve; window.elEleve = elEleve;
 window.__voc = () => voc; window.epreuvesDe = epreuvesDe; window.elevesDe = elevesDe;
 window.scanFeuille = scanFeuille; window.scanFichier = scanFichier; window.scanParseTexte = scanParseTexte;
+window.scanEtape = scanEtape; window.scanBoiteReset = scanBoiteReset; window.scanBoiteErreur = scanBoiteErreur; window.scanVersZone = scanVersZone;
+window.__scan = () => ({ cur: scanCur, set: v => { scanCur = v; } });
 window.vocOuvrir = vocOuvrir; window.vocToggle = vocToggle; window.vocStop = vocStop;
 window.vocTraiter = vocTraiter; window.vocAnalyse = vocAnalyse; window.vocCible = vocCible;
 window.setPresence = setPresence; window.vocSuivantNonMarque = vocSuivantNonMarque;
