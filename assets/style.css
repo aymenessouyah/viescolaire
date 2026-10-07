@@ -41,6 +41,11 @@ button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .dot{width:7px;height:7px;border-radius:50%;background:#25d0bd;box-shadow:0 0 0 0 rgba(37,208,189,.7);animation:pulse 2.4s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,208,189,.6)}70%{box-shadow:0 0 0 8px rgba(37,208,189,0)}100%{box-shadow:0 0 0 0 rgba(37,208,189,0)}}
 
+/* les icônes SVG ont une taille par défaut : une icône hors bouton/titre
+   ne doit jamais s'étendre à toute la largeur du conteneur */
+svg{width:16px;height:16px;flex:none}
+.note svg{stroke:var(--blue);vertical-align:-3px;margin-right:3px}
+
 /* ---------- En-tête ---------- */
 .hero-head{background:linear-gradient(120deg,var(--navy) 0%,#14456f 55%,#0e6f8f 100%);color:#fff;padding:22px 0 26px}
 .hero-head .wrap{display:flex;flex-wrap:wrap;gap:18px;justify-content:space-between;align-items:center}
@@ -240,6 +245,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between}
 .scan-et.ok{color:var(--green)}
 .scan-et.err{color:var(--rose);font-weight:600}
 .scan-bw i{display:block;height:6px;border-radius:3px;background:var(--blue);width:0%;transition:width .25s}
+.ar-nom{direction:rtl;font-size:12.5px;color:var(--ink-2)}
 @keyframes scan-rot{to{transform:rotate(360deg)}}
 @media (max-width:920px){.scan-grid{grid-template-columns:1fr}.scan-box{position:static;order:-1}}
 @media (max-width:1000px){.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr 1fr}}
@@ -304,3 +310,131 @@ tr.acc-4si2 td:first-child{box-shadow:inset 4px 0 0 var(--c-4si2)}
 #install-banner .t{font-weight:700;font-size:14px;line-height:1.2}
 #install-banner .s{font-size:12px;opacity:.85;line-height:1.35}
 #install-banner.hidden{display:none}
+
+/* ============================================================
+   THÈME SOMBRE « ARENA » — interface moderne type arena.ai
+   Fond quasi noir, cartes sombres, bordures fines, accents
+   lumineux bleu → violet. L'impression reste en clair (voir
+   le bloc @media print en fin de fichier).
+   ============================================================ */
+:root{
+  --bg:#0b0d12; --card:#14171f;
+  --line:#242936; --line-2:#1b1f29;
+  --ink:#e8eaf0; --ink-2:#b8bfcc; --ink-3:#8b93a5; --ink-4:#6b7383;
+  --blue:#4da3ff; --blue-2:#6db1ff; --sky:#182130; --sky-2:#131926;
+  --teal:#2dd4bf; --teal-dk:#5eead4;
+  --amber:#fbbf24; --amber-bg:#2b2213; --amber-line:#4d3d1a;
+  --rose:#fb7185; --rose-bg:#2d151b; --rose-line:#4d2029;
+  --green:#34d399; --green-bg:#122a1f; --green-line:#1d4433;
+  --navy:#0d1424; --navy-2:#111a30; --navy-3:#0a0f1c;
+  --sh:0 1px 2px rgba(0,0,0,.4), 0 12px 30px -18px rgba(0,0,0,.65);
+  --sh-lg:0 22px 50px -20px rgba(0,0,0,.75);
+}
+body{background:radial-gradient(1200px 500px at 50% -180px,#151d31 0%,var(--bg) 60%) fixed,var(--bg)}
+::-webkit-scrollbar{width:10px;height:10px;background:#10131a}
+::-webkit-scrollbar-thumb{background:#2a3140;border-radius:6px}
+::selection{background:#2a4a77;color:#fff}
+h1,h2,h3,h4{letter-spacing:-.015em}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(77,163,255,.15)}
+
+/* boutons */
+.btn{border-radius:12px}
+.btn-line{background:#1a1f2b;border-color:var(--line);color:var(--ink-2)}
+.btn-line:hover{background:#222836}
+.btn-soft{background:#16202f;color:#8fc3ff;border-color:#24344c}
+.btn-soft:hover{background:#1b2839}
+.btn-blue{background:linear-gradient(120deg,#3b82f6,#6d5cff);color:#fff;box-shadow:0 10px 22px -12px rgba(77,110,255,.7)}
+.btn-blue:hover{filter:brightness(1.1)}
+.btn-primary{background:#fff;color:#0d1424}
+.btn-primary:hover{background:#dfe7f3}
+#btn-install{background:linear-gradient(120deg,#14b8a6,#0e9488)}
+
+/* barre d'onglets */
+.tabbar{background:rgba(13,16,24,.92);border-bottom:1px solid var(--line)}
+.tab{color:var(--ink-3)}
+.tab:hover{background:#1a2030;color:var(--ink)}
+.tab.on{background:linear-gradient(120deg,#3b82f6,#7c5cff);color:#fff;box-shadow:0 10px 24px -14px rgba(90,110,255,.9)}
+
+/* cartes, KPI, blocs */
+.card-h{background:linear-gradient(180deg,#171b25,#13161e)}
+.kpi{background:var(--card)}
+.tile,.acc,.cell,.search{background:var(--card)}
+.acc>summary{background:linear-gradient(180deg,#171b25,#13161e)}
+.tile .ic,.li .ico{background:#1a2536}
+.note{background:#121a29;border:1px solid #1e2c44;border-left:4px solid var(--blue)}
+.note svg{stroke:#8fc3ff}
+.note.warn{background:var(--amber-bg);border-color:var(--amber-line)}
+.note.rose{background:var(--rose-bg);border-color:var(--rose-line)}
+pre.ex{background:#0d1117;border:1px solid #1e2634}
+.memo-row .k{color:#8fc3ff}
+
+/* badges */
+.b-blue{background:#12233a;color:#8fc3ff;border-color:#24406a}
+.b-green{background:#0f2a20;color:#5eead4;border-color:#1d4a38}
+.b-amber{background:#2b2213;color:#fbd38d;border-color:#4d3d1a}
+.b-rose{background:#2d151b;color:#fda4af;border-color:#4d2029}
+.b-teal{background:#0f2a27;color:#5eead4;border-color:#1d4a44}
+.b-grey{background:#1c212c;color:#9aa3b5;border-color:#2a3140}
+.b-navy{background:#0e1524;color:#c7d8ee;border-color:#26324a}
+.ev-s{background:#12233a;color:#8fc3ff}
+.ev-s.b4{background:#0f2a27;color:#5eead4}
+.ev-h{background:#2d151b;color:#fda4af}
+.ev-v{background:#2b2213;color:#fbd38d}
+.ev-e{background:#1c212c;color:#9aa3b5}
+.ev-3si1{background:var(--c-3si1-bg);color:var(--c-3si1-ink)}
+.ev-4si2{background:var(--c-4si2-bg);color:var(--c-4si2-ink)}
+
+/* classes : 3SI1 bleu clair / 4SI2 violet clair (lisibles sur fond sombre) */
+:root{
+  --c-3si1:#4da3ff; --c-3si1-bg:#0f2038; --c-3si1-line:#1d3a5f; --c-3si1-ink:#8fc7ff;
+  --c-4si2:#a78bfa; --c-4si2-bg:#1f1a38; --c-4si2-line:#3a2f63; --c-4si2-ink:#c9b8ff;
+}
+.b-3si1{background:#1d3a5f;color:#bfe0ff;border-color:#2a4a77}
+.b-4si2{background:#3a2f63;color:#dcc9ff;border-color:#4c3d80}
+.b-3si1,.b-4si2{box-shadow:0 8px 18px -12px rgba(0,0,0,.8)}
+
+/* tableaux */
+table.tbl{background:transparent}
+.tbl thead th{background:#171c26;color:var(--ink-3);border-bottom:1px solid var(--line)}
+.tbl tbody tr:hover{background:#1a1f2b}
+.tbl tr.is-eval td{background:#221d10}
+.tbl tr.is-today td{background:#101f30}
+.tbl tr.is-blocsolo td{background:#1b1730}
+
+/* calendrier, progression, divers */
+.cell.out{background:#10131a}
+.tl-item::before{background:var(--card)}
+.bar{background:#232936}
+.bar .left{background:#2a3040}
+.scan-box{background:#121a29;border-color:#1e2c44}
+.scan-et.act{color:#cfe4ff}
+.scan-bw i{background:linear-gradient(90deg,#3b82f6,#7c5cff)}
+.ar-nom{color:var(--ink-3)}
+
+/* fenêtres, messages, pied de page */
+.modal{background:rgba(4,6,10,.72)}
+.modal .box{background:var(--card);border:1px solid var(--line)}
+.modal .box-f{background:#11141c}
+.toast{background:#182136;border:1px solid #2a3850;color:#e8f0ff}
+footer{background:transparent}
+.update-bar{background:var(--amber-bg);color:#fbd38d;border-bottom:1px solid var(--amber-line)}
+#menu-compte,#login-invite{box-shadow:var(--sh-lg)}
+
+/* ---------- Impression : retour en clair ---------- */
+@media print{
+  :root{
+    --bg:#fff; --card:#fff; --line:#bbb; --line-2:#ddd;
+    --ink:#111; --ink-2:#333; --ink-3:#555; --ink-4:#777;
+    --sky:#eef4fb; --sky-2:#f5f8fc;
+    --amber-bg:#fff; --amber-line:#ddd; --rose-bg:#fff; --rose-line:#ddd; --green-bg:#fff; --green-line:#ddd;
+    --sh:none; --sh-lg:none;
+  }
+  body{background:#fff !important;color:#111}
+  .card,.kpi,.tile,.acc,.cell,.search,.scan-box,.modal .box,table.tbl,.note{background:#fff !important;color:#111 !important}
+  .tbl thead th{background:#eee !important;color:#222 !important}
+  .tbl tbody tr:hover{background:#fff !important}
+  .tbl tr.is-eval td,.tbl tr.is-today td,.tbl tr.is-blocsolo td{background:#fafafa !important}
+  .b-grey{background:#f1f5f9 !important;color:#333 !important}
+  pre.ex{background:#f4f6f9 !important;color:#222 !important;border-color:#ccc}
+  .toast,.tabbar,.modal{display:none !important}
+}
