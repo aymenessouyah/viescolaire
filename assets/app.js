@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.1.18";
+const APP_VER = "v1.1.19";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -1389,7 +1389,7 @@ function renderLoginInvite(){
 }
 function cloudBadge(){
   if (!cloudReady()) return '<span class="badge b-amber">Sauvegarde locale seulement</span>';
-  if (authNeeded() && !authSession()) return '<span class="badge b-amber">Déconnecté — connexion requise pour le cloud</span>';
+  if (authNeeded() && !authSession()) return '<span class="badge b-amber">Déconnecté</span>';
   return store.cloud && store.cloud.ok ? '<span class="badge b-green">Synchronisé le ' + cloudTime() + '</span>' : '<span class="badge b-rose">Configuration à vérifier</span>';
 }
 function cloudWho(){
@@ -1768,7 +1768,7 @@ function cloudCard(){
 }
 function renderCloudBar(){
   const t = (cloudReady() ? "" : "") + cloudBadge() +
-    ' <span class="tiny muted">' + (cloudReady() ? "projet : " + cloudCfg().url.replace(/^https?:\/\//,"").split(".")[0] : "aucun projet configuré") + " • dernier envoi : " + cloudTime() + "</span>";
+    ' <span class="tiny muted">dernier envoi : ' + cloudTime() + '</span>';
   const a = document.getElementById("cloud-bar"); if (a) a.innerHTML = t;
   const b = document.getElementById("cloud-bar2"); if (b) b.innerHTML = cloudBadge();
 }
