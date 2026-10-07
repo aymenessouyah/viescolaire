@@ -12,7 +12,26 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.1.16";
+const APP_VER = "v1.1.17";
+/* réparation automatique : si une autre version traîne dans le cache de
+   l'appareil (mélange d'affichage), tout le cache est purgé et la page
+   se recharge une seule fois — une fois par version, sans boucle */
+try {
+  if (typeof localStorage !== "undefined" && localStorage.getItem("sti_appver") !== APP_VER
+      && window.navigator && window.navigator.serviceWorker && window.navigator.serviceWorker.getRegistrations
+      && window.caches){
+    localStorage.setItem("sti_appver", APP_VER);
+    (async () => {
+      try {
+        const ks = await caches.keys();
+        await Promise.all(ks.map(k => caches.delete(k)));
+        const rs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(rs.map(r => r.unregister()));
+      } catch(e){}
+      setTimeout(() => { try { location.replace(location.href); } catch(e){} }, 300);
+    })();
+  }
+} catch(e){}
 const DATA = window.STI_DATA || {};
 if (!DATA.reference) {
   document.addEventListener("DOMContentLoaded", function(){
