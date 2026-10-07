@@ -6,7 +6,7 @@
      • PDF (aide pédagogique, répartitions, annexes) : cache d'abord
        (documents volumineux, rarement modifiés → consultables hors ligne)
    ========================================================================= */
-const VERSION    = "sti-espace-v1.1.7";
+const VERSION    = "sti-espace-v1.1.15";
 const CORE_CACHE = VERSION + "-core";
 const DOCS_CACHE = VERSION + "-docs";
 
@@ -26,6 +26,14 @@ const CORE_ASSETS = [
   "./data/annexes.js",
   "./data/docs.js",
   "./supabase/config.js",
+  "./assets/tesseract/tesseract.min.js",
+  "./assets/tesseract/worker.min.js",
+  "./assets/tesseract/core/tesseract-core-simd-lstm.wasm.js",
+  "./assets/tesseract/core/tesseract-core-simd-lstm.wasm",
+  "./assets/tesseract/core/tesseract-core-lstm.wasm.js",
+  "./assets/tesseract/core/tesseract-core-lstm.wasm",
+  "./assets/tesseract/lang/ara.traineddata.gz",
+  "./assets/tesseract/lang/fra.traineddata.gz",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/apple-touch-icon.png"
