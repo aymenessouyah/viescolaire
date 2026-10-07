@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.1.20";
+const APP_VER = "v1.1.21";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
