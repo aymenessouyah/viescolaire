@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.1.17";
+const APP_VER = "v1.1.18";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -36,7 +36,7 @@ const DATA = window.STI_DATA || {};
 if (!DATA.reference) {
   document.addEventListener("DOMContentLoaded", function(){
     document.body.insertAdjacentHTML("afterbegin",
-      '<div style="padding:14px 18px;background:#fdeef1;color:#a51f38;font:600 14px system-ui">'+
+      '<div style="padding:14px 18px;background:var(--rose-bg);color:var(--rose);font:600 14px system-ui">'+
       'Données non chargées : vérifiez que le dossier <code>data/</code> est bien présent à côté de <code>index.html</code>.</div>');
   });
   return;
@@ -282,7 +282,7 @@ function renderDash(){
   const nextVac = VACANCES.find(v => v.to >= t);
 
   const heroToday = todaySessions.length
-    ? todaySessions.map(s => '<div class="row" style="gap:8px;margin-top:6px"><span class="badge" style="background:#fff;color:'+clsCoul(s.cls)+';border-color:#fff">'+s.cls+'</span><strong>'+titleOf(s,store)+'</strong><span class="muted">— séance n°'+s.n+' ('+(CLASSES[s.cls].heures)+' h)</span></div>').join("")
+    ? todaySessions.map(s => '<div class="row" style="gap:8px;margin-top:6px"><span class="badge" style="background:var(--card);color:'+clsCoul(s.cls)+';border-color:var(--line)">'+s.cls+'</span><strong>'+titleOf(s,store)+'</strong><span class="muted">— séance n°'+s.n+' ('+(CLASSES[s.cls].heures)+' h)</span></div>').join("")
     : '<p class="tiny" style="margin-top:6px;opacity:.85">Aucune séance aujourd’hui. Prochaines séances : <strong>'+
         (nextSessions("3SI1",1)[0] ? fmtLong(nextSessions("3SI1",1)[0].iso) + ' (3SI1)' : "—") + '</strong> et <strong>' +
         (nextSessions("4SI2",1)[0] ? fmtLong(nextSessions("4SI2",1)[0].iso) + ' (4SI2)' : "—") + '</strong>.</p>';
@@ -359,7 +359,7 @@ function renderDash(){
               <div class="bar"><i class="done" style="width:${k.pct}%"></i><i class="left" style="width:${100-k.pct}%"></i></div>
               <div class="legend">
                 <span><i class="sq" style="background:#12a06a"></i> réalisées / échues</span>
-                <span><i class="sq" style="background:#dbe6f2"></i> restantes</span>
+                <span><i class="sq" style="background:#2a3040"></i> restantes</span>
                 <span class="muted">DC1 : ${dcOf(c,"dc1")} • DC2 : ${dcOf(c,"dc2")} • DS1 : ${fmtShort(DS1[c].main)}</span>
               </div>
             </div>`;
@@ -742,11 +742,11 @@ function renderCal(){
         <div class="cal-head">${["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"].map(j=>'<div>'+j+'</div>').join("")}</div>
         <div class="cal">${cellHtml}</div>
         <div class="legend" style="margin-top:12px">
-          <span><i class="sq" style="background:#dcecfb"></i> séance 3SI1</span>
-          <span><i class="sq" style="background:#d7f3ee"></i> séance 4SI2</span>
-          <span><i class="sq" style="background:#efe6ff"></i> évaluation / suspension</span>
-          <span><i class="sq" style="background:#fbeccd"></i> vacances</span>
-          <span><i class="sq" style="background:#fbdde3"></i> jour férié</span>
+          <span><i class="sq" style="background:#12233a"></i> séance 3SI1</span>
+          <span><i class="sq" style="background:#0f2a27"></i> séance 4SI2</span>
+          <span><i class="sq" style="background:#1c212c"></i> évaluation / suspension</span>
+          <span><i class="sq" style="background:#2b2213"></i> vacances</span>
+          <span><i class="sq" style="background:#2d151b"></i> jour férié</span>
         </div>
       </div>
     </div>
@@ -1583,7 +1583,7 @@ function renderRef(){
                       <thead><tr><th style="width:200px">Élément</th><th>Description</th><th style="width:34%">Exemple / repère</th><th style="width:150px">Source</th></tr></thead>
                       <tbody>
                         ${sc.rows.map(r => `<tr class="memo-line">
-                          <td class="mono" style="font-weight:700;color:#0f5f9e">${r[0]}</td>
+                          <td class="mono" style="font-weight:700;color:#8fc3ff">${r[0]}</td>
                           <td class="small">${r[1] || ""}</td>
                           <td>${r[2] ? '<pre class="ex">' + escCode(r[2]) + "</pre>" : '<span class="tiny muted">—</span>'}</td>
                           <td><span class="badge b-grey">${r[3] || sc.src}</span></td>
@@ -1620,7 +1620,7 @@ function renderRef(){
                       <thead><tr><th style="width:200px">Élément</th><th>Description</th><th style="width:38%">Exemple</th></tr></thead>
                       <tbody>
                         ${sc.rows.map(r => `<tr>
-                          <td class="mono" style="font-weight:700;color:#0f5f9e">${r[0]}</td>
+                          <td class="mono" style="font-weight:700;color:#8fc3ff">${r[0]}</td>
                           <td class="small">${r[1] || ""}</td>
                           <td>${r[2] ? '<pre class="ex">' + escCode(r[2]) + "</pre>" : '<span class="tiny muted">—</span>'}</td>
                         </tr>`).join("")}
