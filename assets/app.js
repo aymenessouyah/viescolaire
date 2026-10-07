@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.1.21";
+const APP_VER = "v1.1.22";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -1359,6 +1359,8 @@ function toggleCompte(ev){
     btns[1].style.display = estConnecte ? "" : "none";        /* profil */
     btns[2].style.display = (typeof estAdmin === "function" && estAdmin()) ? "" : "none";  /* gérer les profs */
     btns[3].style.display = estConnecte ? "" : "none";        /* déconnexion */
+    const mi = document.getElementById("mc-installer");
+    if (mi) mi.style.display = standaloneMode() ? "none" : "";  /* installer (inutile si déjà installée) */
   }
 }
 function fermerMenuCompte(){ const m = document.getElementById("menu-compte"); if (m) m.classList.add("hidden"); }
@@ -1786,7 +1788,7 @@ function showInstallBanner(txt){
   b.classList.remove("hidden");
 }
 function dismissInstall(){
-  try { localStorage.setItem("sti_install_hide", String(Date.now() + 14*24*3600*1000)); } catch(e){}
+  try { localStorage.setItem("sti_install_hide", String(Date.now() + 3*24*3600*1000)); } catch(e){}
   const b = document.getElementById("install-banner");
   if (b) b.classList.add("hidden");
 }
