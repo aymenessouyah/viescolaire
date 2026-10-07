@@ -20,42 +20,6 @@
 <body>
 
 <!-- ===================== BARRE D'ÉTAT ===================== -->
-<!-- ===================== BARRE LATÉRALE (style arena) ===================== -->
-<div class="shell">
-<aside class="side no-print">
-  <div class="side-brand">
-    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg></div>
-    <div><b>Espace STI</b><div class="tiny muted">2026 / 2027</div></div>
-  </div>
-  <button class="btn btn-new" onclick="openModal(0)" title="Saisir la séance d'aujourd'hui"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 5v14"/><path d="M5 12h14"/></svg> Séance du jour</button>
-  <nav class="side-nav" id="tabs" aria-label="Navigation principale"></nav>
-  <div class="side-tools">
-    <button class="btn btn-line" style="flex:1;justify-content:center;padding:8px 4px" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg></button>
-    <button class="btn btn-line" style="flex:1;justify-content:center;padding:8px 4px" onclick="window.print()" title="Imprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></button>
-    <button class="btn btn-line" style="flex:1;justify-content:center;padding:8px 4px" onclick="exportJSON()" title="Exporter les données (secours)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></button>
-    <button class="btn btn-line" style="flex:1;justify-content:center;padding:8px 4px;display:none" id="btn-install" onclick="installApp()" title="Installer l'application"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></button>
-  </div>
-  <div class="side-foot">
-    <div style="position:relative">
-      <button class="btn btn-line" id="btn-compte" style="width:100%;justify-content:flex-start" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> <span id="compte-txt">Connexion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;margin-left:auto"><path d="m6 9 6 6 6-6"/></svg></button>
-      <div id="menu-compte" class="hidden" style="position:absolute;left:0;right:0;bottom:calc(100% + 8px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
-        <div id="mc-id" class="tiny" style="padding:8px 10px;border-bottom:1px solid var(--line-2);margin-bottom:4px"></div>
-        <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('connexion')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Se connecter / Changer de compte</button>
-        <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('profil')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> Mon profil (nom et matière)</button>
-        <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('admin')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="9" cy="7" r="4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg> Gérer les professeurs</button>
-        <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0;color:#b02a3a" onclick="menuAction('deconnexion')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 12H8"/><path d="m12 9 3 3-3 3"/><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg> Se déconnecter</button>
-        <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="forceMaj()" title="Efface le cache local et recharge l'application en dernière version — à utiliser si une fonctionnalité reste bloquée">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg> Forcer la mise à jour</button>
-        <div id="mc-ver" class="tiny muted" style="padding:6px 10px 4px;border-top:1px solid var(--line-2);margin-top:4px"></div>
-      </div>
-    </div>
-  </div>
-</aside>
-<div class="col">
 <div class="topbar no-print">
   <div class="wrap">
     <div class="row" style="gap:12px">
@@ -73,15 +37,45 @@
 </div>
 
 <!-- ===================== EN-TÊTE ===================== -->
-<header class="mhead">
+<header class="hero-head">
   <div class="wrap">
-    <div>
-      <h1><span id="hero-prof" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier" onclick="openProfil()">Prof. Aymen Essouyah</span></h1>
-      <div class="sub">
-        <span><strong id="hero-lycee">Lycée Rafèha Ariana</strong></span>
-        <span class="chip">Matière : STI</span>
-        <span class="chip">3SI1 &amp; 4SI2</span>
+    <div class="ident">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
       </div>
+      <div>
+        <h1><span id="hero-prof" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier" onclick="openProfil()">Prof. Aymen Essouyah</span></h1>
+        <div class="sub">
+          <span><strong id="hero-lycee">Lycée Rafèha Ariana</strong></span>
+          <span class="chip">Matière : STI</span>
+          <span class="chip">2026 / 2027</span>
+          <span class="chip">3SI1 &amp; 4SI2</span>
+        </div>
+      </div>
+    </div>
+    <div class="head-actions no-print">
+      <div style="position:relative;display:inline-block">
+        <button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> <span id="compte-txt">Connexion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div id="menu-compte" class="hidden" style="position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
+          <div id="mc-id" class="tiny" style="padding:8px 10px;border-bottom:1px solid var(--line-2);margin-bottom:4px"></div>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('connexion')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Se connecter / Changer de compte</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('profil')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> Mon profil (nom et matière)</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('admin')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="9" cy="7" r="4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg> Gérer les professeurs</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0;color:#b02a3a" onclick="menuAction('deconnexion')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 12H8"/><path d="m12 9 3 3-3 3"/><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg> Se déconnecter</button>
+          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="forceMaj()" title="Efface le cache local et recharge l'application en dernière version — à utiliser si une fonctionnalité reste bloquée">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg> Forcer la mise à jour</button>
+          <div id="mc-ver" class="tiny muted" style="padding:6px 10px 4px;border-top:1px solid var(--line-2);margin-top:4px"></div>
+        </div>
+      </div>
+      <button class="btn btn-ghost" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg> Cloud</button>
+      <button class="btn btn-ghost" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimer</button>
+      <button class="btn btn-ghost" onclick="exportJSON()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Exporter</button>
+      <button class="btn btn-ghost" id="btn-install" style="display:none" onclick="installApp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Installer l'application</button>
+      <button class="btn btn-primary" onclick="openModal(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg> Séance du jour</button>
     </div>
   </div>
 </header>
@@ -93,6 +87,10 @@
 </div>
 
 <!-- ===================== ONGLETS ===================== -->
+<nav class="tabbar no-print">
+  <div class="wrap" id="tabs"></div>
+</nav>
+
 <main class="wrap">
   <section id="v-dash" class="view on"></section>
   <section id="v-edt" class="view"></section>
@@ -114,8 +112,6 @@
     </div>
   </div>
 </footer>
-</div>
-</div>
 
 <!-- ===================== MODALE SÉANCE ===================== -->
 <div class="modal" id="modal">
