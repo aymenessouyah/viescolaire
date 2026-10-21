@@ -1,7 +1,7 @@
-# Mise à jour de Vie scolaire — suivi des notions STI
+# Mise à jour de Vie scolaire — thème clair et suivi des notions STI
 
 **Projet :** [aymenessouyah/viescolaire](https://github.com/aymenessouyah/viescolaire)  
-**Version proposée :** `v1.2.0-sti-books`  
+**Version proposée :** `v1.2.1-sti-theme`  
 **État :** préparée et testée localement, **non publiée**. Aucune modification effectuée dans GitHub ni dans la base Supabase réelle.
 
 ## Ce qui est intégré
@@ -21,6 +21,19 @@ Le nom **4SI2** est conservé, conformément à votre confirmation. Il n’y a p
 - Deux livres PDF et six fiches PDF de 3SI ajoutés à la bibliothèque du suivi.
 - Couleurs de classe : **3SI1 bleu, 4SI2 vert**.
 - Suivi **commun aux deux groupes**, pas deux couvertures indépendantes.
+
+## Thème appliqué à l’application existante
+
+- Fond clair, cartes épurées, navigation latérale et barre d’actions conservée.
+- **3SI1 : bleu ; 4SI2 : vert.** Les raccourcis « Mes classes · suivi STI » ouvrent le suivi de la classe choisie et adaptent la palette. Ils ne filtrent pas silencieusement les autres modules.
+- Les neuf vues existantes restent accessibles. « Répartition 1er trim. » est renommé **Ma progression** dans le menu ; son contenu et ses calculs restent ceux de l’intégration précédente.
+- Le bandeau d’accueil est éclairci ; les formulaires, tableaux, profils et fenêtres reprennent le thème.
+- Sur téléphone : menu repliable, fermeture après navigation, par Échap ou par appui hors du menu, et gestion du focus clavier.
+- À l’impression : pas de barre latérale, contenu en pleine largeur.
+- Le thème ne crée aucune clé de stockage et ne change aucune fonction d’envoi/restauration. Aucun nouveau choix de classe n’est enregistré dans vos données métier.
+- Deux fichiers dédiés : `assets/theme-classe.css` et `assets/theme-classe.js`, inclus dans le cache hors ligne de l’application.
+
+Cette archive **remplace le paquet précédent** : elle inclut à la fois le suivi des livres et le thème. Elle s’applique par fusion au dépôt existant, pas comme un nouveau site autonome.
 
 ## Règles de calcul
 
@@ -95,12 +108,14 @@ Décompressez **`Mise-a-jour-viescolaire-STI.zip`**.
 Les fichiers sont rangés directement selon l’arborescence du dépôt :
 
 ```text
-index.html                         modifié : chargement du module et nouvel onglet
+index.html                         modifié : modules, thème et navigation latérale
 sw.js                              modifié : version du cache et nouveaux fichiers
 assets/app.js                      modifié : branchements, conservation des fiches, compteurs
 assets/style.css                   modifié : 4SI2 en vert
 assets/suivi-sti.js                 nouveau : suivi, filtres, historique, cases à cocher
 assets/suivi-sti.css                nouveau : présentation du suivi
+assets/theme-classe.css             nouveau : thème global clair, bleu/vert, mobile et impression
+assets/theme-classe.js              nouveau : navigation, palette, profil et accessibilité
  data/livres-sti.js                 nouveau : référentiels et liens des livres
  data/ajustements-sti.js            nouveau : proposition de planning T1 de 4SI2
  docs/sti-smart-book-3si-2026.pdf    nouveau
@@ -133,7 +148,7 @@ Sur la version publiée, connectez-vous vous-même, enregistrez une modification
 
 ### 4. Actualiser les appareils
 
-La version de l’application et du service worker passe à `v1.2.0-sti-books`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
+La version de l’application et du service worker passe à `v1.2.1-sti-theme`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
 
 Actualisez les onglets ouverts et l’application installée sur chaque appareil. Évitez de continuer à modifier les mêmes fiches dans une ancienne version : un ancien client ne connaît pas le champ des notions.
 
@@ -156,6 +171,11 @@ Le site utilise déjà un système d’instantanés, pas une fusion collaborativ
 - Conservation des champs élèves et notes dans le contrat de sauvegarde testé.
 - Envoi et restauration **simulés** du payload Supabase avec les coches.
 - Contrôles de date du DC1 et de l’introduction à PHP.
-- Affichage mobile sans débordement horizontal détecté.
+- Affichage mobile sans débordement horizontal détecté dans les neuf vues.
+- Navigation latérale et passage bleu/vert sur ordinateur et téléphone.
+- Ouverture du profil et des fiches de séance après application du thème.
+- Menu mobile : ouverture, fermeture après navigation, Échap et retour du focus.
+- Contrôle des styles d’impression : menu masqué et contenu en pleine largeur.
+- Données métier inchangées par les interactions de thème testées, après initialisation normale des modules existants.
 
 **La prévisualisation locale bloque les appels au projet Supabase réel.** Son état « sauvegarde locale seulement » est volontaire et ne diagnostique pas un problème de votre site en production.

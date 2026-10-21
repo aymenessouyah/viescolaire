@@ -2,11 +2,11 @@
   "repository": "https://github.com/aymenessouyah/viescolaire",
   "branch": "main",
   "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
-  "version": "v1.2.0-sti-books",
+  "version": "v1.2.1-sti-theme",
   "files": [
     {
       "path": "assets/app.js",
-      "sha256": "86ce0a1d38ecfd5ec7a8a9a3fb5870eada35788ce5cae32112f060fbf84d9e3c",
+      "sha256": "3ef51742190780cb46756dc88c837e343a13b9fd212dc0983225c43ff482d2d7",
       "action": "modifier",
       "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
     },
@@ -25,6 +25,18 @@
     {
       "path": "assets/suivi-sti.js",
       "sha256": "5771554d111b8e31fa1bc2bcdafd961ce3829d16342b93b55f271eecad95afc4",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/theme-classe.css",
+      "sha256": "86d877f92b09176d8ec1c5319217efe13d7e63202b6a4d5b010064821bebbaf5",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/theme-classe.js",
+      "sha256": "5b18ef26c0d1cc8cdab64567a23df32b59b62758d27b1478c1c3c42b259c290a",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -90,13 +102,13 @@
     },
     {
       "path": "index.html",
-      "sha256": "308e84eecd25a8275ad20ab491a8780eab77506529bc71b505beb7305ddd4797",
+      "sha256": "3817a5df74b25b0ef1e9098b276030837d3f7e5bf1dabf73c84d2283e93079c3",
       "action": "modifier",
       "base_sha256": "974f8d76b243f690430c18e264784b7ffaa5c93dae6a58cd6fcce82646b440b9"
     },
     {
       "path": "sw.js",
-      "sha256": "6977b1f8127b81606a25d831b2e620615e6cb2a9e5d5bf22b7b57f3e3a276b0c",
+      "sha256": "2f413f7bed18ced4a9c0722c86599cbc295ceb593487dc4e6a53dbafc44dee96",
       "action": "modifier",
       "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
     }

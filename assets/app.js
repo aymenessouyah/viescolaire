@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.2.0-sti-books";
+const APP_VER = "v1.2.1-sti-theme";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -208,7 +208,7 @@ const TABS = [
   { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
   { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
-  { id:"v-rep",    t:"Répartition 1<sup>er</sup> trim.", ico:"list" },
+  { id:"v-rep",    t:"Ma progression", ico:"list" },
   { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
   { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
   { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
@@ -292,7 +292,7 @@ function renderDash(){
   const dash = document.getElementById("v-dash");
   dash.innerHTML = `
   ${cloudInvite()}
-  <div class="card" style="background:linear-gradient(120deg,#0b2545,#14456f 60%,#0e6f8f);color:#fff;border:none;margin-bottom:16px">
+  <div class="card vs-welcome" style="background:linear-gradient(120deg,#0b2545,#14456f 60%,#0e6f8f);color:#fff;border:none;margin-bottom:16px">
     <div class="card-b">
       <div class="spread">
         <div style="min-width:260px">
