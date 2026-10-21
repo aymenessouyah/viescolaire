@@ -2,23 +2,23 @@
   "repository": "https://github.com/aymenessouyah/viescolaire",
   "branch": "main",
   "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
-  "version": "v1.4.1-next-courses",
+  "version": "v1.4.2-session-alerts",
   "files": [
     {
       "path": "assets/app.js",
-      "sha256": "0ca6420ec85f753d32610ec7d970a55f459a6f2b085c918fc24591ec15ac7401",
+      "sha256": "a7e5717c689838d6afb5e90ac6b9a76059d61c6689d2210fa200bb313fbd762c",
       "action": "modifier",
       "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
     },
     {
       "path": "assets/interface-reference.css",
-      "sha256": "3593599ec0ef4f5553bb90e915c07aa9a02f850d260c56ed8708d05d1f2259fb",
+      "sha256": "d6181b71e77217ffd80fcfdefb8664b65ff3477117d86c651ced684fa6ec8422",
       "action": "ajouter",
       "base_sha256": null
     },
     {
       "path": "assets/interface-reference.js",
-      "sha256": "8a5c4d562ac7d1dbb11cc7a0afa645dc3e99384d7d3aac529a7f2c388c926579",
+      "sha256": "72af88cd17174c77bcf8c296b2bce4ae2bc8068e806cde2e54f158beb1777b17",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -132,7 +132,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "37170ebabd55aef5d68e238c759afa6d0a0f5938f5a532e87d9426cbf8b06fa5",
+      "sha256": "4f880a58ee9c7533db36dd3eb5cc989d1c2ac3db5aa475d896df631f4199a020",
       "action": "modifier",
       "base_sha256": "974f8d76b243f690430c18e264784b7ffaa5c93dae6a58cd6fcce82646b440b9"
     },
@@ -144,7 +144,7 @@
     },
     {
       "path": "sw.js",
-      "sha256": "43ebee5b3dc14f1a68f6d7142cb17f081324402ba574b6eddf995ec1d3da13e4",
+      "sha256": "683572c3ddc778aa08ddf49fe12865e9f7a5531d88a58607c282d5c4ec5f3cda",
       "action": "modifier",
       "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
     }

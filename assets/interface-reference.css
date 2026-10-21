@@ -589,3 +589,21 @@ body.vs-fusion .ref-essential-bar #compte-txt{display:block;max-width:170px;min-
 body.vs-fusion .ref-essential-status{max-width:100%;min-width:0}
 body.vs-fusion .ref-essential-status #cloud-bar{min-width:0;overflow-wrap:anywhere}
 @media(max-width:700px){body.vs-fusion .ref-essential-bar #compte-txt{max-width:calc(100% - 18px)}}
+
+/* Unconfirmed past sessions: local visual reminder, never automatic confirmation. */
+body.vs-fusion .ref-ui #ref-bell.has-unconfirmed{color:#a64d2c;border-color:#d5a66b;background:#fff7e9}
+body.vs-fusion .ref-ui .ref-bell-count{position:absolute;top:-5px;right:-6px;min-width:19px;height:19px;padding:0 4px;border-radius:12px;background:#ab432e;color:white;font:700 10px/19px Inter,system-ui,sans-serif;box-shadow:0 0 0 2px #fffdf6;pointer-events:none}
+body.vs-fusion .ref-ui .ref-bell-count[hidden]{display:none}
+@keyframes sti-bell-reminder{0%,22%,100%{transform:rotate(0deg)}3%,9%,15%{transform:rotate(16deg)}6%,12%,18%{transform:rotate(-16deg)}}
+body.vs-fusion .ref-ui #ref-bell.has-unconfirmed>svg{transform-origin:50% 15%;animation:sti-bell-reminder 5s ease-in-out infinite}
+body.vs-fusion .ref-ui #ref-bell.motion-paused>svg,body.vs-fusion .ref-ui #ref-bell[aria-expanded="true"]>svg,body.vs-fusion .ref-ui #ref-bell:hover>svg,body.vs-fusion .ref-ui #ref-bell:focus-visible>svg{animation:none}
+body.vs-fusion .ref-ui .bell-dropdown{max-height:min(560px,calc(100dvh - 140px));overflow-y:auto;overscroll-behavior:contain}
+body.vs-fusion .ref-ui .bell-head{position:sticky;top:0;background:#fffdf6;z-index:1}
+body.vs-fusion .ref-ui .ref-notif-section{padding:13px 16px;background:#faf6eb;font-size:12px;border-bottom:1px solid var(--line-soft)}
+body.vs-fusion .ref-ui .ref-notif-section p{font-size:11px;line-height:1.6;margin:6px 0;color:#6b6251}
+body.vs-fusion .ref-ui .ref-motion-toggle{margin:5px 0 0;font-size:10px}
+body.vs-fusion .ref-ui .ref-notif-session{width:100%;text-align:left;border:0;border-bottom:1px solid var(--line-soft);background:#fffdf6;font:inherit;cursor:pointer}
+body.vs-fusion .ref-ui .ref-notif-session:hover,body.vs-fusion .ref-ui .ref-notif-session:focus-visible{background:#f4eddb}
+body.vs-fusion .ref-ui .ref-notif-session .notif-text,body.vs-fusion .ref-ui .ref-notif-session .notif-time{display:block}
+body.vs-fusion .ref-ui .ref-notif-link{display:block;margin-top:5px;font-size:10px;font-weight:600;color:#14684a}
+@media(prefers-reduced-motion:reduce){body.vs-fusion .ref-ui #ref-bell.has-unconfirmed>svg{animation:none}}

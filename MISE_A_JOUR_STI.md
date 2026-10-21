@@ -1,8 +1,18 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-**Version préparée : `v1.4.1-next-courses`**  
+**Version préparée : `v1.4.2-session-alerts`**  
 **Dépôt existant :** https://github.com/aymenessouyah/viescolaire  
 **État : code préparé et testé localement, non publié.** Aucune écriture n’a été faite dans votre dépôt ou votre base réelle. Le script SQL reste à appliquer dans votre environnement.
+
+## Ajout 1.4.2 — cloche des séances non confirmées
+
+La cloche porte un compteur et s’anime par petites oscillations lorsqu’une séance a une **date antérieure à aujourd’hui** et que sa case **« assurée » n’est pas cochée** (`done !== true`). Les séances d’aujourd’hui et futures ne déclenchent pas cette alerte. Les séances marquées reportées mais non confirmées restent dans la liste avec une indication distincte.
+
+Un clic affiche les séances à vérifier, de la plus récente à la plus ancienne. **Vérifier la fiche** ouvre le formulaire existant ; seule une confirmation cochée puis enregistrée retire la séance des rappels. Aucune date passée n’est automatiquement déclarée assurée. Lorsque toutes les séances passées sont confirmées, le compteur et l’animation disparaissent.
+
+Le rappel se met à jour après enregistrement ou réception Cloud, au retour dans l’application et après changement de jour (contrôle local toutes les 30 secondes si la page est visible). Il fonctionne sans Internet. Les échéances futures restent présentes dans le menu. Il s’agit d’une **animation visuelle**, sans vibration physique du téléphone, son, notification système ou message aux élèves.
+
+L’animation s’arrête pendant la lecture du menu. Un bouton permet aussi de la mettre en pause pour la session ouverte, sans masquer le compteur ; la préférence système de réduction des animations est respectée.
 
 ## Correction 1.4.1 — ordre du Suivi des cours
 
@@ -92,7 +102,7 @@ Référence du code d’origine utilisé pour construire le paquet : commit `890
 1. Publier après validation sur la branche de test.
 2. Dans la configuration Cloud, garder la table `espace_pedagogique`, l’URL et la clé publique du projet existant, activer **Accès protégé par mot de passe** et **Synchroniser automatiquement dans les deux sens**.
 3. Mettre à jour les onglets et les applications installées sur **tous les appareils qui écrivent sur ce compte**, avant de reprendre un travail simultané.
-4. Vérifier la version `v1.4.1-next-courses`, puis la connexion et la première association.
+4. Vérifier la version `v1.4.2-session-alerts`, puis la connexion et la première association.
 
 **Important : les anciens clients font des insertions directes et ne participent pas au verrou de synchronisation.** La protection contre les écritures concurrentes exige que tous les clients écrivains utilisent cette nouvelle version. Ne continuez pas à modifier les fiches dans un ancien onglet.
 
@@ -134,6 +144,8 @@ La connexion réelle, les permissions de votre projet et l’hébergement GitHub
 - Les fiches, notions, horaires, profil, classes, élèves, épreuves, notes et présences gardent leur structure métier. Le nouveau stockage IndexedDB ajoute des métadonnées de synchronisation et des copies de secours, pas une nouvelle base métier distante.
 
 ## 6. Vérifications locales
+
+**Ajout 1.4.2 :** 27 contrôles de la cloche réussis (compteur, animation, liste, confirmation/décochage, changement de date, mobile, pause, réduction des animations, aucune écriture automatique). Les 33 contrôles des commandes essentielles, les 86 contrôles de fusion et les 12 contrôles du tri des cours ont été relancés avec succès. La synchronisation et le SQL ne changent pas dans cet ajout.
 
 **Correction 1.4.1 :** 12 contrôles ciblés ont réussi (ordre complet sur toutes les pages, deux classes, recherche, CSV, séance du jour, début/fin d’année, mobile et données inchangées). La suite de fusion de 86 contrôles a également été relancée avec succès. Les autres résultats ci-dessous proviennent de la validation 1.4.0 ; le moteur de synchronisation n’a pas été modifié par cette correction.
 
