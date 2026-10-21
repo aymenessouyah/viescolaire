@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.3.0-sti-fusion";
+const APP_VER = "v1.3.2-sti-essential";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -242,7 +242,7 @@ function renderAll(silent){
   if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
   renderCompte();
   renderLoginInvite();
-  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab});
+  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
 }
 function go(id){
@@ -809,7 +809,7 @@ function filterCal(v){
 
 /* ---------------- 4. RÉPARTITION ---------------- */
 function setRep(cls){ repCls = cls; renderRep(); }
-function setTri(t){ repTri = t; renderRep(); }
+function setTri(t){ if (![1,2,3].includes(Number(t))) return; repTri = Number(t); renderRep(); if(window.STI_INTERFACE) window.STI_INTERFACE.termChanged(repTri); }
 function renderRep(){
   const cls = repCls, cfg = CLASSES[cls];
   const list = sessionsOf(cls, repTri);
@@ -1562,7 +1562,7 @@ function renderRef(){
   </div>
   <div class="row" style="justify-content:space-between;margin-bottom:14px">
     <span class="tiny muted" id="ref-search-info">Recherche sur le mémo et les 5 annexes</span>
-    <span class="row" id="cloud-bar" style="gap:6px"></span>
+    <span class="row" id="cloud-bar-ref" style="gap:6px"></span>
   </div>
 
   <div class="grid g4" style="margin-bottom:16px">
@@ -1794,6 +1794,7 @@ function renderCloudBar(){
   const t = (cloudReady() ? "" : "") + cloudBadge() +
     ' <span class="tiny muted">' + (cloudReady() ? "projet : " + cloudCfg().url.replace(/^https?:\/\//,"").split(".")[0] : "aucun projet configuré") + " • dernier envoi : " + cloudTime() + "</span>";
   const a = document.getElementById("cloud-bar"); if (a) a.innerHTML = t;
+  const refBar = document.getElementById("cloud-bar-ref"); if (refBar) refBar.innerHTML = t;
   const b = document.getElementById("cloud-bar2"); if (b) b.innerHTML = cloudBadge();
 }
 

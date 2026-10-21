@@ -1,7 +1,7 @@
 # Vie scolaire — fusion de l’interface fournie et de l’application STI
 
 **Projet :** [aymenessouyah/viescolaire](https://github.com/aymenessouyah/viescolaire)  
-**Version proposée :** `v1.3.0-sti-fusion`  
+**Version proposée :** `v1.3.2-sti-essential`  
 **État :** préparée et testée localement, **non publiée**. Aucune modification effectuée dans GitHub ni dans la base Supabase réelle.
 
 ## Ce qui est intégré
@@ -36,8 +36,11 @@ Le fichier `index.html` partagé sert de modèle pour la navigation, les composa
 
 ### Navigation et actions
 
-- Le menu principal reprend les cinq entrées du modèle. **Outils STI & données** donne accès aux huit autres vues existantes : suivi des notions, emploi du temps, calendrier tunisien, répartition annuelle, programme/compétences, élèves/notes/présences, cahier détaillé et annexes.
-- L’icône de réglages, dans la barre supérieure, affiche les commandes existantes : compte, Cloud, impression, export et séance du jour. Le bouton du profil reste accessible en bas du menu.
+- Le menu principal reprend les cinq entrées du modèle. Une section **Planification**, directement visible, ajoute **Emploi du temps** et trois boutons **Répartition — 1er / 2e / 3e trimestre**. Chaque bouton ouvre le trimestre correspondant dans la répartition existante et conserve le choix de classe 3SI1/4SI2. Le bouton actif suit aussi le sélecteur de trimestre à l’intérieur de la page.
+- **Outils STI & données** conserve les six autres vues : suivi des notions, calendrier tunisien, programme/compétences, élèves/notes/présences, cahier détaillé et annexes.
+- Une barre **COMPTE & SAUVEGARDE** est désormais toujours visible en haut, y compris sur téléphone et après défilement : **Connexion / compte**, **Cloud**, **Envoyer au Cloud**, **Restaurer du Cloud**, **Imprimer**, **Exporter** et **Séance du jour**. Aucun réglage n’est nécessaire pour faire apparaître ces boutons. L’installation de l’application reste proposée selon les capacités du navigateur.
+- Le menu du compte conserve connexion/changement de compte, profil, administration, déconnexion et mise à jour. L’icône de réglages supérieure ouvre directement la configuration Cloud. Le profil reste aussi accessible en bas du menu.
+- L’état réseau et l’état de la sauvegarde existants sont affichés dans cette barre. Les commandes d’envoi et de restauration appellent les fonctions existantes ; la restauration manuelle conserve sa demande de confirmation avant remplacement. Ce ne sont pas encore des commandes de fusion bidirectionnelle automatique.
 - La recherche supérieure fonctionne avec Entrée et ouvre le suivi des cours. Elle recherche dans les titres, contenus, préparations et notions cochées.
 - La cloche affiche les prochaines échéances connues du planning. Ce sont des rappels locaux, pas des notifications envoyées aux élèves.
 - **Nouvelle séance** ouvre un choix de créneau, puis le formulaire existant. Cela crée ou complète une fiche sans déplacer la date, renuméroter les séances ou modifier les groupes. Si aucune séance n’est prévue aujourd’hui, **Fiche du jour** propose aussi ce choix.
@@ -220,3 +223,17 @@ Le site utilise déjà un système d’instantanés, pas une fusion collaborativ
 85 contrôles automatisés ont réussi : structure du tableau de bord, recherche, filtre par classe, CSV, sélection des fiches, mode classe, réutilisation sans validation, saisie par le formulaire conservé, recalcul des graphiques, couverture par domaine, DC1 du 2 novembre, ajout d’épreuve, persistance après rechargement, transport dans le payload existant, notifications, outils de compte, treize vues sur ordinateur/mobile et styles d’impression. Aucun problème JavaScript détecté dans ce parcours.
 
 La suite de régression précédente a également réussi, y compris le blocage du réalisé futur, le dédoublonnage des notions, la conservation des champs supplémentaires et l’envoi/restauration cloud **simulés**. Aucune écriture dans la base réelle n’a été effectuée. Les données de test ont été supprimées du navigateur de contrôle et ne sont pas incluses dans l’archive.
+
+### Ajout 1.3.1 — accès directs aux trimestres
+
+38 contrôles ciblés ont réussi : les trois trimestres pour chacune des deux classes, nombre de séances correspondant au trimestre, sélection active du menu, conservation de la classe, accès direct à l’emploi du temps, navigation mobile et maintien de la barre Compte/Cloud. Aucun changement des données métier ni des fonctions de sauvegarde. La suite de fusion (85 contrôles) a également été relancée avec succès.
+
+**Hors ligne et synchronisation bidirectionnelle : demande en attente.** Cette version ajoute les boutons demandés en priorité. Elle ne met pas encore en œuvre la nouvelle synchronisation automatique dans les deux sens ni la gestion des conflits entre appareils ; le comportement de sauvegarde précédent est conservé.
+
+### Ajout 1.3.2 — compte et Cloud prioritaires
+
+Les boutons essentiels ont été déplacés dans l’en-tête fixe ; ils ne sont plus derrière l’icône de réglages. Aucun appel réel n’a été fait à la base. Un identifiant d’état Cloud dupliqué dans l’ancien écran Annexes a été renommé pour que chaque affichage ait un identifiant unique.
+
+33 contrôles ciblés ont réussi : visibilité immédiate sur ordinateur/mobile, maintien lors du défilement, menu du compte, fenêtre de connexion, configuration Cloud, envoi/restauration sans configuration qui demandent les paramètres, export JSON, absence de débordement et conservation des données. La suite de fusion (86 contrôles), les 38 contrôles des trimestres et la régression du transport Cloud simulé ont aussi réussi.
+
+La nouvelle synchronisation hors ligne/bidirectionnelle reste **en attente**, conformément à la priorité donnée aux commandes visibles. Ne pas confondre cette amélioration d’interface avec une nouvelle gestion des conflits entre appareils.

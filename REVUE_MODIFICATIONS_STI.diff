@@ -5,7 +5,7 @@
  'use strict';
  
 -const APP_VER = "v1.1.22";
-+const APP_VER = "v1.3.0-sti-fusion";
++const APP_VER = "v1.3.2-sti-essential";
  /* réparation automatique : si une autre version traîne dans le cache de
     l'appareil (mélange d'affichage), tout le cache est purgé et la page
     se recharge une seule fois — une fois par version, sans boucle */
@@ -63,7 +63,7 @@
 +  if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
    renderCompte();
    renderLoginInvite();
-+  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab});
++  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
    document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
  }
  function go(id){
@@ -103,7 +103,13 @@
                  <span><i class="sq" style="background:#dbe6f2"></i> restantes</span>
                  <span class="muted">DC1 : ${dcOf(c,"dc1")} • DC2 : ${dcOf(c,"dc2")} • DS1 : ${fmtShort(DS1[c].main)}</span>
                </div>
-@@ -806,7 +814,7 @@
+@@ -801,12 +809,12 @@
+ 
+ /* ---------------- 4. RÉPARTITION ---------------- */
+ function setRep(cls){ repCls = cls; renderRep(); }
+-function setTri(t){ repTri = t; renderRep(); }
++function setTri(t){ if (![1,2,3].includes(Number(t))) return; repTri = Number(t); renderRep(); if(window.STI_INTERFACE) window.STI_INTERFACE.termChanged(repTri); }
+ function renderRep(){
    const cls = repCls, cfg = CLASSES[cls];
    const list = sessionsOf(cls, repTri);
    const t = todayISO();
@@ -140,6 +146,15 @@
    setTimeout(() => location.replace(location.href), 350);
  }
  function menuAction(quoi){
+@@ -1553,7 +1562,7 @@
+   </div>
+   <div class="row" style="justify-content:space-between;margin-bottom:14px">
+     <span class="tiny muted" id="ref-search-info">Recherche sur le mémo et les 5 annexes</span>
+-    <span class="row" id="cloud-bar" style="gap:6px"></span>
++    <span class="row" id="cloud-bar-ref" style="gap:6px"></span>
+   </div>
+ 
+   <div class="grid g4" style="margin-bottom:16px">
 @@ -1691,10 +1700,16 @@
      <div style="margin-bottom:12px"><label class="f">Observations / bilan</label>
        <input type="text" id="m-obs" value="${escapeHtml(o.obs || "")}" placeholder="Ex. : notions à reprendre, séance écourtée, groupe très réceptif…"></div>
@@ -173,6 +188,14 @@
      title: document.getElementById("m-titre").value.trim(),
      contenu: document.getElementById("m-contenu").value.trim(),
      devoirs: document.getElementById("m-devoirs").value.trim(),
+@@ -1772,6 +1794,7 @@
+   const t = (cloudReady() ? "" : "") + cloudBadge() +
+     ' <span class="tiny muted">' + (cloudReady() ? "projet : " + cloudCfg().url.replace(/^https?:\/\//,"").split(".")[0] : "aucun projet configuré") + " • dernier envoi : " + cloudTime() + "</span>";
+   const a = document.getElementById("cloud-bar"); if (a) a.innerHTML = t;
++  const refBar = document.getElementById("cloud-bar-ref"); if (refBar) refBar.innerHTML = t;
+   const b = document.getElementById("cloud-bar2"); if (b) b.innerHTML = cloudBadge();
+ }
+ 
 --- a/assets/style.css
 +++ b/assets/style.css
 @@ -279,12 +279,12 @@
@@ -201,7 +224,7 @@
  /* ============================================================
 --- a/index.html
 +++ b/index.html
-@@ -16,8 +16,23 @@
+@@ -16,8 +16,49 @@
  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
  <link rel="stylesheet" href="assets/style.css">
@@ -217,15 +240,118 @@
 +<div class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16.6 16.6 4.4 4.4"/></svg><input type="search" id="ref-search" placeholder="Rechercher une séance, un chapitre, une notion… (Entrée)" aria-label="Recherche globale"><kbd>↵</kbd></div>
 +<div class="date-pill"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="ref-date"></span></div>
 +<div class="bell-wrap"><button class="bell-btn" id="ref-bell" aria-label="Notifications du planning" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M14 21h-4"/></svg></button><div class="bell-dropdown" id="ref-notifications" role="region" aria-label="Notifications du planning"></div></div>
-+<button class="bell-btn" data-ref="tools" aria-label="Compte, sauvegarde et outils" title="Compte, sauvegarde et outils"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg></button>
++<button class="bell-btn" data-ref="tools" aria-label="Configuration du Cloud" title="Configuration du Cloud"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg></button>
 +<button class="btn btn-primary" data-ref="new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Nouvelle séance</span></button>
++<section class="ref-essential-bar" aria-label="Compte et Cloud"><div class="ref-essential-heading"><strong>COMPTE &amp; SAUVEGARDE</strong><div class="ref-essential-status" aria-live="polite"><span id="net-state" class="badge b-grey">En ligne</span><span id="cloud-bar">—</span></div></div><div aria-label="Actions essentielles du compte et des sauvegardes" class="head-actions no-print">
++<div style="position:relative;display:inline-block">
++<button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg> <span id="compte-txt">Connexion</span> <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:14px;height:14px" viewbox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
++<div class="hidden" id="menu-compte" style="position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
++<div class="tiny" id="mc-id" style="padding:8px 10px;border-bottom:1px solid var(--line-2);margin-bottom:4px"></div>
++<button class="btn btn-line" onclick="menuAction('connexion')" style="display:block;width:100%;text-align:left;margin:2px 0">
++<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><rect height="11" rx="2" width="16" x="4" y="10"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg> Se connecter / Changer de compte</button>
++<button class="btn btn-line" onclick="menuAction('profil')" style="display:block;width:100%;text-align:left;margin:2px 0">
++<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg> Mon profil (nom et matière)</button>
++<button class="btn btn-line" onclick="menuAction('admin')" style="display:block;width:100%;text-align:left;margin:2px 0">
++<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><circle cx="9" cy="7" r="4"></circle><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path></svg> Gérer les professeurs</button>
++<button class="btn btn-line" onclick="menuAction('deconnexion')" style="display:block;width:100%;text-align:left;margin:2px 0;color:#b02a3a">
++<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"></path><path d="M15 12H8"></path><path d="m12 9 3 3-3 3"></path><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"></path></svg> Se déconnecter</button>
++<button class="btn btn-line" onclick="forceMaj()" style="display:block;width:100%;text-align:left;margin:2px 0" title="Efface le cache local et recharge l'application en dernière version — à utiliser si une fonctionnalité reste bloquée">
++<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36"></path><path d="M21 3v6h-6"></path></svg> Forcer la mise à jour</button>
++<button class="btn btn-line" id="mc-installer" onclick="installApp()" style="display:block;width:100%;text-align:left;margin:2px 0" title="Installer l'application sur l'écran d'accueil : plein écran, démarrage rapide, fonctionne sans connexion">
++<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg> Installer l'application</button>
++<div class="tiny muted" id="mc-ver" style="padding:6px 10px 4px;border-top:1px solid var(--line-2);margin-top:4px"></div>
++</div>
++</div>
++<button class="btn btn-ghost" id="btn-cloud" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"></path><path d="M17 18H7a4 4 0 0 1 0-8"></path><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"></path></svg> Cloud</button><button class="btn btn-ghost" id="btn-cloud-send" onclick="cloudPush(false)" title="Envoyer une sauvegarde de cet appareil au Cloud" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 17V3M7 8l5-5 5 5M5 17v4h14v-4"></path></svg><span>Envoyer au Cloud</span></button><button class="btn btn-ghost" id="btn-cloud-restore" onclick="cloudPull(false)" title="Récupérer une sauvegarde distante ; confirmation avant remplacement" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 3v14M7 12l5 5 5-5M5 17v4h14v-4"></path></svg><span>Restaurer du Cloud</span></button>
++<button class="btn btn-ghost" onclick="window.print()"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect height="8" width="12" x="6" y="14"></rect></svg> Imprimer</button>
++<button class="btn btn-ghost" onclick="exportJSON()"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5M12 15V3"></path></svg> Exporter</button>
++<button class="btn btn-ghost" id="btn-install" onclick="installApp()" style="display:none"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg> Installer l'application</button>
++<button class="btn btn-primary" onclick="openModal(0)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg> Séance du jour</button>
++</div></section>
 +</header>
 +<button id="vs-overlay" class="vs-sidebar-overlay no-print" aria-label="Fermer le menu de navigation" tabindex="-1"></button>
 +
  
  <!-- ===================== BARRE D'ÉTAT ===================== -->
  <div class="topbar no-print">
-@@ -89,12 +104,22 @@
+@@ -29,57 +70,32 @@
+     <div class="row" style="gap:12px">
+       <span id="tb-today"></span>
+       <span class="hide-sm">|</span>
+-      <span id="net-state" class="badge b-grey">En ligne</span>
++      
+       <span class="hide-sm">|</span>
+-      <button class="btn-link hide-sm" onclick="go('v-dash')" title="État de la sauvegarde">Sauvegarde : <span id="cloud-bar">—</span></button>
++      <button class="btn-link hide-sm" onclick="go('v-dash')" title="État de la sauvegarde">Sauvegarde : <span>—</span></button>
+     </div>
+   </div>
+ </div>
+ 
+ <!-- ===================== EN-TÊTE ===================== -->
+ <header class="hero-head">
+-  <div class="wrap">
+-    <div class="ident">
+-      <div class="logo">
+-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"/></svg>
+-      </div>
+-      <div>
+-        <h1><span id="hero-prof" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier" onclick="openProfil()">Prof. Aymen Essouyah</span></h1>
+-        <div class="sub">
+-          <span><strong id="hero-lycee">Lycée Rafèha Ariana</strong></span>
+-          <span class="chip">Matière : STI</span>
+-          <span class="chip">2026 / 2027</span>
+-          <span class="chip">3SI1 &amp; 4SI2</span>
+-        </div>
+-      </div>
+-    </div>
+-    <div class="head-actions no-print">
+-      <div style="position:relative;display:inline-block">
+-        <button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> <span id="compte-txt">Connexion</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px"><path d="m6 9 6 6 6-6"/></svg></button>
+-        <div id="menu-compte" class="hidden" style="position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
+-          <div id="mc-id" class="tiny" style="padding:8px 10px;border-bottom:1px solid var(--line-2);margin-bottom:4px"></div>
+-          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('connexion')">
+-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Se connecter / Changer de compte</button>
+-          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('profil')">
+-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 14 0v1"/></svg> Mon profil (nom et matière)</button>
+-          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="menuAction('admin')">
+-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><circle cx="9" cy="7" r="4"/><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg> Gérer les professeurs</button>
+-          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0;color:#b02a3a" onclick="menuAction('deconnexion')">
+-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 12H8"/><path d="m12 9 3 3-3 3"/><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/></svg> Se déconnecter</button>
+-          <button class="btn btn-line" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="forceMaj()" title="Efface le cache local et recharge l'application en dernière version — à utiliser si une fonctionnalité reste bloquée">
+-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg> Forcer la mise à jour</button>
+-        <button class="btn btn-line" id="mc-installer" style="display:block;width:100%;text-align:left;margin:2px 0" onclick="installApp()" title="Installer l'application sur l'écran d'accueil : plein écran, démarrage rapide, fonctionne sans connexion">
+-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Installer l'application</button>
+-          <div id="mc-ver" class="tiny muted" style="padding:6px 10px 4px;border-top:1px solid var(--line-2);margin-top:4px"></div>
+-        </div>
+-      </div>
+-      <button class="btn btn-ghost" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"/><path d="M17 18H7a4 4 0 0 1 0-8"/><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"/></svg> Cloud</button>
+-      <button class="btn btn-ghost" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Imprimer</button>
+-      <button class="btn btn-ghost" onclick="exportJSON()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg> Exporter</button>
+-      <button class="btn btn-ghost" id="btn-install" style="display:none" onclick="installApp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg> Installer l'application</button>
+-      <button class="btn btn-primary" onclick="openModal(0)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg> Séance du jour</button>
+-    </div>
+-  </div>
++<div class="wrap">
++<div class="ident">
++<div class="logo">
++<svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"></path><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"></path></svg>
++</div>
++<div>
++<h1><span id="hero-prof" onclick="openProfil()" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier">Prof. Aymen Essouyah</span></h1>
++<div class="sub">
++<span><strong id="hero-lycee">Lycée Rafèha Ariana</strong></span>
++<span class="chip">Matière : STI</span>
++<span class="chip">2026 / 2027</span>
++<span class="chip">3SI1 &amp; 4SI2</span>
++</div>
++</div>
++</div>
++
++</div>
+ </header>
+ 
+ <!-- ===================== BANDEAU DE MISE À JOUR ===================== -->
+@@ -89,12 +105,22 @@
  </div>
  
  <!-- ===================== ONGLETS ===================== -->
@@ -252,7 +378,7 @@
    <section id="v-edt" class="view"></section>
    <section id="v-cal" class="view"></section>
    <section id="v-rep" class="view"></section>
-@@ -320,13 +345,19 @@
+@@ -320,13 +346,19 @@
  <script src="data/memo.js"></script>
  <script src="data/annexes.js"></script>
  <script src="data/docs.js"></script>
@@ -279,7 +405,7 @@
         (documents volumineux, rarement modifiés → consultables hors ligne)
     ========================================================================= */
 -const VERSION    = "sti-espace-v1.1.22";
-+const VERSION    = "sti-espace-v1.3.0-sti-fusion";
++const VERSION    = "sti-espace-v1.3.2-sti-essential";
  const CORE_CACHE = VERSION + "-core";
  const DOCS_CACHE = VERSION + "-docs";
  

@@ -6,7 +6,7 @@
      • PDF (aide pédagogique, répartitions, annexes) : cache d'abord
        (documents volumineux, rarement modifiés → consultables hors ligne)
    ========================================================================= */
-const VERSION    = "sti-espace-v1.3.0-sti-fusion";
+const VERSION    = "sti-espace-v1.3.2-sti-essential";
 const CORE_CACHE = VERSION + "-core";
 const DOCS_CACHE = VERSION + "-docs";
 
