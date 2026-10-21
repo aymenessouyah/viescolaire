@@ -14,3 +14,16 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-vs-class]'
 const tabs=document.getElementById('tabs');if(tabs)new MutationObserver(refresh).observe(tabs,{childList:true});const prof=document.getElementById('hero-prof');if(prof)new MutationObserver(refresh).observe(prof,{childList:true});const cloud=document.getElementById('cloud-bar');if(cloud)new MutationObserver(refresh).observe(cloud,{childList:true});
 narrow.addEventListener('change',()=>{setMenu(false,false);refresh();});apply(active);setMenu(false,false);refresh();window.STI_THEME={refresh,setClass:apply};
 })();
+
+/* Mobile account disclosure: UI state only; no business storage or Cloud writes. */
+(function(){'use strict';
+const bar=document.querySelector('.ref-essential-bar'),button=document.getElementById('ref-account-toggle'),content=document.getElementById('ref-account-content'),state=document.getElementById('ref-account-state');
+if(!bar||!button||!content)return;const mobile=matchMedia('(max-width:700px)');
+function setOpen(open,focus=false){bar.classList.toggle('is-expanded',!!open&&mobile.matches);button.setAttribute('aria-expanded',String(!mobile.matches||!!open));if(!open&&mobile.matches){window.fermerMenuCompte?.();if(focus)button.focus();}}
+function status(){const code=window.STI_SYNC?.status().code,label=!navigator.onLine?'Hors ligne':({starting:'Initialisation',clean:'À jour',syncing:'Échange…',pending:'En attente',conflict:'Conflits',storage:'Stockage !',account:'Compte à vérifier',server:'Cloud à vérifier',paused:'En pause',offline:'Hors ligne',auth:window.cloudReady?.()?'Connexion':'Local'})[code]||'Local';if(state.textContent!==label)state.textContent=label;state.dataset.warning=String(['conflict','storage','account','server'].includes(code));}
+button.addEventListener('click',()=>setOpen(!bar.classList.contains('is-expanded')));
+bar.addEventListener('keydown',e=>{if(e.key==='Escape'&&mobile.matches&&bar.classList.contains('is-expanded')&&!document.querySelector('.modal.on,dialog[open]')){setOpen(false,true);e.preventDefault();}});
+mobile.addEventListener('change',()=>{const inside=content.contains(document.activeElement),toggleFocused=document.activeElement===button;setOpen(false,inside&&mobile.matches);if(!mobile.matches&&toggleFocused)document.getElementById('btn-compte')?.focus();});
+const cloud=document.getElementById('cloud-bar');if(cloud)new MutationObserver(status).observe(cloud,{childList:true,subtree:true,characterData:true});
+window.addEventListener('online',status);window.addEventListener('offline',status);setOpen(false);status();
+})();

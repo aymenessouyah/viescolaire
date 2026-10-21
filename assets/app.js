@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.4.3-color-modes";
+const APP_VER = "v1.4.4-mobile-panel";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

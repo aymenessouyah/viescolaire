@@ -725,6 +725,10 @@ html[data-color-mode="dark"] body.vs-fusion .ref-ui .ref-notif-session{border:0;
 html[data-color-mode="dark"] body.vs-fusion .ref-ui .ref-notif-session:hover,html[data-color-mode="dark"] body.vs-fusion .ref-ui .ref-notif-session:focus-visible{background:#232019;}
 html[data-color-mode="dark"] body.vs-fusion .ref-ui .ref-notif-link{color:#ccf5e6;}
 @media (prefers-reduced-motion:reduce){}
+@media (max-width:700px){html[data-color-mode="dark"] body.vs-fusion .ref-essential-bar .ref-account-toggle{background:#201e17;color:#d2efe4;border:1px solid #292516;}
+html[data-color-mode="dark"] body.vs-fusion .ref-account-state{color:#b9bdb2;}
+html[data-color-mode="dark"] body.vs-fusion .ref-account-state[data-warning="true"]{color:#e39b8c;}}
+@media (prefers-reduced-motion:reduce){}
 html[data-color-mode="dark"] .sti-sync-dialog{background:#201e17;color:#dce5df;border:1px solid #292516;box-shadow:0 24px 80px #11211b55;}
 html[data-color-mode="dark"] .sti-sync-dialog::backdrop{background:#101e1899;}
 html[data-color-mode="dark"] .sti-sync-dialog h2{color:#cef3e6;}

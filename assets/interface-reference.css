@@ -559,7 +559,7 @@ body.vs-fusion .vs-sidebar .ref-term{font-size:12px;line-height:1.45}
 body.vs-fusion .vs-sidebar .ref-term span{min-width:0}
 body.vs-fusion .ref-planning+.ref-tools{margin-top:15px}
 
-/* Connexion et Cloud : commandes permanentes, jamais repliées. */
+/* Connexion et Cloud : permanents sur ordinateur, volet repliable sur mobile. */
 body.vs-fusion .vs-workspace-top{flex-wrap:wrap;row-gap:12px}
 body.vs-fusion .ref-essential-bar{flex:0 0 100%;width:100%;border-top:1px solid #E7E3D2;padding-top:10px;order:5}
 body.vs-fusion .ref-essential-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
@@ -607,3 +607,24 @@ body.vs-fusion .ref-ui .ref-notif-session:hover,body.vs-fusion .ref-ui .ref-noti
 body.vs-fusion .ref-ui .ref-notif-session .notif-text,body.vs-fusion .ref-ui .ref-notif-session .notif-time{display:block}
 body.vs-fusion .ref-ui .ref-notif-link{display:block;margin-top:5px;font-size:10px;font-weight:600;color:#14684a}
 @media(prefers-reduced-motion:reduce){body.vs-fusion .ref-ui #ref-bell.has-unconfirmed>svg{animation:none}}
+
+/* Mobile: compact account bar, all actions one tap away. */
+body.vs-fusion .ref-account-toggle{display:none}
+@media(max-width:700px){
+ body.vs-fusion .ref-essential-bar{padding-top:7px}
+ body.vs-fusion .ref-essential-bar .ref-account-toggle{display:flex;align-items:center;gap:9px;width:100%;min-height:44px;padding:10px 12px;background:#FFFDF6;color:#14382B;border:1px solid #E7E3D2;border-radius:10px;cursor:pointer;text-align:left;font:600 11px/1.4 var(--ref-sans)}
+ body.vs-fusion .ref-account-toggle>span:first-child{flex:1;min-width:0}
+ body.vs-fusion .ref-essential-bar .ref-account-toggle>svg{width:15px;height:15px;transition:transform .18s ease}
+ body.vs-fusion .ref-essential-bar.is-expanded .ref-account-toggle>svg{transform:rotate(180deg)}
+ body.vs-fusion .ref-account-state{font-size:9px;font-weight:500;color:#656B5C;max-width:105px;text-align:right}
+ body.vs-fusion .ref-account-state[data-warning="true"]{color:#a43d28;font-weight:700}
+ body.vs-fusion .ref-essential-bar:not(.is-expanded) #ref-account-content{display:none}
+ body.vs-fusion .ref-essential-bar.is-expanded #ref-account-content{display:block;margin-top:10px;max-height:calc(100dvh - 210px);overflow:auto;overscroll-behavior:contain;padding:1px 2px 3px}
+ body.vs-fusion #ref-account-content .ref-essential-heading>strong{display:none}
+ body.vs-fusion #ref-account-content #sti-sync-details{margin-bottom:8px}
+ body.vs-fusion #ref-account-content .head-actions>div:has(#menu-compte:not(.hidden)){grid-column:1 / -1}
+ body.vs-fusion .ref-essential-bar #menu-compte{position:static!important;min-width:0!important;width:100%;max-width:100%;margin-top:6px;box-sizing:border-box}
+}
+@media(prefers-reduced-motion:reduce){body.vs-fusion .ref-account-toggle>svg{transition:none}}
+/* Installation prompts must not cover account or session dialog actions. */
+body.vs-fusion:has(.modal.on,dialog[open]) #install-banner{display:none!important}
