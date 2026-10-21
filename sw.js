@@ -6,7 +6,7 @@
      • PDF (aide pédagogique, répartitions, annexes) : cache d'abord
        (documents volumineux, rarement modifiés → consultables hors ligne)
    ========================================================================= */
-const VERSION    = "sti-espace-v1.1.22";
+const VERSION    = "sti-espace-v1.2.0-sti-books";
 const CORE_CACHE = VERSION + "-core";
 const DOCS_CACHE = VERSION + "-docs";
 
@@ -16,6 +16,10 @@ const CORE_ASSETS = [
   "./manifest.webmanifest",
   "./assets/style.css",
   "./assets/app.js",
+  "./assets/suivi-sti.js",
+  "./assets/suivi-sti.css",
+  "./data/livres-sti.js",
+  "./data/ajustements-sti.js",
   "./assets/eleves.js",
   "./assets/admin.js",
   "./data/reference.js",
@@ -40,6 +44,15 @@ const CORE_ASSETS = [
 ];
 
 const DOC_ASSETS = [
+  "./docs/sti-smart-book-3si-2026.pdf",
+  "./docs/sti-smart-book-4si-2026.pdf",
+  "./docs/fiches-3si-2026/S5-6-3sti.pdf",
+  "./docs/fiches-3si-2026/S7-8-3sti.pdf",
+  "./docs/fiches-3si-2026/S9-10-3sti.pdf",
+  "./docs/fiches-3si-2026/S11-12-3sti.pdf",
+  "./docs/fiches-3si-2026/S13-14-3sti.pdf",
+  "./docs/fiches-3si-2026/S15-16-3sti.pdf",
+
   "./docs/Aide-pedagogique-STI-3-4-2024.pdf",
   "./docs/Repartition-T1-3SI.pdf",
   "./docs/Repartition-T1-4SI.pdf",
@@ -64,7 +77,7 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== CORE_CACHE && k !== DOCS_CACHE).map(k => caches.delete(k)));
+    await Promise.all(keys.filter(k => k.startsWith("sti-espace-") && k !== CORE_CACHE && k !== DOCS_CACHE).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });

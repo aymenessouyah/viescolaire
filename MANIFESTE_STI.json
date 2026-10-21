@@ -1,0 +1,106 @@
+{
+  "repository": "https://github.com/aymenessouyah/viescolaire",
+  "branch": "main",
+  "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
+  "version": "v1.2.0-sti-books",
+  "files": [
+    {
+      "path": "assets/app.js",
+      "sha256": "86ce0a1d38ecfd5ec7a8a9a3fb5870eada35788ce5cae32112f060fbf84d9e3c",
+      "action": "modifier",
+      "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
+    },
+    {
+      "path": "assets/style.css",
+      "sha256": "dc416dbccd405bae00b85f4cfc95cfd6605ea86a21496974217df7f3bb3c4c57",
+      "action": "modifier",
+      "base_sha256": "58958404f1a9c2d4314833c71935126f9786a94c2538ecce0d3925e65b2d7866"
+    },
+    {
+      "path": "assets/suivi-sti.css",
+      "sha256": "b9b27f1cce303d66a9f6b48cfebdd4017a5e2933a5b30cb0589c3f85109276a0",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/suivi-sti.js",
+      "sha256": "5771554d111b8e31fa1bc2bcdafd961ce3829d16342b93b55f271eecad95afc4",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "data/ajustements-sti.js",
+      "sha256": "f36f2a498d26ddb2ca7785d7d5c9655e88782a4a54dd05f5209f0bdf7b1bff6d",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "data/livres-sti.js",
+      "sha256": "202950c62d5fd0c8e4caa755fc27ae5f4c9a7ef15aa6ff91ee02732d339c70fa",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/fiches-3si-2026/S11-12-3sti.pdf",
+      "sha256": "915d37b85d084396871c7a1914af713255c14ec1fd0469b1ded69518d23b1f36",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/fiches-3si-2026/S13-14-3sti.pdf",
+      "sha256": "c5be86a6ab86bbab795858f7835500589626d5308cf0a9252cf10e4e6eff7b96",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/fiches-3si-2026/S15-16-3sti.pdf",
+      "sha256": "3cbe3c3797f474059a34c4f22d6ca3efb152070782d656694fac2b54a6d0055c",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/fiches-3si-2026/S5-6-3sti.pdf",
+      "sha256": "d51b43b5a1a463c492ce174e6b6feca0b8083a027a21972500fb42a512149590",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/fiches-3si-2026/S7-8-3sti.pdf",
+      "sha256": "29a6d3bd794bed99bf9e35e66c1a1b27e098d5693b1cddd6b5a81114833ba17f",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/fiches-3si-2026/S9-10-3sti.pdf",
+      "sha256": "e18c754ce35d41a0b79462c71ace2855aea0d2d5491e6cc7aefbb54127338582",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/sti-smart-book-3si-2026.pdf",
+      "sha256": "8289ea3279103dc61f337a71b655bbd9d62110c08a2c683fe2bb2b32f770e908",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "docs/sti-smart-book-4si-2026.pdf",
+      "sha256": "dbad53b9b758ba12a85be07d384173a9e09c597e35e7333d5fd145f79c3e0061",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "index.html",
+      "sha256": "308e84eecd25a8275ad20ab491a8780eab77506529bc71b505beb7305ddd4797",
+      "action": "modifier",
+      "base_sha256": "974f8d76b243f690430c18e264784b7ffaa5c93dae6a58cd6fcce82646b440b9"
+    },
+    {
+      "path": "sw.js",
+      "sha256": "6977b1f8127b81606a25d831b2e620615e6cb2a9e5d5bf22b7b57f3e3a276b0c",
+      "action": "modifier",
+      "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
+    }
+  ],
+  "database_changed": false,
+  "supabase_config_included": false
+}

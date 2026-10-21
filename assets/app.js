@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.1.22";
+const APP_VER = "v1.2.0-sti-books";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -24,9 +24,9 @@ try {
     (async () => {
       try {
         const ks = await caches.keys();
-        await Promise.all(ks.map(k => caches.delete(k)));
+        await Promise.all(ks.filter(k => k.startsWith("sti-espace-")).map(k => caches.delete(k)));
         const rs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(rs.map(r => r.unregister()));
+        await Promise.all(rs.filter(r => r.scope === new URL("./", location.href).href).map(r => r.unregister()));
       } catch(e){}
       setTimeout(() => { try { location.replace(location.href); } catch(e){} }, 300);
     })();
@@ -121,7 +121,7 @@ function triOf(iso){
 }
 const SESSIONS = { "3SI1": generateSessions("3SI1"), "4SI2": generateSessions("4SI2") };
 function sessionsOf(cls, tri){ return SESSIONS[cls].filter(s => !tri || s.tri === tri); }
-/* identité visuelle des classes : 3SI1 = bleu, 4SI2 = violet */
+/* identité visuelle des classes : 3SI1 = bleu, 4SI2 = vert */
 function clsChip(c){ return c === "3SI1" ? "b-3si1" : "b-4si2"; }
 function clsCoul(c){ return c === "3SI1" ? "var(--c-3si1)" : "var(--c-4si2)"; }
 function titleOf(s, store){
@@ -162,7 +162,7 @@ function save(silent){
 }
 function seanceState(s){
   const o = store.seances[s.cls+"|"+s.n] || {};
-  if (o.done === true) return "faite";
+  if (o.done === true && s.iso <= todayISO()) return "faite";
   if (o.done === false) return "reportee";
   return s.iso <= todayISO() ? "passee" : "avenir";
 }
@@ -205,6 +205,7 @@ function ic(n, cls){ return '<svg class="'+(cls||'')+'" viewBox="0 0 24 24" fill
 
 const TABS = [
   { id:"v-dash",   t:"Tableau de bord", ico:"home" },
+  { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
   { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
   { id:"v-rep",    t:"Répartition 1<sup>er</sup> trim.", ico:"list" },
@@ -233,6 +234,7 @@ function renderAll(silent){
   if (typeof applyProfil === "function") applyProfil();
   renderCahier();
   renderRef();
+  if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
   renderCompte();
   renderLoginInvite();
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
@@ -258,7 +260,7 @@ function nextSessions(cls, k){
 }
 function kpiDone(cls, tri){
   const list = sessionsOf(cls, tri), t = todayISO();
-  const done = list.filter(s => { const st = seanceState(s); return st==="faite" || st==="passee"; }).length;
+  const done = list.filter(s => { const st = seanceState(s); return st==="faite"; }).length;
   return { done:done, total:list.length, pct: Math.round(done/list.length*100) };
 }
 /* invitation à activer la sauvegarde distante — affichée seulement si nécessaire */
@@ -347,7 +349,7 @@ function renderDash(){
   <div class="grid g2" style="align-items:start">
     <div class="stack">
       <div class="card">
-        <div class="card-h"><h3>${ic("check")} Avancement du programme — 1<sup>er</sup> trimestre</h3><span class="badge b-grey">Mis à jour le ${fmtShort(t)}</span></div>
+        <div class="card-h"><h3>${ic("check")} Séances déclarées assurées — 1<sup>er</sup> trimestre</h3><span class="badge b-grey">Mis à jour le ${fmtShort(t)}</span></div>
         <div class="card-b">
           ${["3SI1","4SI2"].map(c => {
             const k = kpiDone(c,1);
@@ -358,7 +360,7 @@ function renderDash(){
               </div>
               <div class="bar"><i class="done" style="width:${k.pct}%"></i><i class="left" style="width:${100-k.pct}%"></i></div>
               <div class="legend">
-                <span><i class="sq" style="background:#12a06a"></i> réalisées / échues</span>
+                <span><i class="sq" style="background:#12a06a"></i> assurées (confirmées)</span>
                 <span><i class="sq" style="background:#dbe6f2"></i> restantes</span>
                 <span class="muted">DC1 : ${dcOf(c,"dc1")} • DC2 : ${dcOf(c,"dc2")} • DS1 : ${fmtShort(DS1[c].main)}</span>
               </div>
@@ -806,7 +808,7 @@ function renderRep(){
   const cls = repCls, cfg = CLASSES[cls];
   const list = sessionsOf(cls, repTri);
   const t = todayISO();
-  const done = list.filter(s => { const st = seanceState(s); return st==="faite"||st==="passee"; }).length;
+  const done = list.filter(s => { const st = seanceState(s); return st==="faite"; }).length;
   const pct = Math.round(done/list.length*100) || 0;
   const dcList = evalDates(cls,"dc");
 
@@ -916,6 +918,7 @@ function toggleDone(cls, n){
   const key = cls+"|"+n, o = store.seances[key] || {};
   const s = SESSIONS[cls].find(x => x.n===n);
   const st = seanceState(s);
+  if (s.iso > todayISO() && st !== "faite") { toast("Une séance future ne peut pas être déclarée assurée."); return; }
   o.done = (st === "faite") ? false : true;
   store.seances[key] = o;
   save(true); toast("État de la séance n°"+n+" ("+cls+") mis à jour");
@@ -1067,7 +1070,7 @@ function renderCahier(){
     sessionsOf(c, cahTri).forEach(s => list.push(s));
   });
   list.sort((a,b) => b.iso.localeCompare(a.iso));
-  const done = list.filter(s => { const st = seanceState(s); return st==="faite"||st==="passee"; }).length;
+  const done = list.filter(s => { const st = seanceState(s); return st==="faite"; }).length;
 
   document.getElementById("v-cahier").innerHTML = `
   <div class="sec-head">
@@ -1368,8 +1371,8 @@ function fermerMenuCompte(){ const m = document.getElementById("menu-compte"); i
 async function forceMaj(){
   if (!confirm("Effacer le cache local et recharger l'application en dernière version ?")) return;
   toast("Effacement du cache…");
-  try { if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch(e){}
-  try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } } catch(e){}
+  try { if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("sti-espace-")).map(k => caches.delete(k))); } } catch(e){}
+  try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.filter(r => r.scope === new URL("./", location.href).href).map(r => r.unregister())); } } catch(e){}
   setTimeout(() => location.replace(location.href), 350);
 }
 function menuAction(quoi){
@@ -1691,10 +1694,16 @@ function openModal(cls, n){
     <div style="margin-bottom:12px"><label class="f">Observations / bilan</label>
       <input type="text" id="m-obs" value="${escapeHtml(o.obs || "")}" placeholder="Ex. : notions à reprendre, séance écourtée, groupe très réceptif…"></div>
     <div class="row" style="gap:8px">
-      <label class="badge b-green" style="cursor:pointer"><input type="checkbox" id="m-done" ${o.done?"checked":""}> Séance assurée</label>
+      <label class="badge b-green" style="cursor:pointer"><input type="checkbox" id="m-done" ${o.done?"checked":""}> Séance assurée — contenu commun traité avec les deux groupes</label>
       <label class="badge b-rose" style="cursor:pointer"><input type="checkbox" id="m-rep" ${o.done===false?"checked":""}> Séance reportée</label>
     </div>
     <div class="note tiny" style="margin-top:12px">Rappel du contenu prévu par la répartition officielle : ${s.blk ? s.blk.t + " — " + s.blk.det : "séance à planifier (le document de répartition fourni ne couvre que le 1<sup>er</sup> trimestre)."}</div>`;
+  if (window.STI_TRACK) window.STI_TRACK.mountModal(cls,n,o);
+  document.getElementById("m-done").addEventListener("change",function(){ if(this.checked) document.getElementById("m-rep").checked=false; });
+  document.getElementById("m-rep").addEventListener("change",function(){ if(this.checked) document.getElementById("m-done").checked=false; });
+  if (cls === "4SI2" && s.iso >= "2026-10-05" && s.iso <= "2026-12-28" && o.title && s.blk && o.title !== s.blk.t) {
+    document.getElementById("m-body").insertAdjacentHTML("afterbegin",'<div class="sti-preserve"><strong>Votre fiche personnalisée a été conservée.</strong> Le planning de référence a été recalé (PHP dès le 09/10 ; DC1 le 02/11). Comparez votre titre avec le rappel ci-dessous avant de modifier cette fiche.</div>');
+  }
   document.getElementById("modal").classList.add("on");
 }
 function closeModal(){ document.getElementById("modal").classList.remove("on"); document.body.style.overflow=""; }
@@ -1703,7 +1712,14 @@ function saveModal(){
   const k = mCtx.cls+"|"+mCtx.n;
   const doneBox = document.getElementById("m-done").checked;
   const repBox = document.getElementById("m-rep").checked;
+  const s = SESSIONS[mCtx.cls].find(x => x.n === mCtx.n);
+  if (doneBox && s && s.iso > todayISO()) { toast("Une séance future ne peut pas être déclarée assurée."); return; }
+  if (doneBox && repBox) { toast("Choisissez assurée ou reportée, pas les deux."); return; }
+  const previous = store.seances[k] || {};
   store.seances[k] = {
+    ...previous,
+    notions: window.STI_TRACK ? window.STI_TRACK.selection(mCtx.cls) : (previous.notions || []),
+    notionsVersion: window.STI_TRACK ? window.STI_TRACK.version : previous.notionsVersion,
     title: document.getElementById("m-titre").value.trim(),
     contenu: document.getElementById("m-contenu").value.trim(),
     devoirs: document.getElementById("m-devoirs").value.trim(),
