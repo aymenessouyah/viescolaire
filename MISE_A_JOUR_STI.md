@@ -1,8 +1,12 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-**Version préparée : `v1.4.0-offline-sync`**  
+**Version préparée : `v1.4.1-next-courses`**  
 **Dépôt existant :** https://github.com/aymenessouyah/viescolaire  
 **État : code préparé et testé localement, non publié.** Aucune écriture n’a été faite dans votre dépôt ou votre base réelle. Le script SQL reste à appliquer dans votre environnement.
+
+## Correction 1.4.1 — ordre du Suivi des cours
+
+Le tableau commence désormais par les séances d’aujourd’hui et à venir, de la plus proche à la plus lointaine. Les séances passées viennent ensuite, de la plus récente à la plus ancienne. Cet ordre est conservé dans les filtres, la recherche, la pagination et l’export CSV. Aucune fiche ni date du planning n’est modifiée.
 
 ## 1. Ce que cette version ajoute
 
@@ -88,7 +92,7 @@ Référence du code d’origine utilisé pour construire le paquet : commit `890
 1. Publier après validation sur la branche de test.
 2. Dans la configuration Cloud, garder la table `espace_pedagogique`, l’URL et la clé publique du projet existant, activer **Accès protégé par mot de passe** et **Synchroniser automatiquement dans les deux sens**.
 3. Mettre à jour les onglets et les applications installées sur **tous les appareils qui écrivent sur ce compte**, avant de reprendre un travail simultané.
-4. Vérifier la version `v1.4.0-offline-sync`, puis la connexion et la première association.
+4. Vérifier la version `v1.4.1-next-courses`, puis la connexion et la première association.
 
 **Important : les anciens clients font des insertions directes et ne participent pas au verrou de synchronisation.** La protection contre les écritures concurrentes exige que tous les clients écrivains utilisent cette nouvelle version. Ne continuez pas à modifier les fiches dans un ancien onglet.
 
@@ -129,7 +133,9 @@ La connexion réelle, les permissions de votre projet et l’hébergement GitHub
 - PHP en 4SI2 à partir du **9 octobre 2026**, DC1 au **2 novembre 2026** ; calendrier tunisien et propositions déjà préparés conservés. Les titres personnalisés ne sont pas remplacés automatiquement.
 - Les fiches, notions, horaires, profil, classes, élèves, épreuves, notes et présences gardent leur structure métier. Le nouveau stockage IndexedDB ajoute des métadonnées de synchronisation et des copies de secours, pas une nouvelle base métier distante.
 
-## 6. Vérifications locales de cette version
+## 6. Vérifications locales
+
+**Correction 1.4.1 :** 12 contrôles ciblés ont réussi (ordre complet sur toutes les pages, deux classes, recherche, CSV, séance du jour, début/fin d’année, mobile et données inchangées). La suite de fusion de 86 contrôles a également été relancée avec succès. Les autres résultats ci-dessous proviennent de la validation 1.4.0 ; le moteur de synchronisation n’a pas été modifié par cette correction.
 
 | Suite | Résultat |
 |---|---:|

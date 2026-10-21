@@ -24,7 +24,7 @@
 -    })();
 -  }
 -} catch(e){}
-+const APP_VER = "v1.4.0-offline-sync";
++const APP_VER = "v1.4.1-next-courses";
 +/* Version stockée sans effacer le cache hors ligne ni les données. */
 +try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
  const DATA = window.STI_DATA || {};
@@ -689,7 +689,7 @@
 -const CORE_ASSETS = [
 -  "./",
 +/* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-+const VERSION='sti-espace-v1.4.0-offline-sync';
++const VERSION='sti-espace-v1.4.1-next-courses';
 +const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 +const CORE_ASSETS=[
    "./index.html",
