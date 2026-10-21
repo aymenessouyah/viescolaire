@@ -1,8 +1,14 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-**Version préparée : `v1.4.2-session-alerts`**  
+**Version préparée : `v1.4.3-color-modes`**  
 **Dépôt existant :** https://github.com/aymenessouyah/viescolaire  
 **État : code préparé et testé localement, non publié.** Aucune écriture n’a été faite dans votre dépôt ou votre base réelle. Le script SQL reste à appliquer dans votre environnement.
+
+## Correction 1.4.3 — bouton clair / sombre
+
+Le bouton soleil/lune en haut **change maintenant le mode d’affichage**, sans ouvrir le Cloud. Le choix clair ou sombre est mémorisé sur cet appareil, restauré au rechargement et disponible hors ligne. La préférence reste locale : aucun changement dans les fiches, notes ou paramètres Cloud.
+
+Le mode sombre couvre les écrans, formulaires, menus et notifications. Les impressions restent claires et les documents PDF/images ne sont pas inversés. Le mode clair conserve la présentation crème existante. La configuration et la connexion restent accessibles par les boutons **Cloud** et **Connexion** de la barre permanente.
 
 ## Ajout 1.4.2 — cloche des séances non confirmées
 
@@ -87,6 +93,8 @@ Décompresser **`Vie-scolaire-hors-ligne-synchronisation.zip`** et fusionner son
 Les nouveaux fichiers spécifiques à cette version sont :
 
 ```text
+assets/color-mode.js                   bascule clair/sombre et préférence locale
+assets/color-mode.css                  palette sombre, impression claire conservée
 assets/offline-sync.js                 synchronisation, file locale, conflits et comptes
 assets/offline-sync.css                fenêtres de statut et de résolution
 assets/sync-merge.js                   moteur de fusion trois voies
@@ -102,7 +110,7 @@ Référence du code d’origine utilisé pour construire le paquet : commit `890
 1. Publier après validation sur la branche de test.
 2. Dans la configuration Cloud, garder la table `espace_pedagogique`, l’URL et la clé publique du projet existant, activer **Accès protégé par mot de passe** et **Synchroniser automatiquement dans les deux sens**.
 3. Mettre à jour les onglets et les applications installées sur **tous les appareils qui écrivent sur ce compte**, avant de reprendre un travail simultané.
-4. Vérifier la version `v1.4.2-session-alerts`, puis la connexion et la première association.
+4. Vérifier la version `v1.4.3-color-modes`, puis la connexion et la première association.
 
 **Important : les anciens clients font des insertions directes et ne participent pas au verrou de synchronisation.** La protection contre les écritures concurrentes exige que tous les clients écrivains utilisent cette nouvelle version. Ne continuez pas à modifier les fiches dans un ancien onglet.
 
@@ -144,6 +152,8 @@ La connexion réelle, les permissions de votre projet et l’hébergement GitHub
 - Les fiches, notions, horaires, profil, classes, élèves, épreuves, notes et présences gardent leur structure métier. Le nouveau stockage IndexedDB ajoute des métadonnées de synchronisation et des copies de secours, pas une nouvelle base métier distante.
 
 ## 6. Vérifications locales
+
+**Correction 1.4.3 :** 45 contrôles du mode clair/sombre réussis : bascule, absence d’ouverture du Cloud, conservation du choix, treize vues, formulaires, clavier, mobile, impression claire et données inchangées. Les 10 contrôles de cache/mise à jour incluent un véritable rechargement hors ligne en mode sombre. Les suites synchronisation simulée (30), commandes essentielles (33), fusion d’interface (86), cloche (27) et tri des cours (12) ont été relancées avec succès. Aucune opération sur la base ou le dépôt réels.
 
 **Ajout 1.4.2 :** 27 contrôles de la cloche réussis (compteur, animation, liste, confirmation/décochage, changement de date, mobile, pause, réduction des animations, aucune écriture automatique). Les 33 contrôles des commandes essentielles, les 86 contrôles de fusion et les 12 contrôles du tri des cours ont été relancés avec succès. La synchronisation et le SQL ne changent pas dans cet ajout.
 

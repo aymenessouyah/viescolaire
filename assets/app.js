@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.4.2-session-alerts";
+const APP_VER = "v1.4.3-color-modes";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

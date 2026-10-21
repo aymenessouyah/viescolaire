@@ -2,13 +2,25 @@
   "repository": "https://github.com/aymenessouyah/viescolaire",
   "branch": "main",
   "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
-  "version": "v1.4.2-session-alerts",
+  "version": "v1.4.3-color-modes",
   "files": [
     {
       "path": "assets/app.js",
-      "sha256": "a7e5717c689838d6afb5e90ac6b9a76059d61c6689d2210fa200bb313fbd762c",
+      "sha256": "0dca8d0b1bc0617d4a3fc2a9f345c28619647219c6aebb3969ffe81e91ef6784",
       "action": "modifier",
       "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
+    },
+    {
+      "path": "assets/color-mode.css",
+      "sha256": "79c4f5e40ea6f5424626e04716af9313fe8e0f6cebf2919f2c8a7d6b7421d2d0",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/color-mode.js",
+      "sha256": "bd31b5c05c6293eecf5604f496e94dced4f2e68455ad8cafdc77c44eaeea0c41",
+      "action": "ajouter",
+      "base_sha256": null
     },
     {
       "path": "assets/interface-reference.css",
@@ -18,7 +30,7 @@
     },
     {
       "path": "assets/interface-reference.js",
-      "sha256": "72af88cd17174c77bcf8c296b2bce4ae2bc8068e806cde2e54f158beb1777b17",
+      "sha256": "ae7c813e1b2f80f5c4f5bea98800598f4b879855f94673f517188394cd7e5ad5",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -66,7 +78,7 @@
     },
     {
       "path": "assets/theme-classe.js",
-      "sha256": "1bbb2647edf3711fc85f32d068f664ca90717fd6b7ca19bc4f374c84b2535813",
+      "sha256": "26db0e5489d7e69203045a33f78e36101531bfa095b182eb42ca5708b2f41538",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -132,7 +144,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "4f880a58ee9c7533db36dd3eb5cc989d1c2ac3db5aa475d896df631f4199a020",
+      "sha256": "5323f67402d6d8e3ce0223730cf9099bec2af49a1edb8feb1e34fb966f72b86e",
       "action": "modifier",
       "base_sha256": "974f8d76b243f690430c18e264784b7ffaa5c93dae6a58cd6fcce82646b440b9"
     },
@@ -144,7 +156,7 @@
     },
     {
       "path": "sw.js",
-      "sha256": "683572c3ddc778aa08ddf49fe12865e9f7a5531d88a58607c282d5c4ec5f3cda",
+      "sha256": "aa3a865600658132002b8675d8ebf8221c586a35a975720a615ab6212f07c667",
       "action": "modifier",
       "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
     }
