@@ -2,11 +2,11 @@
   "repository": "https://github.com/aymenessouyah/viescolaire",
   "branch": "main",
   "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
-  "version": "v1.2.1-sti-theme",
+  "version": "v1.2.2-sti-reference",
   "files": [
     {
       "path": "assets/app.js",
-      "sha256": "3ef51742190780cb46756dc88c837e343a13b9fd212dc0983225c43ff482d2d7",
+      "sha256": "70db3968a8d455f2d7daeb95d05eddef91d18e4cf0b0efa42679f16a375e6261",
       "action": "modifier",
       "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
     },
@@ -30,13 +30,13 @@
     },
     {
       "path": "assets/theme-classe.css",
-      "sha256": "86d877f92b09176d8ec1c5319217efe13d7e63202b6a4d5b010064821bebbaf5",
+      "sha256": "6412b8339d6d3e0dc11bd6c9d75d47bd826ba99985f5b90a02277ccd790f6f01",
       "action": "ajouter",
       "base_sha256": null
     },
     {
       "path": "assets/theme-classe.js",
-      "sha256": "5b18ef26c0d1cc8cdab64567a23df32b59b62758d27b1478c1c3c42b259c290a",
+      "sha256": "1bbb2647edf3711fc85f32d068f664ca90717fd6b7ca19bc4f374c84b2535813",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -108,7 +108,7 @@
     },
     {
       "path": "sw.js",
-      "sha256": "2f413f7bed18ced4a9c0722c86599cbc295ceb593487dc4e6a53dbafc44dee96",
+      "sha256": "4763e5c967c0974843a9234b399868b1fd77fab6b5a751875c1f41f6b561c403",
       "action": "modifier",
       "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
     }

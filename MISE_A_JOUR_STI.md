@@ -1,7 +1,7 @@
-# Mise à jour de Vie scolaire — thème clair et suivi des notions STI
+# Mise à jour de Vie scolaire — thème crème, vert forêt et or — suivi des notions STI
 
 **Projet :** [aymenessouyah/viescolaire](https://github.com/aymenessouyah/viescolaire)  
-**Version proposée :** `v1.2.1-sti-theme`  
+**Version proposée :** `v1.2.2-sti-reference`  
 **État :** préparée et testée localement, **non publiée**. Aucune modification effectuée dans GitHub ni dans la base Supabase réelle.
 
 ## Ce qui est intégré
@@ -24,10 +24,13 @@ Le nom **4SI2** est conservé, conformément à votre confirmation. Il n’y a p
 
 ## Thème appliqué à l’application existante
 
-- Fond clair, cartes épurées, navigation latérale et barre d’actions conservée.
-- **3SI1 : bleu ; 4SI2 : vert.** Les raccourcis « Mes classes · suivi STI » ouvrent le suivi de la classe choisie et adaptent la palette. Ils ne filtrent pas silencieusement les autres modules.
+- Thème repris du fichier `index.html` fourni : fond crème pointillé (`#F5F2E8`), cartes ivoire (`#FFFDF6`), menu vert forêt en dégradé et accents dorés (`#D9A441`).
+- Titres en **Fraunces**, interface en **Inter** ; polices incorporées au CSS, utilisables hors ligne sans appel à Google Fonts. Licences SIL Open Font License incluses dans le CSS.
+- Cartes arrondies avec ombres, boutons verts et dorés, tableaux et fenêtres harmonisés. Le tableau de bord commence par l’accueil puis les indicateurs existants.
+- Le modèle est utilisé comme référence visuelle seulement : aucun profil fictif, élève, note, graphique de démonstration ou donnée du lycée Jean-Zay n’est importé.
+- **3SI1 : bleu ; 4SI2 : vert.** Les raccourcis « Mes classes · suivi STI » ouvrent le suivi de la classe choisie. La palette générale reste crème/vert/or ; les cartes et repères de classe conservent leurs couleurs distinctes. Ils ne filtrent pas silencieusement les autres modules.
 - Les neuf vues existantes restent accessibles. « Répartition 1er trim. » est renommé **Ma progression** dans le menu ; son contenu et ses calculs restent ceux de l’intégration précédente.
-- Le bandeau d’accueil est éclairci ; les formulaires, tableaux, profils et fenêtres reprennent le thème.
+- Le bandeau d’accueil reprend le fond papier et les titres à empattements ; les formulaires, tableaux, profils et fenêtres reprennent le thème.
 - Sur téléphone : menu repliable, fermeture après navigation, par Échap ou par appui hors du menu, et gestion du focus clavier.
 - À l’impression : pas de barre latérale, contenu en pleine largeur.
 - Le thème ne crée aucune clé de stockage et ne change aucune fonction d’envoi/restauration. Aucun nouveau choix de classe n’est enregistré dans vos données métier.
@@ -114,8 +117,8 @@ assets/app.js                      modifié : branchements, conservation des fic
 assets/style.css                   modifié : 4SI2 en vert
 assets/suivi-sti.js                 nouveau : suivi, filtres, historique, cases à cocher
 assets/suivi-sti.css                nouveau : présentation du suivi
-assets/theme-classe.css             nouveau : thème global clair, bleu/vert, mobile et impression
-assets/theme-classe.js              nouveau : navigation, palette, profil et accessibilité
+assets/theme-classe.css             nouveau : thème crème/vert/or et polices intégrées, mobile et impression
+assets/theme-classe.js              nouveau : navigation, repères de classe, profil et accessibilité
  data/livres-sti.js                 nouveau : référentiels et liens des livres
  data/ajustements-sti.js            nouveau : proposition de planning T1 de 4SI2
  docs/sti-smart-book-3si-2026.pdf    nouveau
@@ -148,7 +151,7 @@ Sur la version publiée, connectez-vous vous-même, enregistrez une modification
 
 ### 4. Actualiser les appareils
 
-La version de l’application et du service worker passe à `v1.2.1-sti-theme`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
+La version de l’application et du service worker passe à `v1.2.2-sti-reference`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
 
 Actualisez les onglets ouverts et l’application installée sur chaque appareil. Évitez de continuer à modifier les mêmes fiches dans une ancienne version : un ancien client ne connaît pas le champ des notions.
 
@@ -172,7 +175,8 @@ Le site utilise déjà un système d’instantanés, pas une fusion collaborativ
 - Envoi et restauration **simulés** du payload Supabase avec les coches.
 - Contrôles de date du DC1 et de l’introduction à PHP.
 - Affichage mobile sans débordement horizontal détecté dans les neuf vues.
-- Navigation latérale et passage bleu/vert sur ordinateur et téléphone.
+- Navigation latérale, sélection de 3SI1/4SI2 et repères bleu/vert sur ordinateur et téléphone.
+- Comparaison des sources avec le paquet précédent : logique métier inchangée (seule la version change dans `app.js`) ; module de suivi, référentiels et PDF identiques.
 - Ouverture du profil et des fiches de séance après application du thème.
 - Menu mobile : ouverture, fermeture après navigation, Échap et retour du focus.
 - Contrôle des styles d’impression : menu masqué et contenu en pleine largeur.
