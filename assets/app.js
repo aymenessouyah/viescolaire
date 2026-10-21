@@ -12,26 +12,9 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.3.2-sti-essential";
-/* réparation automatique : si une autre version traîne dans le cache de
-   l'appareil (mélange d'affichage), tout le cache est purgé et la page
-   se recharge une seule fois — une fois par version, sans boucle */
-try {
-  if (typeof localStorage !== "undefined" && localStorage.getItem("sti_appver") !== APP_VER
-      && window.navigator && window.navigator.serviceWorker && window.navigator.serviceWorker.getRegistrations
-      && window.caches){
-    localStorage.setItem("sti_appver", APP_VER);
-    (async () => {
-      try {
-        const ks = await caches.keys();
-        await Promise.all(ks.filter(k => k.startsWith("sti-espace-")).map(k => caches.delete(k)));
-        const rs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(rs.filter(r => r.scope === new URL("./", location.href).href).map(r => r.unregister()));
-      } catch(e){}
-      setTimeout(() => { try { location.replace(location.href); } catch(e){} }, 300);
-    })();
-  }
-} catch(e){}
+const APP_VER = "v1.4.0-offline-sync";
+/* Version stockée sans effacer le cache hors ligne ni les données. */
+try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
 if (!DATA.reference) {
   document.addEventListener("DOMContentLoaded", function(){
@@ -154,6 +137,7 @@ function load(){
   return base;
 }
 function save(silent){
+  if (window.STI_SYNC && !window.STI_SYNC.beforeSave(store)) return;
   store.saved = new Date().toISOString();
   try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){}
   if(!silent) toast("Modifications enregistrées dans ce navigateur");
@@ -1197,19 +1181,18 @@ function authApply(d){
 }
 /* jeton valide ; renouvellement automatique quand il arrive à expiration */
 async function authToken(){
-  const s = authSession();
-  if (!s) return null;
-  if (authValid()) return s.access_token;
-  if (!s.refresh_token || !cloudReady()) { authClear(); return null; }
-  try {
-    const c = cloudCfg();
-    const r = await fetch(c.url.replace(/\/$/, "") + "/auth/v1/token?grant_type=refresh_token", {
-      method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: s.refresh_token })
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return authApply(await r.json());
-  } catch (e) { authClear(); return null; }
+ const s=authSession();if(!s)return null;if(authValid())return s.access_token;
+ if(!navigator.onLine)return null; // Conserver le refresh token pendant une coupure réseau.
+ if(!s.refresh_token||!cloudReady())return null;
+ if(window.__stiRefresh)return window.__stiRefresh;
+ window.__stiRefresh=(async()=>{
+  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);
+  try{
+   const c=cloudCfg(),r=await fetch(c.url.replace(/\/$/,"")+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token}),signal:ctl.signal});
+   if(!r.ok){if([400,401].includes(r.status)&&authSession()?.refresh_token===s.refresh_token)authClear();return null;}
+   const d=await r.json();if(authSession()?.refresh_token!==s.refresh_token)return null;return authApply(d);
+  }catch(e){return null;}finally{clearTimeout(timer);window.__stiRefresh=null;}
+ })();return window.__stiRefresh;
 }
 function authNeeded(){ return cloudReady() && cloudCfg().auth; }
 function openAuth(){
@@ -1296,19 +1279,16 @@ async function doLogout(){
     } catch (e) {}
   }
   authClear();
+  if(window.STI_SYNC) window.STI_SYNC.onLogout();
   window.__afterLogin = null;
   toast("Déconnecté — les données restent sur cet appareil");
   renderAll(true); renderCloudBar(); renderCompte(); renderLoginInvite();
 }
 /* après une connexion réussie : synchronisation dans le bon sens */
 async function afterLogin(){
-  const a = window.__afterLogin; window.__afterLogin = null;
-  if (a === "push") { await cloudPush(true); }
-  else if (cloudHasLocalData()) { await cloudPush(true); }
-  else { await cloudPull(true); }
-  renderAll(true); renderCloudBar();
-  /* première connexion de ce professeur : on demande son nom et sa matière */
-  if (!store.profil || !store.profil.nom) { if (typeof openProfil === "function") openProfil(); }
+  window.__afterLogin = null;
+  renderAll(true); renderCloudBar(); renderCompte();
+  if(window.STI_SYNC) await window.STI_SYNC.onLogin();
 }
 
 /* ---------- synchronisation distante (Supabase) ---------- */
@@ -1334,6 +1314,7 @@ async function cloudHeaders(){
   return { "apikey": c.key, "Authorization": "Bearer " + (tok || c.key), "Content-Type": "application/json", "Prefer": "return=minimal" };
 }
 function cloudTime(){
+  if(window.STI_SYNC){const d=window.STI_SYNC.status().lastOk;return d?new Date(d).toLocaleString("fr-FR"):"jamais";}
   const s = store.cloud && store.cloud.at;
   if (!s) return "jamais";
   return fmtShort(s.slice(0,10)) + " à " + s.slice(11,16);
@@ -1375,11 +1356,8 @@ function toggleCompte(ev){
 function fermerMenuCompte(){ const m = document.getElementById("menu-compte"); if (m) m.classList.add("hidden"); }
 /* efface le cache local et recharge : garantit l'exécution de la dernière version publiée */
 async function forceMaj(){
-  if (!confirm("Effacer le cache local et recharger l'application en dernière version ?")) return;
-  toast("Effacement du cache…");
-  try { if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("sti-espace-")).map(k => caches.delete(k))); } } catch(e){}
-  try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.filter(r => r.scope === new URL("./", location.href).href).map(r => r.unregister())); } } catch(e){}
-  setTimeout(() => location.replace(location.href), 350);
+ if(!navigator.onLine){toast("Reconnectez-vous pour vérifier les mises à jour. Le cache hors ligne est conservé.");return;}
+ await applyUpdate();
 }
 function menuAction(quoi){
   fermerMenuCompte();
@@ -1399,6 +1377,7 @@ function renderLoginInvite(){
   b.classList.toggle("hidden", !(cloudReady() && authNeeded() && !authSession() && currentTab === "v-dash"));
 }
 function cloudBadge(){
+  if(window.STI_SYNC) return window.STI_SYNC.badge();
   if (!cloudReady()) return '<span class="badge b-amber">Sauvegarde locale seulement</span>';
   if (authNeeded() && !authSession()) return '<span class="badge b-amber">Déconnecté — connexion requise pour le cloud</span>';
   return store.cloud && store.cloud.ok ? '<span class="badge b-green">Synchronisé le ' + cloudTime() + '</span>' : '<span class="badge b-rose">Configuration à vérifier</span>';
@@ -1419,60 +1398,8 @@ function payLoad(){
     }
   };
 }
-async function cloudPush(silent){
-  if (!cloudReady()){ if (!silent) openCloudSettings(); return; }
-  if (authNeeded() && !(await authToken())) {
-    if (!silent){ window.__afterLogin = "push"; openAuth(); }
-    return;
-  }
-  const c = cloudCfg();
-  store.cloud = store.cloud || {};
-  try {
-    const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table, {
-      method: "POST", headers: await cloudHeaders(), body: JSON.stringify([payLoad()])
-    });
-    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 160));
-    store.cloud = { ok:true, at:new Date().toISOString() };
-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){}
-    if (!silent) toast("Données envoyées à la base distante");
-    renderCloudBar();
-  } catch (e) {
-    store.cloud = { ok:false, at:new Date().toISOString(), err:String(e.message || e) };
-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(err){}
-    if (!silent) alert("Échec de l'envoi :\n" + (e.message || e) + "\n\nVérifiez l'URL du projet, la clé publique et la table SQL (voir README).");
-    renderCloudBar();
-  }
-}
-async function cloudPull(silent){
-  if (!cloudReady()){ openCloudSettings(); return; }
-  if (authNeeded() && !(await authToken())) {
-    window.__afterLogin = "pull"; openAuth(); return;
-  }
-  const c = cloudCfg();
-  try {
-    const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table + "?select=*&order=created_at.desc&limit=1", { headers: await cloudHeaders() });
-    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 160));
-    const rows = await r.json();
-    if (!rows.length){ if (!silent) alert("Aucune sauvegarde trouvée dans la base distante."); return; }
-    const snap = rows[0];
-    const local = (store.seances ? Object.keys(store.seances).length : 0);
-    const remote = snap.payload && snap.payload.seances ? Object.keys(snap.payload.seances).length : 0;
-    const quand = snap.created_at ? snap.created_at.slice(0,16).replace("T"," ") : "date inconnue";
-    if (!silent && !confirm("Sauvegarde distante du " + quand + "\n" + remote + " fiche(s) enregistrée(s) — cette session en contient " + local + ".\n\nRemplacer les données de cet appareil par la version distante ?")) return;
-    store.times = snap.payload.times || store.times;
-    store.seances = snap.payload.seances || {};
-    if (typeof snap.payload.saved === "string") store.saved = snap.payload.saved;
-    ["profil","classes","eleves","epreuves","notes","presences"].forEach(k => {
-      if (snap.payload[k] !== undefined && snap.payload[k] !== null) store[k] = snap.payload[k];
-    });
-    store.cloud = { ok:true, at:new Date().toISOString() };
-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){}
-    toast("Données restaurées depuis la base distante");
-    renderAll(true);
-  } catch (e) {
-    alert("Échec de la restauration :\n" + (e.message || e) + "\n\nVérifiez l'URL, la clé, la table et les règles d'accès (voir README).");
-  }
-}
+async function cloudPush(silent){ if(window.STI_SYNC) return window.STI_SYNC.request(!silent); }
+async function cloudPull(silent){ if(window.STI_SYNC) return window.STI_SYNC.request(!silent); }
 function cloudHasLocalData(){
   return !!(store.saved ||
     (store.seances && Object.keys(store.seances).length) ||
@@ -1481,22 +1408,8 @@ function cloudHasLocalData(){
 /* Premier démarrage sur cet appareil (téléphone, tablette, poste du lycée) :
    si rien n'est encore enregistré localement, on propose d'abord la version
    du cloud, pour que la sauvegarde distante soit la source de vérité. */
-async function cloudFirstRunRestore(){
-  if (!cloudReady() || cloudHasLocalData()) return false;
-  if (authNeeded() && !(await authToken())) {
-    /* nouvel appareil : demande de connexion une fois par session de navigation */
-    if (!sessionStorage.getItem("sti_auth_asked")) {
-      sessionStorage.setItem("sti_auth_asked", "1");
-      window.__afterLogin = "pull";
-      openAuth();
-    }
-    return false;
-  }
-  window.__cloudFirstRun = true;
-  await cloudPull(true);
-  return true;
-}
-function cloudAutoPush(){ if (cloudCfg().auto && cloudReady()) cloudPush(true); }
+async function cloudFirstRunRestore(){ return false; /* Association et fusion gérées par STI_SYNC après initialisation. */ }
+function cloudAutoPush(){ if(window.STI_SYNC) window.STI_SYNC.localChanged(); }
 /* bouton « Cloud » de l'en-tête : ouvre la connexion quand elle est attendue,
    sinon la fenêtre de configuration (URL, clé, table, nom de l'appareil) */
 function openCloud(){
@@ -1766,14 +1679,14 @@ function cloudCard(){
       <div class="space-y" style="display:grid;gap:8px">
         <div class="spread"><span class="tiny muted">Projet</span><span class="tiny">${c.url ? c.url.replace(/^https?:\/\//,"").split(".")[0] + " • table " + c.table : "non configuré"}</span></div>
         <div class="spread"><span class="tiny muted">Appareil</span><span class="tiny">${escapeHtml(c.device)}</span></div>
-        <div class="spread"><span class="tiny muted">Dernier envoi</span><span class="tiny">${cloudTime()}</span></div>
+        <div class="spread"><span class="tiny muted">Dernière synchronisation</span><span class="tiny">${cloudTime()}</span></div>
         <div class="spread"><span class="tiny muted">Fiches enregistrées</span><span class="tiny">${Object.keys(store.seances || {}).length}</span></div>
-        <div class="spread"><span class="tiny muted">Envoi automatique</span><span class="tiny">${c.auto ? "activé" : "désactivé"}</span></div>
+        <div class="spread"><span class="tiny muted">Synchronisation automatique</span><span class="tiny">${c.auto ? "activé" : "désactivé"}</span></div>
         <div class="spread"><span class="tiny muted">Connexion</span><span class="tiny">${cloudWho()}</span></div>
       </div>
       <div class="row no-print" style="margin-top:12px;gap:8px">
         <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Envoyer maintenant</button>
-        <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Restaurer</button>
+        <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Recevoir et fusionner</button>
         ${authNeeded() ? (authSession()
             ? '<button class="btn btn-xs btn-line" onclick="doLogout()">' + ic("out") + ' Se déconnecter</button>'
             : '<button class="btn btn-xs btn-blue" onclick="openAuth()">' + ic("lock") + ' Se connecter</button>') : ""}
@@ -1791,6 +1704,7 @@ function cloudCard(){
   </div>`;
 }
 function renderCloudBar(){
+  if(window.STI_SYNC){ window.STI_SYNC.renderStatus(); return; }
   const t = (cloudReady() ? "" : "") + cloudBadge() +
     ' <span class="tiny muted">' + (cloudReady() ? "projet : " + cloudCfg().url.replace(/^https?:\/\//,"").split(".")[0] : "aucun projet configuré") + " • dernier envoi : " + cloudTime() + "</span>";
   const a = document.getElementById("cloud-bar"); if (a) a.innerHTML = t;
@@ -1862,26 +1776,28 @@ window.addEventListener("appinstalled", () => {
   if (typeof toast === "function") toast("Application installée — retrouvez son icône sur l'écran d'accueil ou dans le menu Démarrer");
 });
 function registerSW(){
-  if (!("serviceWorker" in navigator)) return;
-  if (location.protocol !== "http:" && location.protocol !== "https:") return; /* évite l'échec en ouverture locale */
-  navigator.serviceWorker.register("sw.js").then(reg => {
-    reg.addEventListener("updatefound", () => {
-      const nw = reg.installing;
-      if (!nw) return;
-      nw.addEventListener("statechange", () => {
-        if (nw.state === "installed" && navigator.serviceWorker.controller) {
-          const b = document.getElementById("update-bar");
-          if (b) b.classList.remove("hidden");
-        }
-      });
-    });
-  }).catch(() => {});
+ if(!navigator.serviceWorker||!["http:","https:"].includes(location.protocol))return;
+ navigator.serviceWorker.register("sw.js").then(reg=>{
+  window.__stiRegistration=reg;
+  const notice=()=>{if(reg.waiting){window.__newSW=reg.waiting;document.getElementById("update-bar")?.classList.remove("hidden");}};
+  notice();reg.addEventListener("updatefound",()=>{const worker=reg.installing;if(worker)worker.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller)notice();});});
+  navigator.serviceWorker.ready.then(r=>r.active?.postMessage({type:"CACHE_DOCUMENTS"}));
+  window.addEventListener("online",()=>reg.update().catch(()=>{}));
+  setInterval(()=>{if(navigator.onLine&&!document.hidden)reg.update().catch(()=>{});},1800000);
+ }).catch(()=>{if(typeof toast==="function")toast("Préparation hors ligne incomplète — rechargez avec Internet.");});
 }
-function applyUpdate(){ if (window.__newSW) window.__newSW.postMessage({ type: "SKIP_WAITING" }); location.reload(); }
+async function applyUpdate(){
+ if(window.STI_SYNC&&!window.STI_SYNC.canUpdate()){toast("Fermez la fiche en cours et attendez la fin de l’échange avant la mise à jour.");return;}
+ if(window.STI_SYNC)await window.STI_SYNC.flush();
+ const reg=window.__stiRegistration,worker=reg?.waiting||window.__newSW;
+ if(worker){navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload(),{once:true});worker.postMessage({type:"SKIP_WAITING"});}
+ else if(navigator.onLine&&reg){await reg.update();toast("Vérification de la version effectuée.");}
+ else toast("La version disponible hors ligne est conservée.");
+}
 window.addEventListener("online", () => {
   const e = document.getElementById("net-state"); if (e){ e.textContent = "En ligne"; e.className = "badge b-green"; }
   /* reprise automatique : un envoi qui avait échoué (hors ligne) est retenté */
-  if (cloudReady() && store.cloud && store.cloud.ok === false) cloudPush(true);
+  if(window.STI_SYNC) window.STI_SYNC.request(false);
 });
 window.addEventListener("offline", () => { const e = document.getElementById("net-state"); if (e){ e.textContent = "Hors ligne — données locales"; e.className = "badge b-amber"; } });
 

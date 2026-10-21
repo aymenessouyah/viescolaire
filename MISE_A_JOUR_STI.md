@@ -1,239 +1,157 @@
-# Vie scolaire — fusion de l’interface fournie et de l’application STI
+# Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-**Projet :** [aymenessouyah/viescolaire](https://github.com/aymenessouyah/viescolaire)  
-**Version proposée :** `v1.3.2-sti-essential`  
-**État :** préparée et testée localement, **non publiée**. Aucune modification effectuée dans GitHub ni dans la base Supabase réelle.
+**Version préparée : `v1.4.0-offline-sync`**  
+**Dépôt existant :** https://github.com/aymenessouyah/viescolaire  
+**État : code préparé et testé localement, non publié.** Aucune écriture n’a été faite dans votre dépôt ou votre base réelle. Le script SQL reste à appliquer dans votre environnement.
 
-## Ce qui est intégré
+## 1. Ce que cette version ajoute
 
-| Classe | Identité visuelle | Organisation | Référentiel |
-|---|---|---|---|
-| **3SI1** | Bleu | Mardi et jeudi ; deux groupes de 2 h par jour | 269 entrées, Smart Book p. 58–72 |
-| **4SI2** | Vert | Lundi et vendredi ; deux groupes de 2 h par jour | 333 entrées, Smart Book p. 83–100 |
+- Utilisation de l’interface sans Internet après un premier chargement complet en ligne.
+- Enregistrement local des changements et état de synchronisation conservés dans le navigateur, avec une copie IndexedDB en complément du stockage existant.
+- Envoi **et réception** automatiques à la reconnexion, au retour dans l’application et lors d’une vérification périodique d’environ 30 secondes, lorsque l’application est ouverte et visible.
+- Fusion des changements compatibles, par champ et par identifiant d’entité.
+- **Conflits : conservation des deux versions et choix explicite.** Une suppression concurrente à une modification est aussi un conflit. Aucune règle « dernier appareil arrivé = gagnant ».
+- États visibles : hors ligne, modifications en attente, synchronisation en cours, à jour, conflit, connexion ou installation SQL à vérifier.
+- Bouton permanent **Hors ligne & synchronisation**, avec état du cache, nombre de PDF disponibles, synchronisation manuelle et export des versions locales.
+- Mise à jour de l’application téléchargée en arrière-plan, puis appliquée **sur validation**, sans rechargement automatique au milieu d’une fiche.
 
-Le nom **4SI2** est conservé, conformément à votre confirmation. Il n’y a pas de renommage vers 4SI1 et pas de migration des identifiants des élèves ou des classes.
+**Conditions :** navigateur compatible, premier chargement en HTTPS, stockage du site conservé, compte connecté pour le Cloud, configuration automatique activée, et installation de la fonction SQL fournie. Une application fermée ne synchronise pas en tâche de fond. Sans Internet, une première connexion à un compte n’est pas possible, mais les données déjà présentes restent utilisables.
 
-- **Suivi des notions** disponible dans **Outils STI & données**, en complément des cinq écrans du modèle.
-- Recherche et filtres par domaine et état de couverture.
-- Cases à cocher dans les **fiches de séance existantes**.
-- Compteurs et historique des séances pour chaque notion.
-- Export CSV de la couverture de la classe sélectionnée.
-- Deux livres PDF et six fiches PDF de 3SI ajoutés à la bibliothèque du suivi.
-- Couleurs de classe : **3SI1 bleu, 4SI2 vert**.
-- Suivi **commun aux deux groupes**, pas deux couvertures indépendantes.
+## 2. Utilisation quotidienne
 
-## Interface fournie : reprise de la structure, pas seulement des couleurs
+1. Ouvrir le site avec Internet, se connecter et attendre **À jour**.
+2. Dans **Hors ligne & synchronisation**, vérifier **Interface hors ligne : prête**. Les PDF ont leur propre compteur : un document non encore téléchargé n’est pas garanti hors ligne.
+3. Sans Internet, modifier puis **enregistrer** les fiches, notes ou présences normalement. Le bandeau signale le fonctionnement local.
+4. Au retour du réseau, laisser l’application ouverte. Les changements partent vers le Cloud et les nouveautés des autres appareils sont reçues. Fermer les fenêtres de saisie pour autoriser leur application à l’écran.
+5. Si un conflit apparaît, lire les deux valeurs, choisir celle à retenir pour chaque champ, puis valider. Les copies des deux versions restent archivées localement et exportables.
 
-Le fichier `index.html` partagé sert de modèle pour la navigation, les composants et les cinq écrans principaux. Son CSS est repris et limité aux nouveaux écrans pour ne pas perturber les anciens modules. Les textes et chiffres de démonstration ne sont pas importés.
+Les boutons **Envoyer au Cloud** et **Recevoir du Cloud** sont conservés. Ils déclenchent désormais le même échange sécurisé dans les deux sens : « Recevoir » ne remplace plus brutalement l’ensemble du navigateur.
 
-| Écran du modèle | Adaptation STI reliée aux données existantes |
-|---|---|
-| Tableau de bord | Quatre indicateurs, courbe prévu/effectué, anneau par classe, séances du jour, fiches récentes et couverture des livres |
-| Suivi des cours | Tableau des séances, recherche, filtres 3SI1/4SI2, pagination, export CSV et accès aux fiches |
-| Fiche pédagogique | Liste des séances et document papier, préparation de référence distincte du réalisé, notions cochées, devoirs, observations privées, mode classe et impression |
-| Avancement des cours | Onglets de classes, domaines du Smart Book, jauge, barres et accès direct au référentiel filtré |
-| Répartition des devoirs | Calendrier mensuel, liste des évaluations, filtres à venir/dates passées, charge par classe et ajout d’une épreuve |
+### Première synchronisation et changement de compte
 
-### Navigation et actions
+Si des données locales existent déjà, l’application demande comment les associer au compte : **fusionner mes données avec ce compte** ou **ouvrir les données de ce compte**. Une copie locale est conservée avant l’opération. Un désaccord avec une sauvegarde distante inconnue peut demander des choix supplémentaires : c’est une précaution, pas une perte de données.
 
-- Le menu principal reprend les cinq entrées du modèle. Une section **Planification**, directement visible, ajoute **Emploi du temps** et trois boutons **Répartition — 1er / 2e / 3e trimestre**. Chaque bouton ouvre le trimestre correspondant dans la répartition existante et conserve le choix de classe 3SI1/4SI2. Le bouton actif suit aussi le sélecteur de trimestre à l’intérieur de la page.
-- **Outils STI & données** conserve les six autres vues : suivi des notions, calendrier tunisien, programme/compétences, élèves/notes/présences, cahier détaillé et annexes.
-- Une barre **COMPTE & SAUVEGARDE** est désormais toujours visible en haut, y compris sur téléphone et après défilement : **Connexion / compte**, **Cloud**, **Envoyer au Cloud**, **Restaurer du Cloud**, **Imprimer**, **Exporter** et **Séance du jour**. Aucun réglage n’est nécessaire pour faire apparaître ces boutons. L’installation de l’application reste proposée selon les capacités du navigateur.
-- Le menu du compte conserve connexion/changement de compte, profil, administration, déconnexion et mise à jour. L’icône de réglages supérieure ouvre directement la configuration Cloud. Le profil reste aussi accessible en bas du menu.
-- L’état réseau et l’état de la sauvegarde existants sont affichés dans cette barre. Les commandes d’envoi et de restauration appellent les fonctions existantes ; la restauration manuelle conserve sa demande de confirmation avant remplacement. Ce ne sont pas encore des commandes de fusion bidirectionnelle automatique.
-- La recherche supérieure fonctionne avec Entrée et ouvre le suivi des cours. Elle recherche dans les titres, contenus, préparations et notions cochées.
-- La cloche affiche les prochaines échéances connues du planning. Ce sont des rappels locaux, pas des notifications envoyées aux élèves.
-- **Nouvelle séance** ouvre un choix de créneau, puis le formulaire existant. Cela crée ou complète une fiche sans déplacer la date, renuméroter les séances ou modifier les groupes. Si aucune séance n’est prévue aujourd’hui, **Fiche du jour** propose aussi ce choix.
-- **Réutiliser titre et devoirs** préremplit uniquement ces deux champs dans le formulaire de la séance cible. Rien n’est enregistré avant validation. Les coches, le statut, le contenu réalisé et les observations ne sont pas copiés.
-- **Nouveau devoir** ajoute une épreuve à `store.epreuves[classe]`, avec la structure existante : `id`, `titre`, `type`, `date`, `bareme`, `tags`. La fonction `save()` existante assure sa sauvegarde. L’action d’accès aux notes ouvre le module élèves/épreuves conservé.
+Pour un autre compte, aucun envoi automatique des données du compte précédent n’est effectué. L’ouverture de l’autre espace doit être confirmée. Les copies locales en attente de chaque compte sont reprises lorsqu’on revient dans cet espace. Éviter d’utiliser simultanément des comptes différents dans plusieurs onglets du même navigateur : un changement d’espace bloque l’ancien onglet et demande son rechargement.
 
-### Graphiques et chiffres : règles explicites
+## 3. Installer sur le projet existant
 
-- Élèves : nombre d’élèves enregistrés dans les listes du profil.
-- Couverture moyenne : moyenne arithmétique des pourcentages indépendants des deux Smart Books, pas maîtrise des élèves ni couverture de tout le programme.
-- Notes saisies : notes numériques effectivement présentes, hors absences ; aucun nombre de copies à corriger n’est inventé.
-- Heures des graphiques : durée prévue affectée aux fiches communes confirmées, **4 h enseignant par fiche** (2 groupes de 2 h). Ce n’est pas une mesure indépendante des durées réellement effectuées si une séance a été écourtée.
-- Le réalisé ne compte que `done === true` pour une date non future. La courbe s’arrête au mois courant ; elle ne projette pas le réalisé dans le futur.
-- Activité récente : fiches renseignées triées par date de séance, **pas un journal horodaté des modifications**.
-- Évaluations : épreuves saisies et créneaux DC/DS du planning. Une épreuve saisie pour la même classe et la même date masque l’entrée prévisionnelle dans cet affichage, sans la supprimer des données. Les périodes officielles de synthèse, vacances et semaines bloquées restent consultables via le lien **Calendrier officiel**.
-- Une date d’évaluation passée n’implique ni remise des copies ni correction terminée. Les taux fictifs de rendu et de correction du modèle ne sont pas repris.
+### A — Sauvegarder
 
-### Présentation et conservation
+- Exporter le JSON depuis **chaque appareil contenant des changements non synchronisés**.
+- Conserver une sauvegarde de la base et du code actuel ; travailler d’abord sur une branche ou un environnement de test.
+- Ne communiquer aucun mot de passe, jeton ou clé `service_role`.
 
-Fond crème pointillé, menu vert forêt, or, cartes ivoire, typographie **Fraunces / Inter** et disposition du modèle. Les repères de **3SI1 restent bleus et ceux de 4SI2 verts**. Les polices sont incorporées au CSS avec leurs licences SIL OFL ; les graphiques SVG n’ont pas de dépendance CDN.
+### B — Installer la fonction SQL, une seule fois
 
-Les nouveaux écrans utilisent la même structure de sauvegarde que l’application. Aucune nouvelle base, clé métier locale ou table n’est créée. Les fonctions d’envoi et de restauration ne sont pas remplacées. Le module de suivi, les référentiels et les PDF de la version précédente restent identiques.
-
-L’interface est adaptée au mobile ; le menu se ferme après navigation et gère le focus clavier. La fiche papier est imprimable sans le menu et sans sa colonne de sélection ; le mode classe masque les observations privées.
-
-**L’aperçu local n’importe pas votre sauvegarde distante.** Des compteurs à zéro signifient qu’aucune donnée personnelle n’est chargée dans cet aperçu, pas que vos données ont été effacées.
-
-Cette archive **remplace le paquet précédent**. Elle contient l’interface fusionnée, le suivi des livres et les ajustements déjà livrés. Elle s’applique par fusion au dépôt existant, pas comme un projet autonome.
-
-## Règles de calcul
-
-1. Chaque entrée reprend une ligne des tableaux du livre. Certaines lignes regroupent plusieurs syntaxes. Les attributs HTML sont des précisions associées, pas des entrées séparées.
-2. Une notion compte une seule fois dans la couverture ; son nombre d’utilisations et son historique restent visibles.
-3. Elle compte uniquement si elle est cochée dans une séance **explicitement assurée**, dont la date n’est pas future.
-4. Une séance simplement échue, à venir ou reportée n’augmente pas la couverture.
-5. Les deux instructions barrées « ne pas utiliser » des annexes sont exclues du dénominateur.
-6. Les anciens indicateurs de séances ont également été corrigés : une date passée n’est plus assimilée à une séance assurée.
-
-**Pour un suivi commun**, confirmer la fiche lorsque le contenu commun a été traité avec les deux groupes. Si un groupe prend du retard, laisser les éléments concernés en prévision et le préciser dans les observations.
-
-Ce taux mesure la **couverture des tableaux du livre**, ni toute la matière STI, ni la maîtrise individuelle des élèves. Les domaines systèmes, réseaux et objets connectés ne sont pas couverts par ces seuls tableaux.
-
-## Planning de 4SI2
-
-La proposition du premier trimestre est recalée sur les indications fournies :
-
-- PHP à partir du **vendredi 9 octobre 2026** ;
-- DC1 reporté au **lundi 2 novembre 2026** ;
-- correction du DC1 proposée au **vendredi 6 novembre**.
-
-**Les dates, numéros et clés des séances restent inchangés.** Les ajustements portent sur le contenu de référence des 22 premiers créneaux de 4SI2. La ventilation détaillée des cours et les dates non confirmées restent des propositions.
-
-Les fiches déjà personnalisées — titres, observations, devoirs, état, champs supplémentaires — ne sont pas écrasées. Un avertissement apparaît dans une fiche de 4SI2 si son titre personnalisé diffère du planning recalé. Il faut alors comparer et décider manuellement.
-
-Les autres répartitions, dont les trimestres 2 et 3 du dépôt, sont conservées. Cette mise à jour n’est pas une validation complète de tous leurs contenus, horaires ou échéances.
-
-## Intégration Supabase : pas de nouvelle table imposée
-
-Le dépôt prévoit une table `public.espace_pedagogique`, contenant des instantanés dans une colonne `payload` de type `jsonb`.
-
-Le suivi complète chaque fiche existante dans `payload.seances` :
-
-```json
-{
-  "4SI2|10": {
-    "title": "Titre personnalisé conservé",
-    "contenu": "Déroulement réellement effectué",
-    "devoirs": "Travail à domicile",
-    "obs": "Observations",
-    "done": true,
-    "notions": ["identifiant-stable-du-referentiel"],
-    "notionsVersion": "smart-books-2026-v1"
-  }
-}
-```
-
-L’identifiant ci-dessus est illustratif ; l’application enregistre les identifiants réels de la classe.
-
-- Les fonctions existantes d’envoi, de restauration et d’export JSON transportent les nouvelles coches via `seances`.
-- Une ancienne sauvegarde sans ces champs reste lisible : elle n’invente aucune utilisation.
-- Le profil, les classes, les élèves, les épreuves, les notes et les présences restent dans leur structure existante.
-- Le schéma SQL et les règles RLS ne sont pas modifiés par cette archive.
-- `supabase/config.js` n’est **pas** remplacé.
-
-**Limite de vérification :** le SQL public du dépôt a été examiné. L’envoi et la restauration ont été testés avec un transport simulé, **pas avec votre base réelle ni un compte connecté**. La présence effective des colonnes, des droits et des politiques RLS dans Supabase doit être confirmée dans votre environnement. Ne réexécutez pas les anciens scripts SQL pour installer ce suivi : ce n’est pas nécessaire si la base correspond au schéma du dépôt.
-
-## Publication sûre
-
-### 1. Sauvegarder avant toute mise à jour
-
-- Depuis le site actuel, exportez vos données en JSON sur l’appareil qui contient la version la plus complète.
-- Vérifiez séparément que votre sauvegarde cloud actuelle fonctionne.
-- Conservez une copie du code actuel ou créez une branche de travail.
-- N’envoyez ni mot de passe, ni jeton GitHub, ni clé `service_role`.
-
-### 2. Fusionner les fichiers de l’archive dans le dépôt
-
-Décompressez **`Mise-a-jour-viescolaire-STI.zip`**.
-
-Les fichiers sont rangés directement selon l’arborescence du dépôt :
+Ouvrir **votre projet Supabase existant**, puis SQL Editor. Examiner et exécuter :
 
 ```text
-index.html                         modifié : cinq écrans, barre supérieure, navigation et modules
-sw.js                              modifié : version du cache et nouveaux fichiers
-assets/app.js                      modifié : navigation, branchement du rendu, conservation des fiches, compteurs
-assets/style.css                   modifié : 4SI2 en vert
-assets/suivi-sti.js                 nouveau : suivi, filtres, historique, cases à cocher
-assets/suivi-sti.css                nouveau : présentation du suivi
-assets/theme-classe.css             nouveau : thème crème/vert/or et polices intégrées, mobile et impression
-assets/theme-classe.js              nouveau : navigation, repères de classe, profil et accessibilité
-assets/interface-reference.css     nouveau : CSS du modèle et adaptation aux écrans STI
-assets/interface-reference.js      nouveau : cinq écrans reliés au store existant
- data/livres-sti.js                 nouveau : référentiels et liens des livres
- data/ajustements-sti.js            nouveau : proposition de planning T1 de 4SI2
- docs/sti-smart-book-3si-2026.pdf    nouveau
- docs/sti-smart-book-4si-2026.pdf    nouveau
- docs/fiches-3si-2026/              six nouveaux PDF
+installation/synchronisation-atomique.sql
 ```
 
-**Fusionnez les dossiers, ne supprimez pas les dossiers existants.** L’archive ne contient pas tout le projet. Conservez notamment les autres fichiers `assets/`, les données d’origine, `documents/`, `icons/`, `supabase/`, `manifest.webmanifest` et les outils OCR.
+Ce fichier est dans l’archive. Il ajoute/remplace uniquement la fonction `public.sti_sync_snapshot` et règle ses droits d’exécution. Il **ne crée pas une nouvelle base, ne supprime aucune ligne et ne remplace pas les politiques RLS**.
 
-Dans l’interface GitHub : ouvrir le dépôt, idéalement une branche de travail, puis **Add file → Upload files**. Déposer les fichiers et dossiers extraits à la racine, sans créer un niveau supplémentaire portant le nom de l’archive. Examiner les changements avant le commit.
+Prérequis attendus, conformes au schéma public du dépôt :
 
-Les clés de données et le format historique `classe|numéro` sont conservés. Ne remplacez pas `index.html` par l’ancienne page autonome développée dans cette conversation : utilisez uniquement les fichiers de cette archive pour l’intégration.
+- table `public.espace_pedagogique` ;
+- colonnes `id bigint`, `created_at`, `prof`, `lycee`, `annee`, `device`, `prof_id uuid` et `payload jsonb` ;
+- comptes authentifiés autorisés à lire et insérer leurs propres lignes, et uniquement les leurs ;
+- `prof_id = auth.uid()` pour l’isolation des comptes ; droits de table et de séquence existants valides.
 
-### 3. Tester, puis publier
+La fonction reste **SECURITY INVOKER** : elle n’élève pas les droits et respecte les politiques existantes. Elle verrouille l’échange par compte/année et vérifie l’identifiant du dernier instantané avant d’en créer un autre. Si un autre appareil a écrit entre-temps, elle répond « réessayer », sans écrasement.
 
-Vérifiez avant fusion dans `main` :
+**Ne réexécutez pas aveuglément les anciens scripts de création ou de migration du dépôt.** Si votre base réelle diffère de ces prérequis, il faut d’abord examiner ses colonnes et politiques. Les anciennes lignes sans propriétaire ne sont pas attribuées automatiquement à un compte.
 
-- Les onglets habituels et vos données existantes restent accessibles.
-- Le nouvel onglet **Suivi des notions** est présent.
-- Les classes sont **3SI1** et **4SI2**, bleu et vert.
-- Une notion cochée dans une séance non assurée reste prévue.
-- La confirmation d’une séance passée la fait compter une seule fois.
-- Deux utilisations d’une même notion donnent une seule notion couverte, mais deux séances dans l’historique.
-- Une coche retirée recalcule la couverture.
-- L’historique de 3SI1 ne change pas lorsque 4SI2 est modifiée.
-- Le DC1 de référence de 4SI2 est au 02/11/2026 et PHP commence au 09/10/2026.
-- Les titres personnalisés éventuellement conservés ont été relus.
+Si la fonction n’existe pas ou n’est pas accessible, l’application garde les changements localement et signale le problème. Elle ne revient pas à l’ancien envoi direct non sécurisé contre les conflits.
 
-Sur la version publiée, connectez-vous vous-même, enregistrez une modification identifiable, vérifiez la réussite de l’envoi, puis contrôlez la restauration sur un second appareil **après sauvegarde de ses données locales**. Ce test final est indispensable pour valider votre configuration réelle Supabase.
+### C — Fusionner l’archive dans le dépôt
 
-### 4. Actualiser les appareils
+Décompresser **`Vie-scolaire-hors-ligne-synchronisation.zip`** et fusionner son contenu à la racine du dépôt existant, sans créer un dossier supplémentaire.
 
-La version de l’application et du service worker passe à `v1.3.0-sti-fusion`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
+**Ne supprimez pas les dossiers existants.** C’est une mise à jour, pas un projet autonome. Conserver notamment les fichiers d’origine de `data/`, `assets/eleves.js`, `assets/admin.js`, les icônes, les documents, les outils OCR, `manifest.webmanifest` et **votre `supabase/config.js`**. Ce dernier n’est pas inclus dans l’archive et n’est pas remplacé.
 
-Actualisez les onglets ouverts et l’application installée sur chaque appareil. Évitez de continuer à modifier les mêmes fiches dans une ancienne version : un ancien client ne connaît pas le champ des notions.
+Les nouveaux fichiers spécifiques à cette version sont :
 
-## Retour arrière
+```text
+assets/offline-sync.js                 synchronisation, file locale, conflits et comptes
+assets/offline-sync.css                fenêtres de statut et de résolution
+assets/sync-merge.js                   moteur de fusion trois voies
+installation/synchronisation-atomique.sql   fonction serveur sur la table existante
+```
 
-Si nécessaire, revenez au commit précédent des fichiers d’application. Ne supprimez pas la table Supabase, les instantanés ou le stockage local. Conservez l’export JSON créé avant publication et les sauvegardes contenant les nouvelles coches.
+`assets/app.js`, `index.html` et `sw.js` sont aussi modifiés. L’archive inclut l’ensemble de l’interface fusionnée, le suivi STI, les référentiels et les huit PDF ajoutés précédemment. Elle contient un manifeste SHA-256 et un diff des fichiers d’origine modifiés.
 
-Le site utilise déjà un système d’instantanés, pas une fusion collaborative en temps réel. L’envoi depuis plusieurs appareils peut créer des versions divergentes ; vérifiez l’appareil source avant une restauration.
+Référence du code d’origine utilisé pour construire le paquet : commit `890e66c183d1bfcca9e926b09102cc3a23a1056c`. **Si le dépôt a changé depuis, comparer les modifications avant de remplacer des fichiers.** Les ajouts ultérieurs au code ne sont pas automatiquement fusionnés par cette archive.
 
-## Tests effectués localement
+### D — Mettre tous les appareils à jour
 
-- Syntaxe JavaScript des fichiers modifiés.
-- Chargement de l’interface sans erreur JavaScript détectée.
-- Référentiels séparés de 269 et 333 entrées.
-- Absence de précochage automatique.
-- Couverture réalisée, prévisionnelle, dédoublonnage et historique.
-- Blocage de la déclaration d’une séance future comme assurée.
-- Retrait de coches et persistance après rechargement.
-- Conservation des titres personnalisés et des champs supplémentaires des fiches.
-- Conservation des champs élèves et notes dans le contrat de sauvegarde testé.
-- Envoi et restauration **simulés** du payload Supabase avec les coches.
-- Contrôles de date du DC1 et de l’introduction à PHP.
-- Affichage mobile sans débordement horizontal détecté dans les treize vues.
-- Navigation latérale, sélection de 3SI1/4SI2 et repères bleu/vert sur ordinateur et téléphone.
-- Comparaison des sources avec le paquet précédent : module de suivi, référentiels et PDF identiques ; branchement du nouveau rendu ajouté à `app.js`, sans remplacement de la sauvegarde.
-- Ouverture du profil et des fiches de séance après application du thème.
-- Menu mobile : ouverture, fermeture après navigation, Échap et retour du focus.
-- Contrôle des styles d’impression : menu masqué et contenu en pleine largeur.
-- Données métier inchangées par les interactions de thème testées, après initialisation normale des modules existants.
+1. Publier après validation sur la branche de test.
+2. Dans la configuration Cloud, garder la table `espace_pedagogique`, l’URL et la clé publique du projet existant, activer **Accès protégé par mot de passe** et **Synchroniser automatiquement dans les deux sens**.
+3. Mettre à jour les onglets et les applications installées sur **tous les appareils qui écrivent sur ce compte**, avant de reprendre un travail simultané.
+4. Vérifier la version `v1.4.0-offline-sync`, puis la connexion et la première association.
 
-**La prévisualisation locale bloque les appels au projet Supabase réel.** Son état « sauvegarde locale seulement » est volontaire et ne diagnostique pas un problème de votre site en production.
+**Important : les anciens clients font des insertions directes et ne participent pas au verrou de synchronisation.** La protection contre les écritures concurrentes exige que tous les clients écrivains utilisent cette nouvelle version. Ne continuez pas à modifier les fiches dans un ancien onglet.
 
-### Vérifications de la fusion 1.3.0
+Pour les versions futures, une nouvelle interface complète est préparée en cache avant activation. Si un fichier obligatoire manque, l’ancienne version reste disponible hors ligne. La validation de la mise à jour est refusée tant qu’une saisie ou un échange est en cours.
 
-85 contrôles automatisés ont réussi : structure du tableau de bord, recherche, filtre par classe, CSV, sélection des fiches, mode classe, réutilisation sans validation, saisie par le formulaire conservé, recalcul des graphiques, couverture par domaine, DC1 du 2 novembre, ajout d’épreuve, persistance après rechargement, transport dans le payload existant, notifications, outils de compte, treize vues sur ordinateur/mobile et styles d’impression. Aucun problème JavaScript détecté dans ce parcours.
+### E — Valider dans votre environnement réel
 
-La suite de régression précédente a également réussi, y compris le blocage du réalisé futur, le dédoublonnage des notions, la conservation des champs supplémentaires et l’envoi/restauration cloud **simulés**. Aucune écriture dans la base réelle n’a été effectuée. Les données de test ont été supprimées du navigateur de contrôle et ne sont pas incluses dans l’archive.
+Sur deux appareils de test ou avec des données réversibles et sauvegardées :
 
-### Ajout 1.3.1 — accès directs aux trimestres
+- modifier une fiche en ligne sur A et vérifier sa réception sur B ;
+- couper Internet sur A, modifier et enregistrer, recharger hors ligne ;
+- modifier un champ différent sur B, reconnecter A et vérifier que les deux changements sont conservés ;
+- modifier le même champ sur les deux appareils et vérifier la demande de choix ;
+- vérifier le fonctionnement des notes, présences, export et profil ;
+- contrôler les journaux et droits de votre projet si une erreur serveur apparaît.
 
-38 contrôles ciblés ont réussi : les trois trimestres pour chacune des deux classes, nombre de séances correspondant au trimestre, sélection active du menu, conservation de la classe, accès direct à l’emploi du temps, navigation mobile et maintien de la barre Compte/Cloud. Aucun changement des données métier ni des fonctions de sauvegarde. La suite de fusion (85 contrôles) a également été relancée avec succès.
+La connexion réelle, les permissions de votre projet et l’hébergement GitHub Pages restent **à valider au déploiement**. Les tests locaux ne remplacent pas cette étape.
 
-**Hors ligne et synchronisation bidirectionnelle : demande en attente.** Cette version ajoute les boutons demandés en priorité. Elle ne met pas encore en œuvre la nouvelle synchronisation automatique dans les deux sens ni la gestion des conflits entre appareils ; le comportement de sauvegarde précédent est conservé.
+## 4. Limites et précautions
 
-### Ajout 1.3.2 — compte et Cloud prioritaires
+- IndexedDB et le stockage local ne remplacent pas une sauvegarde indépendante. Une suppression des données du navigateur, un mode privé ou une éviction par le système peuvent les effacer. Exporter régulièrement le JSON et les versions locales.
+- Les copies locales ne sont pas chiffrées par l’application. Sur un appareil partagé, protéger la session système et les fichiers exportés, notamment ceux contenant des notes ou des présences.
+- Le cache concerne l’interface et les ressources statiques, **pas les appels Cloud ou les jetons d’authentification**. Les jetons restent gérés par le mécanisme de connexion existant ; ils ne sont pas copiés dans les archives de conflit.
+- Les PDF ne bloquent pas la préparation de l’interface. Leur absence est signalée par le compteur. Le bouton de retéléchargement permet de rafraîchir les documents disponibles. Les outils OCR restent des ressources chargées à la demande ; leur fonctionnement hors ligne nécessite leur téléchargement préalable.
+- En cas de manque de stockage, exporter les données et traiter l’alerte avant de poursuivre ; ne pas vider le site tant que des changements sont en attente.
+- L’indication **À jour** correspond au dernier échange confirmé, pas à une garantie qu’aucun autre appareil ne modifiera ensuite le Cloud.
+- La synchronisation utilise des instantanés avec fusion, pas une coédition caractère par caractère. Une fenêtre de saisie ouverte retarde la réception pour protéger le brouillon.
 
-Les boutons essentiels ont été déplacés dans l’en-tête fixe ; ils ne sont plus derrière l’icône de réglages. Aucun appel réel n’a été fait à la base. Un identifiant d’état Cloud dupliqué dans l’ancien écran Annexes a été renommé pour que chaque affichage ait un identifiant unique.
+## 5. Ce qui reste conservé de l’interface et du suivi STI
 
-33 contrôles ciblés ont réussi : visibilité immédiate sur ordinateur/mobile, maintien lors du défilement, menu du compte, fenêtre de connexion, configuration Cloud, envoi/restauration sans configuration qui demandent les paramètres, export JSON, absence de débordement et conservation des données. La suite de fusion (86 contrôles), les 38 contrôles des trimestres et la régression du transport Cloud simulé ont aussi réussi.
+- **Connexion / compte, Cloud, envoyer, recevoir, imprimer et exporter** dans la barre permanente, sur ordinateur et téléphone ; profil, administration, installation selon navigateur et déconnexion restent accessibles.
+- **Emploi du temps** et **Répartition — 1er / 2e / 3e trimestre** directement visibles dans le menu.
+- Les cinq écrans du modèle : tableau de bord, suivi des cours, fiche papier, avancement et calendrier des devoirs, reliés aux données réelles ; les outils STI existants restent accessibles.
+- **3SI1 en bleu, 4SI2 en vert**. Identifiants et clés historiques `classe|numéro` conservés.
+- Deux groupes de 2 h par classe et par jour, avec **suivi partagé** : 3SI1 mardi 08–12 et jeudi 13–17 ; 4SI2 lundi/vendredi 08–12. Cela représente 4 h par groupe et 8 h enseignant par semaine pour chaque classe.
+- Référentiels séparés : **269 entrées 3SI1**, **333 entrées 4SI2**. Une notion compte une seule fois dans la couverture, uniquement si cochée dans une séance explicitement assurée et non future. Le taux mesure les tableaux du livre, pas tout le programme ni la maîtrise des élèves.
+- Aucun historique fictif, aucune coche ajoutée automatiquement. Les préparations et propositions ne certifient pas le contenu réellement enseigné.
+- PHP en 4SI2 à partir du **9 octobre 2026**, DC1 au **2 novembre 2026** ; calendrier tunisien et propositions déjà préparés conservés. Les titres personnalisés ne sont pas remplacés automatiquement.
+- Les fiches, notions, horaires, profil, classes, élèves, épreuves, notes et présences gardent leur structure métier. Le nouveau stockage IndexedDB ajoute des métadonnées de synchronisation et des copies de secours, pas une nouvelle base métier distante.
 
-La nouvelle synchronisation hors ligne/bidirectionnelle reste **en attente**, conformément à la priorité donnée aux commandes visibles. Ne pas confondre cette amélioration d’interface avec une nouvelle gestion des conflits entre appareils.
+## 6. Vérifications locales de cette version
+
+| Suite | Résultat |
+|---|---:|
+| Fusion trois voies, ajouts, suppressions, listes par ID, choix explicites | 213 contrôles réussis |
+| Deux navigateurs isolés, réseau coupé, conflits, CAS, comptes, onglets | 30 contrôles réussis |
+| Service worker réel : rechargement hors ligne, mise à jour incomplète, validation sans perte | 9 contrôles réussis |
+| Fonction SQL sur PostgreSQL local PGlite, schéma du dépôt et RLS | 13 contrôles réussis |
+| Commandes essentielles ordinateur/mobile | 33 contrôles réussis |
+| Cinq écrans fusionnés et treize vues ordinateur/mobile | 86 contrôles réussis |
+| Trimestres, emploi du temps et navigation | 38 contrôles réussis |
+| Régression du suivi des notions et conservation des données | 19 contrôles réussis |
+
+Les échanges Cloud de navigateur ont été **simulés**, sans URL, clé ou données réelles de votre projet. Le test SQL local vérifie l’exécution, le refus d’un identifiant périmé et l’isolation des propriétaires ; il ne reproduit pas deux connexions PostgreSQL concurrentes réelles. Le scénario navigateur force une collision de version et vérifie la reprise.
+
+Le banc de test utilise le véritable service worker et un serveur sans accès à Supabase. Les huit PDF ajoutés sont disponibles dans ce banc ; huit anciens PDF non copiés dans l’environnement local y retournent 404, sans empêcher le cache de l’interface. Leur disponibilité réelle doit être contrôlée via le compteur après publication.
+
+Aucune donnée de test, configuration privée ou dépendance du banc de test n’est incluse dans l’archive. L’aperçu local ne charge pas votre sauvegarde : des compteurs à zéro n’indiquent pas une suppression de vos données.
+
+## 7. Retour arrière
+
+Conserver tous les exports et les deux versions des conflits. Ne supprimer ni la table, ni les instantanés, ni le stockage du navigateur.
+
+Un retour à l’ancien code réintroduit son comportement d’envoi direct : désactiver les échanges automatiques et cesser les modifications simultanées avant cette opération. Ne pas mélanger durablement anciens et nouveaux clients écrivains.
+
+La commande de retrait de la fonction SQL figure en commentaire dans le script ; **ne pas l’exécuter tant que cette version est utilisée**. Garder la fonction en place ne supprime aucune donnée et n’oblige pas à l’utiliser.

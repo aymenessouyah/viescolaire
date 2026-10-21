@@ -2,11 +2,11 @@
   "repository": "https://github.com/aymenessouyah/viescolaire",
   "branch": "main",
   "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
-  "version": "v1.3.2-sti-essential",
+  "version": "v1.4.0-offline-sync",
   "files": [
     {
       "path": "assets/app.js",
-      "sha256": "17bee49634f559f190ec938f24564241bda93b443ec461907ecdd5fec6c1a8b3",
+      "sha256": "42e338c8ef7cb27da3d6f7fe791c567c3ad7666ccbf9db7968a21c47539f9e3c",
       "action": "modifier",
       "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
     },
@@ -19,6 +19,18 @@
     {
       "path": "assets/interface-reference.js",
       "sha256": "f918eee9c96dd7612a91075b307b09dc7030ed79ad701e4f0316810ca0132b3a",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/offline-sync.css",
+      "sha256": "b52491d842a4e36b7d3100e2e1db60aec95881bbb3113648900e8388fc84e99a",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/offline-sync.js",
+      "sha256": "0f9a0fe3aafcda367f00ac50fe044842e68905d2e9c867c0071618d8ad6832fc",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -37,6 +49,12 @@
     {
       "path": "assets/suivi-sti.js",
       "sha256": "5771554d111b8e31fa1bc2bcdafd961ce3829d16342b93b55f271eecad95afc4",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
+      "path": "assets/sync-merge.js",
+      "sha256": "76df15300a0eef31ac10e87aad93bbf6c87008c9220d022db8708579cd9731f7",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -114,13 +132,19 @@
     },
     {
       "path": "index.html",
-      "sha256": "539311ba769011b0f99585854806f499f3099357ceff473fbfe2d8d9ec7df633",
+      "sha256": "37170ebabd55aef5d68e238c759afa6d0a0f5938f5a532e87d9426cbf8b06fa5",
       "action": "modifier",
       "base_sha256": "974f8d76b243f690430c18e264784b7ffaa5c93dae6a58cd6fcce82646b440b9"
     },
     {
+      "path": "installation/synchronisation-atomique.sql",
+      "sha256": "2e771fb25c4e196191d07b361c88082f47fc894d8e3d3baf34a7e7ae63059b1d",
+      "action": "ajouter",
+      "base_sha256": null
+    },
+    {
       "path": "sw.js",
-      "sha256": "8a964b93882b7b700ccb78aa8baf5be4ed23a648c50254970ea6d34aa98f5020",
+      "sha256": "017e9f0a059dda829be6695e6a68e3430bcad65741f2f36fb199c8657a72bdde",
       "action": "modifier",
       "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
     }

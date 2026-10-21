@@ -1,27 +1,36 @@
 --- a/assets/app.js
 +++ b/assets/app.js
-@@ -12,7 +12,7 @@
+@@ -12,26 +12,9 @@
  (function () {
  'use strict';
  
 -const APP_VER = "v1.1.22";
-+const APP_VER = "v1.3.2-sti-essential";
- /* réparation automatique : si une autre version traîne dans le cache de
-    l'appareil (mélange d'affichage), tout le cache est purgé et la page
-    se recharge une seule fois — une fois par version, sans boucle */
-@@ -24,9 +24,9 @@
-     (async () => {
-       try {
-         const ks = await caches.keys();
+-/* réparation automatique : si une autre version traîne dans le cache de
+-   l'appareil (mélange d'affichage), tout le cache est purgé et la page
+-   se recharge une seule fois — une fois par version, sans boucle */
+-try {
+-  if (typeof localStorage !== "undefined" && localStorage.getItem("sti_appver") !== APP_VER
+-      && window.navigator && window.navigator.serviceWorker && window.navigator.serviceWorker.getRegistrations
+-      && window.caches){
+-    localStorage.setItem("sti_appver", APP_VER);
+-    (async () => {
+-      try {
+-        const ks = await caches.keys();
 -        await Promise.all(ks.map(k => caches.delete(k)));
-+        await Promise.all(ks.filter(k => k.startsWith("sti-espace-")).map(k => caches.delete(k)));
-         const rs = await navigator.serviceWorker.getRegistrations();
+-        const rs = await navigator.serviceWorker.getRegistrations();
 -        await Promise.all(rs.map(r => r.unregister()));
-+        await Promise.all(rs.filter(r => r.scope === new URL("./", location.href).href).map(r => r.unregister()));
-       } catch(e){}
-       setTimeout(() => { try { location.replace(location.href); } catch(e){} }, 300);
-     })();
-@@ -121,7 +121,7 @@
+-      } catch(e){}
+-      setTimeout(() => { try { location.replace(location.href); } catch(e){} }, 300);
+-    })();
+-  }
+-} catch(e){}
++const APP_VER = "v1.4.0-offline-sync";
++/* Version stockée sans effacer le cache hors ligne ni les données. */
++try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
+ const DATA = window.STI_DATA || {};
+ if (!DATA.reference) {
+   document.addEventListener("DOMContentLoaded", function(){
+@@ -121,7 +104,7 @@
  }
  const SESSIONS = { "3SI1": generateSessions("3SI1"), "4SI2": generateSessions("4SI2") };
  function sessionsOf(cls, tri){ return SESSIONS[cls].filter(s => !tri || s.tri === tri); }
@@ -30,7 +39,15 @@
  function clsChip(c){ return c === "3SI1" ? "b-3si1" : "b-4si2"; }
  function clsCoul(c){ return c === "3SI1" ? "var(--c-3si1)" : "var(--c-4si2)"; }
  function titleOf(s, store){
-@@ -162,7 +162,7 @@
+@@ -154,6 +137,7 @@
+   return base;
+ }
+ function save(silent){
++  if (window.STI_SYNC && !window.STI_SYNC.beforeSave(store)) return;
+   store.saved = new Date().toISOString();
+   try{ localStorage.setItem(KEY, JSON.stringify(store)); }catch(e){}
+   if(!silent) toast("Modifications enregistrées dans ce navigateur");
+@@ -162,7 +146,7 @@
  }
  function seanceState(s){
    const o = store.seances[s.cls+"|"+s.n] || {};
@@ -39,7 +56,7 @@
    if (o.done === false) return "reportee";
    return s.iso <= todayISO() ? "passee" : "avenir";
  }
-@@ -205,9 +205,15 @@
+@@ -205,9 +189,15 @@
  
  const TABS = [
    { id:"v-dash",   t:"Tableau de bord", ico:"home" },
@@ -56,7 +73,7 @@
    { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
    { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
    { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
-@@ -233,8 +239,10 @@
+@@ -233,8 +223,10 @@
    if (typeof applyProfil === "function") applyProfil();
    renderCahier();
    renderRef();
@@ -67,7 +84,7 @@
    document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
  }
  function go(id){
-@@ -258,7 +266,7 @@
+@@ -258,7 +250,7 @@
  }
  function kpiDone(cls, tri){
    const list = sessionsOf(cls, tri), t = todayISO();
@@ -76,7 +93,7 @@
    return { done:done, total:list.length, pct: Math.round(done/list.length*100) };
  }
  /* invitation à activer la sauvegarde distante — affichée seulement si nécessaire */
-@@ -290,7 +298,7 @@
+@@ -290,7 +282,7 @@
    const dash = document.getElementById("v-dash");
    dash.innerHTML = `
    ${cloudInvite()}
@@ -85,7 +102,7 @@
      <div class="card-b">
        <div class="spread">
          <div style="min-width:260px">
-@@ -347,7 +355,7 @@
+@@ -347,7 +339,7 @@
    <div class="grid g2" style="align-items:start">
      <div class="stack">
        <div class="card">
@@ -94,7 +111,7 @@
          <div class="card-b">
            ${["3SI1","4SI2"].map(c => {
              const k = kpiDone(c,1);
-@@ -358,7 +366,7 @@
+@@ -358,7 +350,7 @@
                </div>
                <div class="bar"><i class="done" style="width:${k.pct}%"></i><i class="left" style="width:${100-k.pct}%"></i></div>
                <div class="legend">
@@ -103,7 +120,7 @@
                  <span><i class="sq" style="background:#dbe6f2"></i> restantes</span>
                  <span class="muted">DC1 : ${dcOf(c,"dc1")} • DC2 : ${dcOf(c,"dc2")} • DS1 : ${fmtShort(DS1[c].main)}</span>
                </div>
-@@ -801,12 +809,12 @@
+@@ -801,12 +793,12 @@
  
  /* ---------------- 4. RÉPARTITION ---------------- */
  function setRep(cls){ repCls = cls; renderRep(); }
@@ -118,7 +135,7 @@
    const pct = Math.round(done/list.length*100) || 0;
    const dcList = evalDates(cls,"dc");
  
-@@ -916,6 +924,7 @@
+@@ -916,6 +908,7 @@
    const key = cls+"|"+n, o = store.seances[key] || {};
    const s = SESSIONS[cls].find(x => x.n===n);
    const st = seanceState(s);
@@ -126,7 +143,7 @@
    o.done = (st === "faite") ? false : true;
    store.seances[key] = o;
    save(true); toast("État de la séance n°"+n+" ("+cls+") mis à jour");
-@@ -1067,7 +1076,7 @@
+@@ -1067,7 +1060,7 @@
      sessionsOf(c, cahTri).forEach(s => list.push(s));
    });
    list.sort((a,b) => b.iso.localeCompare(a.iso));
@@ -135,18 +152,181 @@
  
    document.getElementById("v-cahier").innerHTML = `
    <div class="sec-head">
-@@ -1368,8 +1377,8 @@
+@@ -1188,19 +1181,18 @@
+ }
+ /* jeton valide ; renouvellement automatique quand il arrive à expiration */
+ async function authToken(){
+-  const s = authSession();
+-  if (!s) return null;
+-  if (authValid()) return s.access_token;
+-  if (!s.refresh_token || !cloudReady()) { authClear(); return null; }
+-  try {
+-    const c = cloudCfg();
+-    const r = await fetch(c.url.replace(/\/$/, "") + "/auth/v1/token?grant_type=refresh_token", {
+-      method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
+-      body: JSON.stringify({ refresh_token: s.refresh_token })
+-    });
+-    if (!r.ok) throw new Error("HTTP " + r.status);
+-    return authApply(await r.json());
+-  } catch (e) { authClear(); return null; }
++ const s=authSession();if(!s)return null;if(authValid())return s.access_token;
++ if(!navigator.onLine)return null; // Conserver le refresh token pendant une coupure réseau.
++ if(!s.refresh_token||!cloudReady())return null;
++ if(window.__stiRefresh)return window.__stiRefresh;
++ window.__stiRefresh=(async()=>{
++  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);
++  try{
++   const c=cloudCfg(),r=await fetch(c.url.replace(/\/$/,"")+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},body:JSON.stringify({refresh_token:s.refresh_token}),signal:ctl.signal});
++   if(!r.ok){if([400,401].includes(r.status)&&authSession()?.refresh_token===s.refresh_token)authClear();return null;}
++   const d=await r.json();if(authSession()?.refresh_token!==s.refresh_token)return null;return authApply(d);
++  }catch(e){return null;}finally{clearTimeout(timer);window.__stiRefresh=null;}
++ })();return window.__stiRefresh;
+ }
+ function authNeeded(){ return cloudReady() && cloudCfg().auth; }
+ function openAuth(){
+@@ -1287,19 +1279,16 @@
+     } catch (e) {}
+   }
+   authClear();
++  if(window.STI_SYNC) window.STI_SYNC.onLogout();
+   window.__afterLogin = null;
+   toast("Déconnecté — les données restent sur cet appareil");
+   renderAll(true); renderCloudBar(); renderCompte(); renderLoginInvite();
+ }
+ /* après une connexion réussie : synchronisation dans le bon sens */
+ async function afterLogin(){
+-  const a = window.__afterLogin; window.__afterLogin = null;
+-  if (a === "push") { await cloudPush(true); }
+-  else if (cloudHasLocalData()) { await cloudPush(true); }
+-  else { await cloudPull(true); }
+-  renderAll(true); renderCloudBar();
+-  /* première connexion de ce professeur : on demande son nom et sa matière */
+-  if (!store.profil || !store.profil.nom) { if (typeof openProfil === "function") openProfil(); }
++  window.__afterLogin = null;
++  renderAll(true); renderCloudBar(); renderCompte();
++  if(window.STI_SYNC) await window.STI_SYNC.onLogin();
+ }
+ 
+ /* ---------- synchronisation distante (Supabase) ---------- */
+@@ -1325,6 +1314,7 @@
+   return { "apikey": c.key, "Authorization": "Bearer " + (tok || c.key), "Content-Type": "application/json", "Prefer": "return=minimal" };
+ }
+ function cloudTime(){
++  if(window.STI_SYNC){const d=window.STI_SYNC.status().lastOk;return d?new Date(d).toLocaleString("fr-FR"):"jamais";}
+   const s = store.cloud && store.cloud.at;
+   if (!s) return "jamais";
+   return fmtShort(s.slice(0,10)) + " à " + s.slice(11,16);
+@@ -1366,11 +1356,8 @@
+ function fermerMenuCompte(){ const m = document.getElementById("menu-compte"); if (m) m.classList.add("hidden"); }
+ /* efface le cache local et recharge : garantit l'exécution de la dernière version publiée */
  async function forceMaj(){
-   if (!confirm("Effacer le cache local et recharger l'application en dernière version ?")) return;
-   toast("Effacement du cache…");
+-  if (!confirm("Effacer le cache local et recharger l'application en dernière version ?")) return;
+-  toast("Effacement du cache…");
 -  try { if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } } catch(e){}
 -  try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); } } catch(e){}
-+  try { if (window.caches){ const ks = await caches.keys(); await Promise.all(ks.filter(k => k.startsWith("sti-espace-")).map(k => caches.delete(k))); } } catch(e){}
-+  try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations){ const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.filter(r => r.scope === new URL("./", location.href).href).map(r => r.unregister())); } } catch(e){}
-   setTimeout(() => location.replace(location.href), 350);
+-  setTimeout(() => location.replace(location.href), 350);
++ if(!navigator.onLine){toast("Reconnectez-vous pour vérifier les mises à jour. Le cache hors ligne est conservé.");return;}
++ await applyUpdate();
  }
  function menuAction(quoi){
-@@ -1553,7 +1562,7 @@
+   fermerMenuCompte();
+@@ -1390,6 +1377,7 @@
+   b.classList.toggle("hidden", !(cloudReady() && authNeeded() && !authSession() && currentTab === "v-dash"));
+ }
+ function cloudBadge(){
++  if(window.STI_SYNC) return window.STI_SYNC.badge();
+   if (!cloudReady()) return '<span class="badge b-amber">Sauvegarde locale seulement</span>';
+   if (authNeeded() && !authSession()) return '<span class="badge b-amber">Déconnecté — connexion requise pour le cloud</span>';
+   return store.cloud && store.cloud.ok ? '<span class="badge b-green">Synchronisé le ' + cloudTime() + '</span>' : '<span class="badge b-rose">Configuration à vérifier</span>';
+@@ -1410,60 +1398,8 @@
+     }
+   };
+ }
+-async function cloudPush(silent){
+-  if (!cloudReady()){ if (!silent) openCloudSettings(); return; }
+-  if (authNeeded() && !(await authToken())) {
+-    if (!silent){ window.__afterLogin = "push"; openAuth(); }
+-    return;
+-  }
+-  const c = cloudCfg();
+-  store.cloud = store.cloud || {};
+-  try {
+-    const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table, {
+-      method: "POST", headers: await cloudHeaders(), body: JSON.stringify([payLoad()])
+-    });
+-    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 160));
+-    store.cloud = { ok:true, at:new Date().toISOString() };
+-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){}
+-    if (!silent) toast("Données envoyées à la base distante");
+-    renderCloudBar();
+-  } catch (e) {
+-    store.cloud = { ok:false, at:new Date().toISOString(), err:String(e.message || e) };
+-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(err){}
+-    if (!silent) alert("Échec de l'envoi :\n" + (e.message || e) + "\n\nVérifiez l'URL du projet, la clé publique et la table SQL (voir README).");
+-    renderCloudBar();
+-  }
+-}
+-async function cloudPull(silent){
+-  if (!cloudReady()){ openCloudSettings(); return; }
+-  if (authNeeded() && !(await authToken())) {
+-    window.__afterLogin = "pull"; openAuth(); return;
+-  }
+-  const c = cloudCfg();
+-  try {
+-    const r = await fetch(c.url.replace(/\/$/, "") + "/rest/v1/" + c.table + "?select=*&order=created_at.desc&limit=1", { headers: await cloudHeaders() });
+-    if (!r.ok) throw new Error("HTTP " + r.status + " " + (await r.text()).slice(0, 160));
+-    const rows = await r.json();
+-    if (!rows.length){ if (!silent) alert("Aucune sauvegarde trouvée dans la base distante."); return; }
+-    const snap = rows[0];
+-    const local = (store.seances ? Object.keys(store.seances).length : 0);
+-    const remote = snap.payload && snap.payload.seances ? Object.keys(snap.payload.seances).length : 0;
+-    const quand = snap.created_at ? snap.created_at.slice(0,16).replace("T"," ") : "date inconnue";
+-    if (!silent && !confirm("Sauvegarde distante du " + quand + "\n" + remote + " fiche(s) enregistrée(s) — cette session en contient " + local + ".\n\nRemplacer les données de cet appareil par la version distante ?")) return;
+-    store.times = snap.payload.times || store.times;
+-    store.seances = snap.payload.seances || {};
+-    if (typeof snap.payload.saved === "string") store.saved = snap.payload.saved;
+-    ["profil","classes","eleves","epreuves","notes","presences"].forEach(k => {
+-      if (snap.payload[k] !== undefined && snap.payload[k] !== null) store[k] = snap.payload[k];
+-    });
+-    store.cloud = { ok:true, at:new Date().toISOString() };
+-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){}
+-    toast("Données restaurées depuis la base distante");
+-    renderAll(true);
+-  } catch (e) {
+-    alert("Échec de la restauration :\n" + (e.message || e) + "\n\nVérifiez l'URL, la clé, la table et les règles d'accès (voir README).");
+-  }
+-}
++async function cloudPush(silent){ if(window.STI_SYNC) return window.STI_SYNC.request(!silent); }
++async function cloudPull(silent){ if(window.STI_SYNC) return window.STI_SYNC.request(!silent); }
+ function cloudHasLocalData(){
+   return !!(store.saved ||
+     (store.seances && Object.keys(store.seances).length) ||
+@@ -1472,22 +1408,8 @@
+ /* Premier démarrage sur cet appareil (téléphone, tablette, poste du lycée) :
+    si rien n'est encore enregistré localement, on propose d'abord la version
+    du cloud, pour que la sauvegarde distante soit la source de vérité. */
+-async function cloudFirstRunRestore(){
+-  if (!cloudReady() || cloudHasLocalData()) return false;
+-  if (authNeeded() && !(await authToken())) {
+-    /* nouvel appareil : demande de connexion une fois par session de navigation */
+-    if (!sessionStorage.getItem("sti_auth_asked")) {
+-      sessionStorage.setItem("sti_auth_asked", "1");
+-      window.__afterLogin = "pull";
+-      openAuth();
+-    }
+-    return false;
+-  }
+-  window.__cloudFirstRun = true;
+-  await cloudPull(true);
+-  return true;
+-}
+-function cloudAutoPush(){ if (cloudCfg().auto && cloudReady()) cloudPush(true); }
++async function cloudFirstRunRestore(){ return false; /* Association et fusion gérées par STI_SYNC après initialisation. */ }
++function cloudAutoPush(){ if(window.STI_SYNC) window.STI_SYNC.localChanged(); }
+ /* bouton « Cloud » de l'en-tête : ouvre la connexion quand elle est attendue,
+    sinon la fenêtre de configuration (URL, clé, table, nom de l'appareil) */
+ function openCloud(){
+@@ -1553,7 +1475,7 @@
    </div>
    <div class="row" style="justify-content:space-between;margin-bottom:14px">
      <span class="tiny muted" id="ref-search-info">Recherche sur le mémo et les 5 annexes</span>
@@ -155,7 +335,7 @@
    </div>
  
    <div class="grid g4" style="margin-bottom:16px">
-@@ -1691,10 +1700,16 @@
+@@ -1691,10 +1613,16 @@
      <div style="margin-bottom:12px"><label class="f">Observations / bilan</label>
        <input type="text" id="m-obs" value="${escapeHtml(o.obs || "")}" placeholder="Ex. : notions à reprendre, séance écourtée, groupe très réceptif…"></div>
      <div class="row" style="gap:8px">
@@ -173,7 +353,7 @@
    document.getElementById("modal").classList.add("on");
  }
  function closeModal(){ document.getElementById("modal").classList.remove("on"); document.body.style.overflow=""; }
-@@ -1703,7 +1718,14 @@
+@@ -1703,7 +1631,14 @@
    const k = mCtx.cls+"|"+mCtx.n;
    const doneBox = document.getElementById("m-done").checked;
    const repBox = document.getElementById("m-rep").checked;
@@ -188,13 +368,81 @@
      title: document.getElementById("m-titre").value.trim(),
      contenu: document.getElementById("m-contenu").value.trim(),
      devoirs: document.getElementById("m-devoirs").value.trim(),
-@@ -1772,6 +1794,7 @@
+@@ -1744,14 +1679,14 @@
+       <div class="space-y" style="display:grid;gap:8px">
+         <div class="spread"><span class="tiny muted">Projet</span><span class="tiny">${c.url ? c.url.replace(/^https?:\/\//,"").split(".")[0] + " • table " + c.table : "non configuré"}</span></div>
+         <div class="spread"><span class="tiny muted">Appareil</span><span class="tiny">${escapeHtml(c.device)}</span></div>
+-        <div class="spread"><span class="tiny muted">Dernier envoi</span><span class="tiny">${cloudTime()}</span></div>
++        <div class="spread"><span class="tiny muted">Dernière synchronisation</span><span class="tiny">${cloudTime()}</span></div>
+         <div class="spread"><span class="tiny muted">Fiches enregistrées</span><span class="tiny">${Object.keys(store.seances || {}).length}</span></div>
+-        <div class="spread"><span class="tiny muted">Envoi automatique</span><span class="tiny">${c.auto ? "activé" : "désactivé"}</span></div>
++        <div class="spread"><span class="tiny muted">Synchronisation automatique</span><span class="tiny">${c.auto ? "activé" : "désactivé"}</span></div>
+         <div class="spread"><span class="tiny muted">Connexion</span><span class="tiny">${cloudWho()}</span></div>
+       </div>
+       <div class="row no-print" style="margin-top:12px;gap:8px">
+         <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Envoyer maintenant</button>
+-        <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Restaurer</button>
++        <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Recevoir et fusionner</button>
+         ${authNeeded() ? (authSession()
+             ? '<button class="btn btn-xs btn-line" onclick="doLogout()">' + ic("out") + ' Se déconnecter</button>'
+             : '<button class="btn btn-xs btn-blue" onclick="openAuth()">' + ic("lock") + ' Se connecter</button>') : ""}
+@@ -1769,9 +1704,11 @@
+   </div>`;
+ }
+ function renderCloudBar(){
++  if(window.STI_SYNC){ window.STI_SYNC.renderStatus(); return; }
    const t = (cloudReady() ? "" : "") + cloudBadge() +
      ' <span class="tiny muted">' + (cloudReady() ? "projet : " + cloudCfg().url.replace(/^https?:\/\//,"").split(".")[0] : "aucun projet configuré") + " • dernier envoi : " + cloudTime() + "</span>";
    const a = document.getElementById("cloud-bar"); if (a) a.innerHTML = t;
 +  const refBar = document.getElementById("cloud-bar-ref"); if (refBar) refBar.innerHTML = t;
    const b = document.getElementById("cloud-bar2"); if (b) b.innerHTML = cloudBadge();
  }
+ 
+@@ -1839,26 +1776,28 @@
+   if (typeof toast === "function") toast("Application installée — retrouvez son icône sur l'écran d'accueil ou dans le menu Démarrer");
+ });
+ function registerSW(){
+-  if (!("serviceWorker" in navigator)) return;
+-  if (location.protocol !== "http:" && location.protocol !== "https:") return; /* évite l'échec en ouverture locale */
+-  navigator.serviceWorker.register("sw.js").then(reg => {
+-    reg.addEventListener("updatefound", () => {
+-      const nw = reg.installing;
+-      if (!nw) return;
+-      nw.addEventListener("statechange", () => {
+-        if (nw.state === "installed" && navigator.serviceWorker.controller) {
+-          const b = document.getElementById("update-bar");
+-          if (b) b.classList.remove("hidden");
+-        }
+-      });
+-    });
+-  }).catch(() => {});
+-}
+-function applyUpdate(){ if (window.__newSW) window.__newSW.postMessage({ type: "SKIP_WAITING" }); location.reload(); }
++ if(!navigator.serviceWorker||!["http:","https:"].includes(location.protocol))return;
++ navigator.serviceWorker.register("sw.js").then(reg=>{
++  window.__stiRegistration=reg;
++  const notice=()=>{if(reg.waiting){window.__newSW=reg.waiting;document.getElementById("update-bar")?.classList.remove("hidden");}};
++  notice();reg.addEventListener("updatefound",()=>{const worker=reg.installing;if(worker)worker.addEventListener("statechange",()=>{if(worker.state==="installed"&&navigator.serviceWorker.controller)notice();});});
++  navigator.serviceWorker.ready.then(r=>r.active?.postMessage({type:"CACHE_DOCUMENTS"}));
++  window.addEventListener("online",()=>reg.update().catch(()=>{}));
++  setInterval(()=>{if(navigator.onLine&&!document.hidden)reg.update().catch(()=>{});},1800000);
++ }).catch(()=>{if(typeof toast==="function")toast("Préparation hors ligne incomplète — rechargez avec Internet.");});
++}
++async function applyUpdate(){
++ if(window.STI_SYNC&&!window.STI_SYNC.canUpdate()){toast("Fermez la fiche en cours et attendez la fin de l’échange avant la mise à jour.");return;}
++ if(window.STI_SYNC)await window.STI_SYNC.flush();
++ const reg=window.__stiRegistration,worker=reg?.waiting||window.__newSW;
++ if(worker){navigator.serviceWorker.addEventListener("controllerchange",()=>location.reload(),{once:true});worker.postMessage({type:"SKIP_WAITING"});}
++ else if(navigator.onLine&&reg){await reg.update();toast("Vérification de la version effectuée.");}
++ else toast("La version disponible hors ligne est conservée.");
++}
+ window.addEventListener("online", () => {
+   const e = document.getElementById("net-state"); if (e){ e.textContent = "En ligne"; e.className = "badge b-green"; }
+   /* reprise automatique : un envoi qui avait échoué (hors ligne) est retenté */
+-  if (cloudReady() && store.cloud && store.cloud.ok === false) cloudPush(true);
++  if(window.STI_SYNC) window.STI_SYNC.request(false);
+ });
+ window.addEventListener("offline", () => { const e = document.getElementById("net-state"); if (e){ e.textContent = "Hors ligne — données locales"; e.className = "badge b-amber"; } });
  
 --- a/assets/style.css
 +++ b/assets/style.css
@@ -224,13 +472,14 @@
  /* ============================================================
 --- a/index.html
 +++ b/index.html
-@@ -16,8 +16,49 @@
+@@ -16,8 +16,50 @@
  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
  <link rel="stylesheet" href="assets/style.css">
 +<link rel="stylesheet" href="assets/suivi-sti.css">
 +<link rel="stylesheet" href="assets/theme-classe.css">
 +<link rel="stylesheet" href="assets/interface-reference.css">
++<link rel="stylesheet" href="assets/offline-sync.css">
  </head>
  <body>
 +<script>document.body.classList.add("vs-fusion","vs-themed");document.body.dataset.vsTheme="3SI1";</script>
@@ -242,7 +491,7 @@
 +<div class="bell-wrap"><button class="bell-btn" id="ref-bell" aria-label="Notifications du planning" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M14 21h-4"/></svg></button><div class="bell-dropdown" id="ref-notifications" role="region" aria-label="Notifications du planning"></div></div>
 +<button class="bell-btn" data-ref="tools" aria-label="Configuration du Cloud" title="Configuration du Cloud"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg></button>
 +<button class="btn btn-primary" data-ref="new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Nouvelle séance</span></button>
-+<section class="ref-essential-bar" aria-label="Compte et Cloud"><div class="ref-essential-heading"><strong>COMPTE &amp; SAUVEGARDE</strong><div class="ref-essential-status" aria-live="polite"><span id="net-state" class="badge b-grey">En ligne</span><span id="cloud-bar">—</span></div></div><div aria-label="Actions essentielles du compte et des sauvegardes" class="head-actions no-print">
++<section class="ref-essential-bar" aria-label="Compte et Cloud"><button type="button" class="btn btn-line" id="sti-sync-details" data-sync="details">Hors ligne &amp; synchronisation</button><div class="ref-essential-heading"><strong>COMPTE &amp; SAUVEGARDE</strong><div class="ref-essential-status" aria-live="polite"><span id="net-state" class="badge b-grey">En ligne</span><span id="cloud-bar">—</span></div></div><div aria-label="Actions essentielles du compte et des sauvegardes" class="head-actions no-print">
 +<div style="position:relative;display:inline-block">
 +<button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg> <span id="compte-txt">Connexion</span> <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:14px;height:14px" viewbox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
 +<div class="hidden" id="menu-compte" style="position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
@@ -262,7 +511,7 @@
 +<div class="tiny muted" id="mc-ver" style="padding:6px 10px 4px;border-top:1px solid var(--line-2);margin-top:4px"></div>
 +</div>
 +</div>
-+<button class="btn btn-ghost" id="btn-cloud" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"></path><path d="M17 18H7a4 4 0 0 1 0-8"></path><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"></path></svg> Cloud</button><button class="btn btn-ghost" id="btn-cloud-send" onclick="cloudPush(false)" title="Envoyer une sauvegarde de cet appareil au Cloud" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 17V3M7 8l5-5 5 5M5 17v4h14v-4"></path></svg><span>Envoyer au Cloud</span></button><button class="btn btn-ghost" id="btn-cloud-restore" onclick="cloudPull(false)" title="Récupérer une sauvegarde distante ; confirmation avant remplacement" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 3v14M7 12l5 5 5-5M5 17v4h14v-4"></path></svg><span>Restaurer du Cloud</span></button>
++<button class="btn btn-ghost" id="btn-cloud" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"></path><path d="M17 18H7a4 4 0 0 1 0-8"></path><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"></path></svg> Cloud</button><button class="btn btn-ghost" id="btn-cloud-send" onclick="cloudPush(false)" title="Envoyer une sauvegarde de cet appareil au Cloud" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 17V3M7 8l5-5 5 5M5 17v4h14v-4"></path></svg><span>Envoyer au Cloud</span></button><button class="btn btn-ghost" id="btn-cloud-restore" onclick="cloudPull(false)" title="Recevoir et fusionner les modifications ; les conflits restent à valider" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 3v14M7 12l5 5 5-5M5 17v4h14v-4"></path></svg><span>Recevoir du Cloud</span></button>
 +<button class="btn btn-ghost" onclick="window.print()"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect height="8" width="12" x="6" y="14"></rect></svg> Imprimer</button>
 +<button class="btn btn-ghost" onclick="exportJSON()"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5M12 15V3"></path></svg> Exporter</button>
 +<button class="btn btn-ghost" id="btn-install" onclick="installApp()" style="display:none"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg> Installer l'application</button>
@@ -274,7 +523,7 @@
  
  <!-- ===================== BARRE D'ÉTAT ===================== -->
  <div class="topbar no-print">
-@@ -29,57 +70,32 @@
+@@ -29,72 +71,57 @@
      <div class="row" style="gap:12px">
        <span id="tb-today"></span>
        <span class="hide-sm">|</span>
@@ -351,7 +600,10 @@
  </header>
  
  <!-- ===================== BANDEAU DE MISE À JOUR ===================== -->
-@@ -89,12 +105,22 @@
+ <div id="update-bar" class="update-bar hidden no-print">
+-  <span>Une nouvelle version de l'application est disponible.</span>
++  <span>Une nouvelle version de l'application est prête. Vos données locales sont conservées.</span>
+   <button class="btn btn-xs btn-primary" onclick="applyUpdate()">Mettre à jour</button>
  </div>
  
  <!-- ===================== ONGLETS ===================== -->
@@ -378,7 +630,26 @@
    <section id="v-edt" class="view"></section>
    <section id="v-cal" class="view"></section>
    <section id="v-rep" class="view"></section>
-@@ -320,13 +346,19 @@
+@@ -282,8 +309,7 @@
+     </div>
+     <div class="box-b">
+       <p class="small" style="color:var(--ink-2);margin-bottom:12px">
+-        Renseignez l'URL de votre projet <strong>Supabase</strong> et sa clé publique (anon). La table SQL à créer est fournie
+-        dans <code>supabase/schema.sql</code> : les instructions complètes figurent dans le <code>README.md</code> du projet.
++        Renseignez l'URL de votre projet <strong>Supabase</strong> et sa clé publique (anon). Conservez votre base existante. La synchronisation bidirectionnelle nécessite le script <code>installation/synchronisation-atomique.sql</code> et un accès protégé par compte. Consultez <code>MISE_A_JOUR_STI.md</code>.
+       </p>
+       <div style="margin-bottom:10px"><label class="f">URL du projet Supabase</label>
+         <input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co"></div>
+@@ -294,7 +320,7 @@
+         <div><label class="f">Nom de cet appareil</label><input type="text" id="cfg-device" placeholder="Téléphone — Prof. Aymen"></div>
+       </div>
+       <label class="badge b-blue" style="cursor:pointer;display:inline-flex;gap:6px">
+-        <input type="checkbox" id="cfg-auto"> Envoyer automatiquement à chaque enregistrement
++        <input type="checkbox" id="cfg-auto"> Synchroniser automatiquement dans les deux sens
+       </label>
+       <label class="badge b-blue" style="cursor:pointer;display:inline-flex;gap:6px;margin-top:6px">
+         <input type="checkbox" id="cfg-auth"> Accès protégé par mot de passe (compte unique)
+@@ -320,13 +346,21 @@
  <script src="data/memo.js"></script>
  <script src="data/annexes.js"></script>
  <script src="data/docs.js"></script>
@@ -394,22 +665,34 @@
  <script src="assets/app.js"></script>
  <script src="assets/eleves.js"></script>
  <script src="assets/admin.js"></script>
++<script src="assets/sync-merge.js"></script>
++<script src="assets/offline-sync.js"></script>
 +<script src="assets/theme-classe.js"></script>
 +<dialog id="ref-dialog" class="ref-ui" aria-labelledby="ref-dialog-title"></dialog>
  </body>
  </html>
 --- a/sw.js
 +++ b/sw.js
-@@ -6,7 +6,7 @@
-      • PDF (aide pédagogique, répartitions, annexes) : cache d'abord
-        (documents volumineux, rarement modifiés → consultables hors ligne)
-    ========================================================================= */
+@@ -1,21 +1,19 @@
+-/* =========================================================================
+-   Service worker — Espace pédagogique STI
+-   Stratégies :
+-     • page, styles, scripts et données : réseau d'abord, cache de secours
+-       (une mise à jour en ligne est prise en compte immédiatement)
+-     • PDF (aide pédagogique, répartitions, annexes) : cache d'abord
+-       (documents volumineux, rarement modifiés → consultables hors ligne)
+-   ========================================================================= */
 -const VERSION    = "sti-espace-v1.1.22";
-+const VERSION    = "sti-espace-v1.3.2-sti-essential";
- const CORE_CACHE = VERSION + "-core";
- const DOCS_CACHE = VERSION + "-docs";
- 
-@@ -16,6 +16,14 @@
+-const CORE_CACHE = VERSION + "-core";
+-const DOCS_CACHE = VERSION + "-docs";
+-
+-const CORE_ASSETS = [
+-  "./",
++/* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
++const VERSION='sti-espace-v1.4.0-offline-sync';
++const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
++const CORE_ASSETS=[
+   "./index.html",
    "./manifest.webmanifest",
    "./assets/style.css",
    "./assets/app.js",
@@ -424,10 +707,28 @@
    "./assets/eleves.js",
    "./assets/admin.js",
    "./data/reference.js",
-@@ -40,6 +48,15 @@
- ];
- 
- const DOC_ASSETS = [
+@@ -26,20 +24,18 @@
+   "./data/annexes.js",
+   "./data/docs.js",
+   "./supabase/config.js",
+-  "./assets/tesseract/tesseract.min.js",
+-  "./assets/tesseract/worker.min.js",
+-  "./assets/tesseract/core/tesseract-core-simd-lstm.wasm.js",
+-  "./assets/tesseract/core/tesseract-core-simd-lstm.wasm",
+-  "./assets/tesseract/core/tesseract-core-lstm.wasm.js",
+-  "./assets/tesseract/core/tesseract-core-lstm.wasm",
+-  "./assets/tesseract/lang/ara.traineddata.gz",
+-  "./assets/tesseract/lang/fra.traineddata.gz",
+-  "./icons/icon-192.png",
+-  "./icons/icon-512.png",
+-  "./icons/apple-touch-icon.png"
+-];
+-
+-const DOC_ASSETS = [
++  "./assets/offline-sync.js",
++  "./assets/offline-sync.css",
++  "./assets/sync-merge.js"
++],DOC_ASSETS=[
 +  "./docs/sti-smart-book-3si-2026.pdf",
 +  "./docs/sti-smart-book-4si-2026.pdf",
 +  "./docs/fiches-3si-2026/S5-6-3sti.pdf",
@@ -436,16 +737,104 @@
 +  "./docs/fiches-3si-2026/S11-12-3sti.pdf",
 +  "./docs/fiches-3si-2026/S13-14-3sti.pdf",
 +  "./docs/fiches-3si-2026/S15-16-3sti.pdf",
-+
    "./docs/Aide-pedagogique-STI-3-4-2024.pdf",
    "./docs/Repartition-T1-3SI.pdf",
    "./docs/Repartition-T1-4SI.pdf",
-@@ -64,7 +81,7 @@
- self.addEventListener("activate", event => {
-   event.waitUntil((async () => {
-     const keys = await caches.keys();
--    await Promise.all(keys.filter(k => k !== CORE_CACHE && k !== DOCS_CACHE).map(k => caches.delete(k)));
-+    await Promise.all(keys.filter(k => k.startsWith("sti-espace-") && k !== CORE_CACHE && k !== DOCS_CACHE).map(k => caches.delete(k)));
-     await self.clients.claim();
-   })());
+@@ -49,68 +45,34 @@
+   "./docs/Annexe-PHP.pdf",
+   "./docs/Annexe-SQL.pdf"
+ ];
+-
+-self.addEventListener("install", event => {
+-  event.waitUntil((async () => {
+-    const core = await caches.open(CORE_CACHE);
+-    await core.addAll(CORE_ASSETS.map(u => new Request(u, { cache: "reload" }))).catch(() => {});
+-    const docs = await caches.open(DOCS_CACHE);
+-    /* les PDF sont mis en cache un par un : un document absent ne bloque pas l'installation */
+-    await Promise.all(DOC_ASSETS.map(u => docs.add(new Request(u, { cache: "reload" })).catch(() => {})));
+-    self.skipWaiting();
+-  })());
++const corePaths=new Set(CORE_ASSETS.map(p=>new URL(p,self.registration.scope).pathname));
++self.addEventListener('install',event=>event.waitUntil((async()=>{
++ const cache=await caches.open(CORE_CACHE);
++ try{await cache.addAll(CORE_ASSETS.map(p=>new Request(p,{cache:'reload'})));}
++ catch(e){await caches.delete(CORE_CACHE);throw e;} // Keep the old active worker if a mandatory file is unavailable.
++ if(!self.registration.active)await self.skipWaiting();
++})()));
++self.addEventListener('activate',event=>event.waitUntil((async()=>{
++ await self.clients.claim();
++ const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('sti-espace-')&&k!==CORE_CACHE&&k!==DOCS_CACHE).map(k=>caches.delete(k)));
++})()));
++let downloading=null;
++async function cacheDocuments(force=false){if(downloading)return downloading;downloading=(async()=>{const cache=await caches.open(DOCS_CACHE);for(const path of DOC_ASSETS){try{if(!force&&await cache.match(path))continue;const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),15000);try{const r=await fetch(path,{signal:ctl.signal});if(r.ok)await cache.put(path,r);}finally{clearTimeout(t);}}catch(e){/* Missing PDFs don't block the offline interface. */}}})();try{await downloading;}finally{downloading=null;}}
++self.addEventListener('message',event=>{
++ const type=event.data?.type;
++ if(type==='SKIP_WAITING')event.waitUntil(self.skipWaiting());
++ if(type==='CACHE_DOCUMENTS')event.waitUntil(cacheDocuments(!!event.data.force));
++ if(type==='OFFLINE_STATUS')event.waitUntil((async()=>{const c=await caches.open(CORE_CACHE),d=await caches.open(DOCS_CACHE);const ready=(await Promise.all(CORE_ASSETS.map(x=>c.match(x)))).every(Boolean);const documents=(await Promise.all(DOC_ASSETS.map(x=>d.match(x)))).filter(Boolean).length;event.ports[0]?.postMessage({ready,documents,totalDocuments:DOC_ASSETS.length,version:VERSION});})());
  });
+-
+-self.addEventListener("activate", event => {
+-  event.waitUntil((async () => {
+-    const keys = await caches.keys();
+-    await Promise.all(keys.filter(k => k !== CORE_CACHE && k !== DOCS_CACHE).map(k => caches.delete(k)));
+-    await self.clients.claim();
+-  })());
++self.addEventListener('fetch',event=>{
++ const req=event.request,url=new URL(req.url);if(req.method!=='GET'||url.origin!==self.location.origin)return;
++ if(req.mode==='navigate'&&url.pathname.startsWith(new URL(self.registration.scope).pathname)){
++  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);return await cache.match('./index.html')||fetch(req);})());return;
++ }
++ if(corePaths.has(url.pathname)){
++  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);const hit=await cache.match(req,{ignoreSearch:true});return hit||fetch(req);})());return;
++ }
++ if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')||url.pathname.includes('/icons/')){
++  event.respondWith((async()=>{const cache=await caches.open(DOCS_CACHE),hit=await cache.match(req,{ignoreSearch:true});if(hit)return hit;try{const r=await fetch(req);if(r.ok)await cache.put(req,r.clone());return r;}catch(e){return new Response('Ce document n’a pas encore été téléchargé. Reconnectez-vous puis ouvrez-le une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());
++ }
+ });
+-
+-self.addEventListener("message", event => {
+-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+-});
+-
+-self.addEventListener("fetch", event => {
+-  const req = event.request;
+-  if (req.method !== "GET") return;
+-  const url = new URL(req.url);
+-  if (url.origin !== location.origin) return;   /* les appels Supabase ne sont pas mis en cache */
+-
+-  const isDoc = /\.pdf($|\?)/i.test(url.pathname);
+-
+-  if (isDoc) {
+-    event.respondWith((async () => {
+-      const cache = await caches.open(DOCS_CACHE);
+-      const hit = await cache.match(req, { ignoreSearch: true });
+-      if (hit) return hit;
+-      try {
+-        const res = await fetch(req);
+-        if (res && res.ok) cache.put(req, res.clone());
+-        return res;
+-      } catch (e) {
+-        return hit || new Response("Document indisponible hors ligne.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+-      }
+-    })());
+-    return;
+-  }
+-
+-  event.respondWith((async () => {
+-    const cache = await caches.open(CORE_CACHE);
+-    try {
+-      const fresh = await fetch(req);
+-      if (fresh && fresh.ok) cache.put(req, fresh.clone());
+-      return fresh;
+-    } catch (e) {
+-      const hit = await cache.match(req, { ignoreSearch: true });
+-      if (hit) return hit;
+-      if (req.mode === "navigate") {
+-        const page = await cache.match("./index.html");
+-        if (page) return page;
+-      }
+-      return new Response("Ressource indisponible hors ligne.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+-    }
+-  })());
+-});

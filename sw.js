@@ -1,17 +1,7 @@
-/* =========================================================================
-   Service worker — Espace pédagogique STI
-   Stratégies :
-     • page, styles, scripts et données : réseau d'abord, cache de secours
-       (une mise à jour en ligne est prise en compte immédiatement)
-     • PDF (aide pédagogique, répartitions, annexes) : cache d'abord
-       (documents volumineux, rarement modifiés → consultables hors ligne)
-   ========================================================================= */
-const VERSION    = "sti-espace-v1.3.2-sti-essential";
-const CORE_CACHE = VERSION + "-core";
-const DOCS_CACHE = VERSION + "-docs";
-
-const CORE_ASSETS = [
-  "./",
+/* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
+const VERSION='sti-espace-v1.4.0-offline-sync';
+const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
+const CORE_ASSETS=[
   "./index.html",
   "./manifest.webmanifest",
   "./assets/style.css",
@@ -34,20 +24,10 @@ const CORE_ASSETS = [
   "./data/annexes.js",
   "./data/docs.js",
   "./supabase/config.js",
-  "./assets/tesseract/tesseract.min.js",
-  "./assets/tesseract/worker.min.js",
-  "./assets/tesseract/core/tesseract-core-simd-lstm.wasm.js",
-  "./assets/tesseract/core/tesseract-core-simd-lstm.wasm",
-  "./assets/tesseract/core/tesseract-core-lstm.wasm.js",
-  "./assets/tesseract/core/tesseract-core-lstm.wasm",
-  "./assets/tesseract/lang/ara.traineddata.gz",
-  "./assets/tesseract/lang/fra.traineddata.gz",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png"
-];
-
-const DOC_ASSETS = [
+  "./assets/offline-sync.js",
+  "./assets/offline-sync.css",
+  "./assets/sync-merge.js"
+],DOC_ASSETS=[
   "./docs/sti-smart-book-3si-2026.pdf",
   "./docs/sti-smart-book-4si-2026.pdf",
   "./docs/fiches-3si-2026/S5-6-3sti.pdf",
@@ -56,7 +36,6 @@ const DOC_ASSETS = [
   "./docs/fiches-3si-2026/S11-12-3sti.pdf",
   "./docs/fiches-3si-2026/S13-14-3sti.pdf",
   "./docs/fiches-3si-2026/S15-16-3sti.pdf",
-
   "./docs/Aide-pedagogique-STI-3-4-2024.pdf",
   "./docs/Repartition-T1-3SI.pdf",
   "./docs/Repartition-T1-4SI.pdf",
@@ -66,68 +45,34 @@ const DOC_ASSETS = [
   "./docs/Annexe-PHP.pdf",
   "./docs/Annexe-SQL.pdf"
 ];
-
-self.addEventListener("install", event => {
-  event.waitUntil((async () => {
-    const core = await caches.open(CORE_CACHE);
-    await core.addAll(CORE_ASSETS.map(u => new Request(u, { cache: "reload" }))).catch(() => {});
-    const docs = await caches.open(DOCS_CACHE);
-    /* les PDF sont mis en cache un par un : un document absent ne bloque pas l'installation */
-    await Promise.all(DOC_ASSETS.map(u => docs.add(new Request(u, { cache: "reload" })).catch(() => {})));
-    self.skipWaiting();
-  })());
+const corePaths=new Set(CORE_ASSETS.map(p=>new URL(p,self.registration.scope).pathname));
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ const cache=await caches.open(CORE_CACHE);
+ try{await cache.addAll(CORE_ASSETS.map(p=>new Request(p,{cache:'reload'})));}
+ catch(e){await caches.delete(CORE_CACHE);throw e;} // Keep the old active worker if a mandatory file is unavailable.
+ if(!self.registration.active)await self.skipWaiting();
+})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ await self.clients.claim();
+ const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('sti-espace-')&&k!==CORE_CACHE&&k!==DOCS_CACHE).map(k=>caches.delete(k)));
+})()));
+let downloading=null;
+async function cacheDocuments(force=false){if(downloading)return downloading;downloading=(async()=>{const cache=await caches.open(DOCS_CACHE);for(const path of DOC_ASSETS){try{if(!force&&await cache.match(path))continue;const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),15000);try{const r=await fetch(path,{signal:ctl.signal});if(r.ok)await cache.put(path,r);}finally{clearTimeout(t);}}catch(e){/* Missing PDFs don't block the offline interface. */}}})();try{await downloading;}finally{downloading=null;}}
+self.addEventListener('message',event=>{
+ const type=event.data?.type;
+ if(type==='SKIP_WAITING')event.waitUntil(self.skipWaiting());
+ if(type==='CACHE_DOCUMENTS')event.waitUntil(cacheDocuments(!!event.data.force));
+ if(type==='OFFLINE_STATUS')event.waitUntil((async()=>{const c=await caches.open(CORE_CACHE),d=await caches.open(DOCS_CACHE);const ready=(await Promise.all(CORE_ASSETS.map(x=>c.match(x)))).every(Boolean);const documents=(await Promise.all(DOC_ASSETS.map(x=>d.match(x)))).filter(Boolean).length;event.ports[0]?.postMessage({ready,documents,totalDocuments:DOC_ASSETS.length,version:VERSION});})());
 });
-
-self.addEventListener("activate", event => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k.startsWith("sti-espace-") && k !== CORE_CACHE && k !== DOCS_CACHE).map(k => caches.delete(k)));
-    await self.clients.claim();
-  })());
-});
-
-self.addEventListener("message", event => {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
-});
-
-self.addEventListener("fetch", event => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-  const url = new URL(req.url);
-  if (url.origin !== location.origin) return;   /* les appels Supabase ne sont pas mis en cache */
-
-  const isDoc = /\.pdf($|\?)/i.test(url.pathname);
-
-  if (isDoc) {
-    event.respondWith((async () => {
-      const cache = await caches.open(DOCS_CACHE);
-      const hit = await cache.match(req, { ignoreSearch: true });
-      if (hit) return hit;
-      try {
-        const res = await fetch(req);
-        if (res && res.ok) cache.put(req, res.clone());
-        return res;
-      } catch (e) {
-        return hit || new Response("Document indisponible hors ligne.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-      }
-    })());
-    return;
-  }
-
-  event.respondWith((async () => {
-    const cache = await caches.open(CORE_CACHE);
-    try {
-      const fresh = await fetch(req);
-      if (fresh && fresh.ok) cache.put(req, fresh.clone());
-      return fresh;
-    } catch (e) {
-      const hit = await cache.match(req, { ignoreSearch: true });
-      if (hit) return hit;
-      if (req.mode === "navigate") {
-        const page = await cache.match("./index.html");
-        if (page) return page;
-      }
-      return new Response("Ressource indisponible hors ligne.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
-    }
-  })());
+self.addEventListener('fetch',event=>{
+ const req=event.request,url=new URL(req.url);if(req.method!=='GET'||url.origin!==self.location.origin)return;
+ if(req.mode==='navigate'&&url.pathname.startsWith(new URL(self.registration.scope).pathname)){
+  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);return await cache.match('./index.html')||fetch(req);})());return;
+ }
+ if(corePaths.has(url.pathname)){
+  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);const hit=await cache.match(req,{ignoreSearch:true});return hit||fetch(req);})());return;
+ }
+ if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')||url.pathname.includes('/icons/')){
+  event.respondWith((async()=>{const cache=await caches.open(DOCS_CACHE),hit=await cache.match(req,{ignoreSearch:true});if(hit)return hit;try{const r=await fetch(req);if(r.ok)await cache.put(req,r.clone());return r;}catch(e){return new Response('Ce document n’a pas encore été téléchargé. Reconnectez-vous puis ouvrez-le une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());
+ }
 });
