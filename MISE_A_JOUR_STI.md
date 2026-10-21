@@ -1,7 +1,7 @@
-# Mise à jour de Vie scolaire — thème crème, vert forêt et or — suivi des notions STI
+# Vie scolaire — fusion de l’interface fournie et de l’application STI
 
 **Projet :** [aymenessouyah/viescolaire](https://github.com/aymenessouyah/viescolaire)  
-**Version proposée :** `v1.2.2-sti-reference`  
+**Version proposée :** `v1.3.0-sti-fusion`  
 **État :** préparée et testée localement, **non publiée**. Aucune modification effectuée dans GitHub ni dans la base Supabase réelle.
 
 ## Ce qui est intégré
@@ -13,7 +13,7 @@
 
 Le nom **4SI2** est conservé, conformément à votre confirmation. Il n’y a pas de renommage vers 4SI1 et pas de migration des identifiants des élèves ou des classes.
 
-- Nouvel onglet **Suivi des notions**, ajouté à l’application existante.
+- **Suivi des notions** disponible dans **Outils STI & données**, en complément des cinq écrans du modèle.
 - Recherche et filtres par domaine et état de couverture.
 - Cases à cocher dans les **fiches de séance existantes**.
 - Compteurs et historique des séances pour chaque notion.
@@ -22,21 +22,50 @@ Le nom **4SI2** est conservé, conformément à votre confirmation. Il n’y a p
 - Couleurs de classe : **3SI1 bleu, 4SI2 vert**.
 - Suivi **commun aux deux groupes**, pas deux couvertures indépendantes.
 
-## Thème appliqué à l’application existante
+## Interface fournie : reprise de la structure, pas seulement des couleurs
 
-- Thème repris du fichier `index.html` fourni : fond crème pointillé (`#F5F2E8`), cartes ivoire (`#FFFDF6`), menu vert forêt en dégradé et accents dorés (`#D9A441`).
-- Titres en **Fraunces**, interface en **Inter** ; polices incorporées au CSS, utilisables hors ligne sans appel à Google Fonts. Licences SIL Open Font License incluses dans le CSS.
-- Cartes arrondies avec ombres, boutons verts et dorés, tableaux et fenêtres harmonisés. Le tableau de bord commence par l’accueil puis les indicateurs existants.
-- Le modèle est utilisé comme référence visuelle seulement : aucun profil fictif, élève, note, graphique de démonstration ou donnée du lycée Jean-Zay n’est importé.
-- **3SI1 : bleu ; 4SI2 : vert.** Les raccourcis « Mes classes · suivi STI » ouvrent le suivi de la classe choisie. La palette générale reste crème/vert/or ; les cartes et repères de classe conservent leurs couleurs distinctes. Ils ne filtrent pas silencieusement les autres modules.
-- Les neuf vues existantes restent accessibles. « Répartition 1er trim. » est renommé **Ma progression** dans le menu ; son contenu et ses calculs restent ceux de l’intégration précédente.
-- Le bandeau d’accueil reprend le fond papier et les titres à empattements ; les formulaires, tableaux, profils et fenêtres reprennent le thème.
-- Sur téléphone : menu repliable, fermeture après navigation, par Échap ou par appui hors du menu, et gestion du focus clavier.
-- À l’impression : pas de barre latérale, contenu en pleine largeur.
-- Le thème ne crée aucune clé de stockage et ne change aucune fonction d’envoi/restauration. Aucun nouveau choix de classe n’est enregistré dans vos données métier.
-- Deux fichiers dédiés : `assets/theme-classe.css` et `assets/theme-classe.js`, inclus dans le cache hors ligne de l’application.
+Le fichier `index.html` partagé sert de modèle pour la navigation, les composants et les cinq écrans principaux. Son CSS est repris et limité aux nouveaux écrans pour ne pas perturber les anciens modules. Les textes et chiffres de démonstration ne sont pas importés.
 
-Cette archive **remplace le paquet précédent** : elle inclut à la fois le suivi des livres et le thème. Elle s’applique par fusion au dépôt existant, pas comme un nouveau site autonome.
+| Écran du modèle | Adaptation STI reliée aux données existantes |
+|---|---|
+| Tableau de bord | Quatre indicateurs, courbe prévu/effectué, anneau par classe, séances du jour, fiches récentes et couverture des livres |
+| Suivi des cours | Tableau des séances, recherche, filtres 3SI1/4SI2, pagination, export CSV et accès aux fiches |
+| Fiche pédagogique | Liste des séances et document papier, préparation de référence distincte du réalisé, notions cochées, devoirs, observations privées, mode classe et impression |
+| Avancement des cours | Onglets de classes, domaines du Smart Book, jauge, barres et accès direct au référentiel filtré |
+| Répartition des devoirs | Calendrier mensuel, liste des évaluations, filtres à venir/dates passées, charge par classe et ajout d’une épreuve |
+
+### Navigation et actions
+
+- Le menu principal reprend les cinq entrées du modèle. **Outils STI & données** donne accès aux huit autres vues existantes : suivi des notions, emploi du temps, calendrier tunisien, répartition annuelle, programme/compétences, élèves/notes/présences, cahier détaillé et annexes.
+- L’icône de réglages, dans la barre supérieure, affiche les commandes existantes : compte, Cloud, impression, export et séance du jour. Le bouton du profil reste accessible en bas du menu.
+- La recherche supérieure fonctionne avec Entrée et ouvre le suivi des cours. Elle recherche dans les titres, contenus, préparations et notions cochées.
+- La cloche affiche les prochaines échéances connues du planning. Ce sont des rappels locaux, pas des notifications envoyées aux élèves.
+- **Nouvelle séance** ouvre un choix de créneau, puis le formulaire existant. Cela crée ou complète une fiche sans déplacer la date, renuméroter les séances ou modifier les groupes. Si aucune séance n’est prévue aujourd’hui, **Fiche du jour** propose aussi ce choix.
+- **Réutiliser titre et devoirs** préremplit uniquement ces deux champs dans le formulaire de la séance cible. Rien n’est enregistré avant validation. Les coches, le statut, le contenu réalisé et les observations ne sont pas copiés.
+- **Nouveau devoir** ajoute une épreuve à `store.epreuves[classe]`, avec la structure existante : `id`, `titre`, `type`, `date`, `bareme`, `tags`. La fonction `save()` existante assure sa sauvegarde. L’action d’accès aux notes ouvre le module élèves/épreuves conservé.
+
+### Graphiques et chiffres : règles explicites
+
+- Élèves : nombre d’élèves enregistrés dans les listes du profil.
+- Couverture moyenne : moyenne arithmétique des pourcentages indépendants des deux Smart Books, pas maîtrise des élèves ni couverture de tout le programme.
+- Notes saisies : notes numériques effectivement présentes, hors absences ; aucun nombre de copies à corriger n’est inventé.
+- Heures des graphiques : durée prévue affectée aux fiches communes confirmées, **4 h enseignant par fiche** (2 groupes de 2 h). Ce n’est pas une mesure indépendante des durées réellement effectuées si une séance a été écourtée.
+- Le réalisé ne compte que `done === true` pour une date non future. La courbe s’arrête au mois courant ; elle ne projette pas le réalisé dans le futur.
+- Activité récente : fiches renseignées triées par date de séance, **pas un journal horodaté des modifications**.
+- Évaluations : épreuves saisies et créneaux DC/DS du planning. Une épreuve saisie pour la même classe et la même date masque l’entrée prévisionnelle dans cet affichage, sans la supprimer des données. Les périodes officielles de synthèse, vacances et semaines bloquées restent consultables via le lien **Calendrier officiel**.
+- Une date d’évaluation passée n’implique ni remise des copies ni correction terminée. Les taux fictifs de rendu et de correction du modèle ne sont pas repris.
+
+### Présentation et conservation
+
+Fond crème pointillé, menu vert forêt, or, cartes ivoire, typographie **Fraunces / Inter** et disposition du modèle. Les repères de **3SI1 restent bleus et ceux de 4SI2 verts**. Les polices sont incorporées au CSS avec leurs licences SIL OFL ; les graphiques SVG n’ont pas de dépendance CDN.
+
+Les nouveaux écrans utilisent la même structure de sauvegarde que l’application. Aucune nouvelle base, clé métier locale ou table n’est créée. Les fonctions d’envoi et de restauration ne sont pas remplacées. Le module de suivi, les référentiels et les PDF de la version précédente restent identiques.
+
+L’interface est adaptée au mobile ; le menu se ferme après navigation et gère le focus clavier. La fiche papier est imprimable sans le menu et sans sa colonne de sélection ; le mode classe masque les observations privées.
+
+**L’aperçu local n’importe pas votre sauvegarde distante.** Des compteurs à zéro signifient qu’aucune donnée personnelle n’est chargée dans cet aperçu, pas que vos données ont été effacées.
+
+Cette archive **remplace le paquet précédent**. Elle contient l’interface fusionnée, le suivi des livres et les ajustements déjà livrés. Elle s’applique par fusion au dépôt existant, pas comme un projet autonome.
 
 ## Règles de calcul
 
@@ -111,14 +140,16 @@ Décompressez **`Mise-a-jour-viescolaire-STI.zip`**.
 Les fichiers sont rangés directement selon l’arborescence du dépôt :
 
 ```text
-index.html                         modifié : modules, thème et navigation latérale
+index.html                         modifié : cinq écrans, barre supérieure, navigation et modules
 sw.js                              modifié : version du cache et nouveaux fichiers
-assets/app.js                      modifié : branchements, conservation des fiches, compteurs
+assets/app.js                      modifié : navigation, branchement du rendu, conservation des fiches, compteurs
 assets/style.css                   modifié : 4SI2 en vert
 assets/suivi-sti.js                 nouveau : suivi, filtres, historique, cases à cocher
 assets/suivi-sti.css                nouveau : présentation du suivi
 assets/theme-classe.css             nouveau : thème crème/vert/or et polices intégrées, mobile et impression
 assets/theme-classe.js              nouveau : navigation, repères de classe, profil et accessibilité
+assets/interface-reference.css     nouveau : CSS du modèle et adaptation aux écrans STI
+assets/interface-reference.js      nouveau : cinq écrans reliés au store existant
  data/livres-sti.js                 nouveau : référentiels et liens des livres
  data/ajustements-sti.js            nouveau : proposition de planning T1 de 4SI2
  docs/sti-smart-book-3si-2026.pdf    nouveau
@@ -151,7 +182,7 @@ Sur la version publiée, connectez-vous vous-même, enregistrez une modification
 
 ### 4. Actualiser les appareils
 
-La version de l’application et du service worker passe à `v1.2.2-sti-reference`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
+La version de l’application et du service worker passe à `v1.3.0-sti-fusion`. Le rafraîchissement du cache est limité aux caches de cette application, pas aux autres sites ou applications du même domaine.
 
 Actualisez les onglets ouverts et l’application installée sur chaque appareil. Évitez de continuer à modifier les mêmes fiches dans une ancienne version : un ancien client ne connaît pas le champ des notions.
 
@@ -174,12 +205,18 @@ Le site utilise déjà un système d’instantanés, pas une fusion collaborativ
 - Conservation des champs élèves et notes dans le contrat de sauvegarde testé.
 - Envoi et restauration **simulés** du payload Supabase avec les coches.
 - Contrôles de date du DC1 et de l’introduction à PHP.
-- Affichage mobile sans débordement horizontal détecté dans les neuf vues.
+- Affichage mobile sans débordement horizontal détecté dans les treize vues.
 - Navigation latérale, sélection de 3SI1/4SI2 et repères bleu/vert sur ordinateur et téléphone.
-- Comparaison des sources avec le paquet précédent : logique métier inchangée (seule la version change dans `app.js`) ; module de suivi, référentiels et PDF identiques.
+- Comparaison des sources avec le paquet précédent : module de suivi, référentiels et PDF identiques ; branchement du nouveau rendu ajouté à `app.js`, sans remplacement de la sauvegarde.
 - Ouverture du profil et des fiches de séance après application du thème.
 - Menu mobile : ouverture, fermeture après navigation, Échap et retour du focus.
 - Contrôle des styles d’impression : menu masqué et contenu en pleine largeur.
 - Données métier inchangées par les interactions de thème testées, après initialisation normale des modules existants.
 
 **La prévisualisation locale bloque les appels au projet Supabase réel.** Son état « sauvegarde locale seulement » est volontaire et ne diagnostique pas un problème de votre site en production.
+
+### Vérifications de la fusion 1.3.0
+
+85 contrôles automatisés ont réussi : structure du tableau de bord, recherche, filtre par classe, CSV, sélection des fiches, mode classe, réutilisation sans validation, saisie par le formulaire conservé, recalcul des graphiques, couverture par domaine, DC1 du 2 novembre, ajout d’épreuve, persistance après rechargement, transport dans le payload existant, notifications, outils de compte, treize vues sur ordinateur/mobile et styles d’impression. Aucun problème JavaScript détecté dans ce parcours.
+
+La suite de régression précédente a également réussi, y compris le blocage du réalisé futur, le dédoublonnage des notions, la conservation des champs supplémentaires et l’envoi/restauration cloud **simulés**. Aucune écriture dans la base réelle n’a été effectuée. Les données de test ont été supprimées du navigateur de contrôle et ne sont pas incluses dans l’archive.

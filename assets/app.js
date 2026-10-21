@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.2.2-sti-reference";
+const APP_VER = "v1.3.0-sti-fusion";
 /* réparation automatique : si une autre version traîne dans le cache de
    l'appareil (mélange d'affichage), tout le cache est purgé et la page
    se recharge une seule fois — une fois par version, sans boucle */
@@ -205,10 +205,15 @@ function ic(n, cls){ return '<svg class="'+(cls||'')+'" viewBox="0 0 24 24" fill
 
 const TABS = [
   { id:"v-dash",   t:"Tableau de bord", ico:"home" },
+  { id:"v-cours", t:"Suivi des cours", ico:"list" },
+  { id:"v-fiche", t:"Fiche pédagogique", ico:"book" },
+  { id:"v-avancement", t:"Avancement des cours", ico:"target" },
+  { id:"v-devoirs", t:"Répartition des devoirs", ico:"pen" },
+
   { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
   { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
-  { id:"v-rep",    t:"Ma progression", ico:"list" },
+  { id:"v-rep",    t:"Répartition annuelle", ico:"list" },
   { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
   { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
   { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
@@ -237,6 +242,7 @@ function renderAll(silent){
   if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
   renderCompte();
   renderLoginInvite();
+  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
 }
 function go(id){

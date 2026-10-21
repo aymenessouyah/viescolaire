@@ -5,7 +5,7 @@
  'use strict';
  
 -const APP_VER = "v1.1.22";
-+const APP_VER = "v1.2.2-sti-reference";
++const APP_VER = "v1.3.0-sti-fusion";
  /* réparation automatique : si une autre version traîne dans le cache de
     l'appareil (mélange d'affichage), tout le cache est purgé et la page
     se recharge une seule fois — une fois par version, sans boucle */
@@ -39,27 +39,35 @@
    if (o.done === false) return "reportee";
    return s.iso <= todayISO() ? "passee" : "avenir";
  }
-@@ -205,9 +205,10 @@
+@@ -205,9 +205,15 @@
  
  const TABS = [
    { id:"v-dash",   t:"Tableau de bord", ico:"home" },
++  { id:"v-cours", t:"Suivi des cours", ico:"list" },
++  { id:"v-fiche", t:"Fiche pédagogique", ico:"book" },
++  { id:"v-avancement", t:"Avancement des cours", ico:"target" },
++  { id:"v-devoirs", t:"Répartition des devoirs", ico:"pen" },
++
 +  { id:"v-suivi", t:"Suivi des notions", ico:"target" },
    { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
    { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
 -  { id:"v-rep",    t:"Répartition 1<sup>er</sup> trim.", ico:"list" },
-+  { id:"v-rep",    t:"Ma progression", ico:"list" },
++  { id:"v-rep",    t:"Répartition annuelle", ico:"list" },
    { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
    { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
    { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
-@@ -233,6 +234,7 @@
+@@ -233,8 +239,10 @@
    if (typeof applyProfil === "function") applyProfil();
    renderCahier();
    renderRef();
 +  if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
    renderCompte();
    renderLoginInvite();
++  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab});
    document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
-@@ -258,7 +260,7 @@
+ }
+ function go(id){
+@@ -258,7 +266,7 @@
  }
  function kpiDone(cls, tri){
    const list = sessionsOf(cls, tri), t = todayISO();
@@ -68,7 +76,7 @@
    return { done:done, total:list.length, pct: Math.round(done/list.length*100) };
  }
  /* invitation à activer la sauvegarde distante — affichée seulement si nécessaire */
-@@ -290,7 +292,7 @@
+@@ -290,7 +298,7 @@
    const dash = document.getElementById("v-dash");
    dash.innerHTML = `
    ${cloudInvite()}
@@ -77,7 +85,7 @@
      <div class="card-b">
        <div class="spread">
          <div style="min-width:260px">
-@@ -347,7 +349,7 @@
+@@ -347,7 +355,7 @@
    <div class="grid g2" style="align-items:start">
      <div class="stack">
        <div class="card">
@@ -86,7 +94,7 @@
          <div class="card-b">
            ${["3SI1","4SI2"].map(c => {
              const k = kpiDone(c,1);
-@@ -358,7 +360,7 @@
+@@ -358,7 +366,7 @@
                </div>
                <div class="bar"><i class="done" style="width:${k.pct}%"></i><i class="left" style="width:${100-k.pct}%"></i></div>
                <div class="legend">
@@ -95,7 +103,7 @@
                  <span><i class="sq" style="background:#dbe6f2"></i> restantes</span>
                  <span class="muted">DC1 : ${dcOf(c,"dc1")} • DC2 : ${dcOf(c,"dc2")} • DS1 : ${fmtShort(DS1[c].main)}</span>
                </div>
-@@ -806,7 +808,7 @@
+@@ -806,7 +814,7 @@
    const cls = repCls, cfg = CLASSES[cls];
    const list = sessionsOf(cls, repTri);
    const t = todayISO();
@@ -104,7 +112,7 @@
    const pct = Math.round(done/list.length*100) || 0;
    const dcList = evalDates(cls,"dc");
  
-@@ -916,6 +918,7 @@
+@@ -916,6 +924,7 @@
    const key = cls+"|"+n, o = store.seances[key] || {};
    const s = SESSIONS[cls].find(x => x.n===n);
    const st = seanceState(s);
@@ -112,7 +120,7 @@
    o.done = (st === "faite") ? false : true;
    store.seances[key] = o;
    save(true); toast("État de la séance n°"+n+" ("+cls+") mis à jour");
-@@ -1067,7 +1070,7 @@
+@@ -1067,7 +1076,7 @@
      sessionsOf(c, cahTri).forEach(s => list.push(s));
    });
    list.sort((a,b) => b.iso.localeCompare(a.iso));
@@ -121,7 +129,7 @@
  
    document.getElementById("v-cahier").innerHTML = `
    <div class="sec-head">
-@@ -1368,8 +1371,8 @@
+@@ -1368,8 +1377,8 @@
  async function forceMaj(){
    if (!confirm("Effacer le cache local et recharger l'application en dernière version ?")) return;
    toast("Effacement du cache…");
@@ -132,7 +140,7 @@
    setTimeout(() => location.replace(location.href), 350);
  }
  function menuAction(quoi){
-@@ -1691,10 +1694,16 @@
+@@ -1691,10 +1700,16 @@
      <div style="margin-bottom:12px"><label class="f">Observations / bilan</label>
        <input type="text" id="m-obs" value="${escapeHtml(o.obs || "")}" placeholder="Ex. : notions à reprendre, séance écourtée, groupe très réceptif…"></div>
      <div class="row" style="gap:8px">
@@ -150,7 +158,7 @@
    document.getElementById("modal").classList.add("on");
  }
  function closeModal(){ document.getElementById("modal").classList.remove("on"); document.body.style.overflow=""; }
-@@ -1703,7 +1712,14 @@
+@@ -1703,7 +1718,14 @@
    const k = mCtx.cls+"|"+mCtx.n;
    const doneBox = document.getElementById("m-done").checked;
    const repBox = document.getElementById("m-rep").checked;
@@ -193,25 +201,31 @@
  /* ============================================================
 --- a/index.html
 +++ b/index.html
-@@ -16,8 +16,17 @@
+@@ -16,8 +16,23 @@
  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
  <link rel="stylesheet" href="assets/style.css">
 +<link rel="stylesheet" href="assets/suivi-sti.css">
 +<link rel="stylesheet" href="assets/theme-classe.css">
++<link rel="stylesheet" href="assets/interface-reference.css">
  </head>
  <body>
++<script>document.body.classList.add("vs-fusion","vs-themed");document.body.dataset.vsTheme="3SI1";</script>
 +
-+<header class="vs-workspace-top no-print">
-+ <div class="vs-breadcrumb"><button type="button" id="vs-menu" class="vs-menu-button" aria-label="Ouvrir le menu de navigation" aria-controls="vs-sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><span class="vs-breadcrumb-parent">Mon espace</span><span class="vs-divider">/</span><strong id="vs-current-view">Tableau de bord</strong></div>
-+ <div class="vs-top-right"><span class="vs-year"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 11h18"/></svg>Année scolaire 2026 — 2027</span></div>
++<header class="vs-workspace-top ref-ui no-print">
++<button type="button" id="vs-menu" class="vs-menu-button" aria-label="Ouvrir le menu de navigation" aria-controls="vs-sidebar" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
++<div class="search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16.6 16.6 4.4 4.4"/></svg><input type="search" id="ref-search" placeholder="Rechercher une séance, un chapitre, une notion… (Entrée)" aria-label="Recherche globale"><kbd>↵</kbd></div>
++<div class="date-pill"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18"/></svg><span id="ref-date"></span></div>
++<div class="bell-wrap"><button class="bell-btn" id="ref-bell" aria-label="Notifications du planning" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M14 21h-4"/></svg></button><div class="bell-dropdown" id="ref-notifications" role="region" aria-label="Notifications du planning"></div></div>
++<button class="bell-btn" data-ref="tools" aria-label="Compte, sauvegarde et outils" title="Compte, sauvegarde et outils"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg></button>
++<button class="btn btn-primary" data-ref="new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Nouvelle séance</span></button>
 +</header>
 +<button id="vs-overlay" class="vs-sidebar-overlay no-print" aria-label="Fermer le menu de navigation" tabindex="-1"></button>
 +
  
  <!-- ===================== BARRE D'ÉTAT ===================== -->
  <div class="topbar no-print">
-@@ -89,12 +98,17 @@
+@@ -89,12 +104,22 @@
  </div>
  
  <!-- ===================== ONGLETS ===================== -->
@@ -219,20 +233,26 @@
 -  <div class="wrap" id="tabs"></div>
 -</nav>
 +<aside id="vs-sidebar" class="vs-sidebar no-print" aria-label="Espace pédagogique et navigation">
-+ <a class="vs-brand" href="#v-dash" onclick="go('v-dash');return false"><span class="vs-brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-3-2-7-2-10-1v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/><path d="M12 5v15"/></svg></span><span><strong>Vie scolaire</strong><small>ESPACE PÉDAGOGIQUE</small></span></a>
-+ <div class="vs-classes"><p class="vs-navlabel">MES CLASSES · SUIVI STI</p><button type="button" class="vs-class-button active" data-vs-class="3SI1" aria-pressed="true"><span class="vs-class-dot"></span><b>3SI1</b><small>Mar. & jeu.</small></button><button type="button" class="vs-class-button" data-vs-class="4SI2" aria-pressed="false"><span class="vs-class-dot"></span><b>4SI2</b><small>Lun. & ven.</small></button></div>
-+ <p class="vs-navlabel">ORGANISATION</p>
++ <a class="vs-brand" href="#v-dash" onclick="go('v-dash');return false"><span class="vs-brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-3-2-7-2-10-1v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/><path d="M12 5v15"/></svg></span><span><strong>Cahier de Texte</strong><small>STI · LYCÉE RAFÈHA ARIANA</small></span></a>
++
++ <p class="vs-navlabel">PILOTAGE</p>
 + <nav class="tabbar no-print" aria-label="Navigation principale"><div class="wrap" id="tabs"></div></nav>
-+ <div class="vs-side-bottom"><div class="vs-cloud-note"><strong>Votre espace de travail</strong><span id="vs-cloud-status">Sauvegarde dans votre espace</span><br><button type="button" onclick="openCloud()">Gérer la sauvegarde</button></div><button class="vs-profile" type="button" onclick="openProfil()" aria-label="Ouvrir mon profil"><span class="vs-avatar" id="vs-prof-initials">AE</span><span><strong id="vs-prof-name">Aymen Essouyah</strong><small id="vs-prof-school">Lycée Rafèha Ariana</small></span></button></div>
++ <div id="ref-year" class="ref-ui"></div><div class="vs-side-bottom"><div class="vs-cloud-note"><strong>Votre espace de travail</strong><span id="vs-cloud-status">Sauvegarde dans votre espace</span><br><button type="button" onclick="openCloud()">Gérer la sauvegarde</button></div><button class="vs-profile" type="button" onclick="openProfil()" aria-label="Ouvrir mon profil"><span class="vs-avatar" id="vs-prof-initials">AE</span><span><strong id="vs-prof-name">Aymen Essouyah</strong><small id="vs-prof-school">Lycée Rafèha Ariana</small></span></button></div>
 +</aside>
  
  <main class="wrap">
-   <section id="v-dash" class="view on"></section>
+-  <section id="v-dash" class="view on"></section>
++  <section id="v-dash" class="view on ref-ui"></section>
++<section id="v-cours" class="view ref-ui"></section>
++<section id="v-fiche" class="view ref-ui"></section>
++<section id="v-avancement" class="view ref-ui"></section>
++<section id="v-devoirs" class="view ref-ui"></section>
++
 +  <section id="v-suivi" class="view"></section>
    <section id="v-edt" class="view"></section>
    <section id="v-cal" class="view"></section>
    <section id="v-rep" class="view"></section>
-@@ -320,13 +334,17 @@
+@@ -320,13 +345,19 @@
  <script src="data/memo.js"></script>
  <script src="data/annexes.js"></script>
  <script src="data/docs.js"></script>
@@ -244,10 +264,12 @@
  
  <!-- ===================== APPLICATION ===================== -->
 +<script src="assets/suivi-sti.js"></script>
++<script src="assets/interface-reference.js"></script>
  <script src="assets/app.js"></script>
  <script src="assets/eleves.js"></script>
  <script src="assets/admin.js"></script>
 +<script src="assets/theme-classe.js"></script>
++<dialog id="ref-dialog" class="ref-ui" aria-labelledby="ref-dialog-title"></dialog>
  </body>
  </html>
 --- a/sw.js
@@ -257,11 +279,11 @@
         (documents volumineux, rarement modifiés → consultables hors ligne)
     ========================================================================= */
 -const VERSION    = "sti-espace-v1.1.22";
-+const VERSION    = "sti-espace-v1.2.2-sti-reference";
++const VERSION    = "sti-espace-v1.3.0-sti-fusion";
  const CORE_CACHE = VERSION + "-core";
  const DOCS_CACHE = VERSION + "-docs";
  
-@@ -16,6 +16,12 @@
+@@ -16,6 +16,14 @@
    "./manifest.webmanifest",
    "./assets/style.css",
    "./assets/app.js",
@@ -269,12 +291,14 @@
 +  "./assets/suivi-sti.css",
 +  "./assets/theme-classe.css",
 +  "./assets/theme-classe.js",
++  "./assets/interface-reference.js",
++  "./assets/interface-reference.css",
 +  "./data/livres-sti.js",
 +  "./data/ajustements-sti.js",
    "./assets/eleves.js",
    "./assets/admin.js",
    "./data/reference.js",
-@@ -40,6 +46,15 @@
+@@ -40,6 +48,15 @@
  ];
  
  const DOC_ASSETS = [
@@ -290,7 +314,7 @@
    "./docs/Aide-pedagogique-STI-3-4-2024.pdf",
    "./docs/Repartition-T1-3SI.pdf",
    "./docs/Repartition-T1-4SI.pdf",
-@@ -64,7 +79,7 @@
+@@ -64,7 +81,7 @@
  self.addEventListener("activate", event => {
    event.waitUntil((async () => {
      const keys = await caches.keys();
