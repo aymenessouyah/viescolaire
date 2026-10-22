@@ -1,8 +1,18 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-**Version préparée : `v1.4.4-mobile-panel`**  
+**Version préparée : `v1.4.5-cahier-confirmation`**  
 **Dépôt existant :** https://github.com/aymenessouyah/viescolaire  
 **État : code préparé et testé localement, non publié.** Aucune écriture n’a été faite dans votre dépôt ou votre base réelle. Le script SQL reste à appliquer dans votre environnement.
+
+## Correction 1.4.5 — dernières séances non confirmées dans le Cahier
+
+Le **Cahier de textes** s’ouvre maintenant sur les séances de date **antérieure à aujourd’hui**, **ni assurées ni reportées**, de la plus récente à la plus ancienne. Les deux classes et tous les trimestres sont inclus par défaut ; les séances d’aujourd’hui ou à venir n’apparaissent pas dans cette liste de dates passées.
+
+Les filtres permettent de choisir la classe, le trimestre et l’état : **À confirmer**, **Toutes les séances**, **Assurées** ou **Reportées**. Les choix agissent uniquement sur l’affichage : aucune fiche n’est supprimée. Après avoir coché puis enregistré « assurée » ou « reportée », la séance quitte la liste à confirmer mais reste dans l’historique. En décochant les deux choix et en enregistrant, elle revient dans la liste si sa date est passée.
+
+Le bouton **Vérifier la fiche** ouvre le formulaire conservé. Un contenu de référence est identifié comme « Préparation prévue », jamais comme du contenu réellement enseigné. Les compteurs indiquent les séances affichées et les fiches du périmètre classe/trimestre sélectionné.
+
+Cette correction concerne le **Cahier de textes**. L’ordre du **Suivi des cours** (prochaines séances en premier) reste inchangé, tout comme les règles de la cloche précédemment ajoutées.
 
 ## Ajout 1.4.4 — Compte & sauvegarde repliable sur mobile
 
@@ -118,7 +128,7 @@ Référence du code d’origine utilisé pour construire le paquet : commit `890
 1. Publier après validation sur la branche de test.
 2. Dans la configuration Cloud, garder la table `espace_pedagogique`, l’URL et la clé publique du projet existant, activer **Accès protégé par mot de passe** et **Synchroniser automatiquement dans les deux sens**.
 3. Mettre à jour les onglets et les applications installées sur **tous les appareils qui écrivent sur ce compte**, avant de reprendre un travail simultané.
-4. Vérifier la version `v1.4.4-mobile-panel`, puis la connexion et la première association.
+4. Vérifier la version `v1.4.5-cahier-confirmation`, puis la connexion et la première association.
 
 **Important : les anciens clients font des insertions directes et ne participent pas au verrou de synchronisation.** La protection contre les écritures concurrentes exige que tous les clients écrivains utilisent cette nouvelle version. Ne continuez pas à modifier les fiches dans un ancien onglet.
 
@@ -160,6 +170,8 @@ La connexion réelle, les permissions de votre projet et l’hébergement GitHub
 - Les fiches, notions, horaires, profil, classes, élèves, épreuves, notes et présences gardent leur structure métier. Le nouveau stockage IndexedDB ajoute des métadonnées de synchronisation et des copies de secours, pas une nouvelle base métier distante.
 
 ## 6. Vérifications locales
+
+**Correction 1.4.5 :** 30 contrôles du Cahier réussis : filtre par défaut, exclusion des séances assurées/reportées et des dates non passées, ordre décroissant, classes et trois trimestres, historique complet, confirmation/report/décochage par le formulaire natif, conservation des champs supplémentaires, cas vide et mobile sombre à 320/390 px. Les suites d’interface (86), de mode clair/sombre (45) et des commandes essentielles (33) ont aussi été relancées avec succès. Aucun changement au SQL ou au moteur de synchronisation.
 
 **Ajout 1.4.4 :** 34 contrôles du volet mobile réussis : repli par défaut, boutons accessibles après ouverture, clavier, états réseau, mode sombre, passage mobile/ordinateur, hauteur réduite de 393 à 187 px, écrans étroits/courts et données inchangées. Les suites des commandes essentielles (33, adaptées au volet), fusion d’interface (86), clair/sombre (45), cloche (27) et trimestres (38) ont été relancées avec succès. Aucun changement au moteur de synchronisation ni au SQL dans cette version.
 

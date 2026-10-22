@@ -2,11 +2,11 @@
   "repository": "https://github.com/aymenessouyah/viescolaire",
   "branch": "main",
   "commit_at_verification": "890e66c183d1bfcca9e926b09102cc3a23a1056c",
-  "version": "v1.4.4-mobile-panel",
+  "version": "v1.4.5-cahier-confirmation",
   "files": [
     {
       "path": "assets/app.js",
-      "sha256": "371af3191a659c469b3bcb1bc7539d384d2e7dff9202f1556be89e2276f06ac5",
+      "sha256": "ee9bb5473259cccc98f5b8758a0f61c0296c2e3633cae084bdb980cae2db0e15",
       "action": "modifier",
       "base_sha256": "bc9a9ccb7402a30a69039d28b020b0ef0616c37cf496b140f771b1327eb50d9d"
     },
@@ -30,7 +30,7 @@
     },
     {
       "path": "assets/interface-reference.js",
-      "sha256": "91a01fc8d5bd2e24c2e635280b51aaabe33e4314426fd26f9314b86f90364b16",
+      "sha256": "448bf07daeb47fe221e8845660205b991fa7f6e604cf4dcd80404c15307a771e",
       "action": "ajouter",
       "base_sha256": null
     },
@@ -156,7 +156,7 @@
     },
     {
       "path": "sw.js",
-      "sha256": "3d067be3bf5e51c5d3ee41c4e40314a37f0547db7d5309aa2cd10440527b769b",
+      "sha256": "8dda52075dea571b43d4a83bd8c26b4975348f010cec4e4df729374306e0033d",
       "action": "modifier",
       "base_sha256": "e60f06d2af8a18bc9a958e5c3e63f0cfa9c5f23daeab87848f168b3c64c28b6a"
     }

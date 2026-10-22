@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.4.4-mobile-panel";
+const APP_VER = "v1.4.5-cahier-confirmation";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1051,71 +1051,50 @@ function renderProg(){
 
 
 /* ---------------- 6. CAHIER DE TEXTES ---------------- */
-let cahCls = "both", cahTri = 1;
+/* Cahier : les séances passées sans décision d'abord, sans modifier les fiches. */
+let cahCls = "both", cahTri = 0, cahStatus = "pending";
 function renderCahier(){
-  const t = todayISO();
-  const list = [];
-  ["3SI1","4SI2"].forEach(c => {
-    if (cahCls!=="both" && cahCls!==c) return;
-    sessionsOf(c, cahTri).forEach(s => list.push(s));
-  });
-  list.sort((a,b) => b.iso.localeCompare(a.iso));
-  const done = list.filter(s => { const st = seanceState(s); return st==="faite"; }).length;
-
-  document.getElementById("v-cahier").innerHTML = `
-  <div class="sec-head">
-    <div>
-      <h2>${ic("pen")} Cahier de textes numérique</h2>
-      <p class="lead">Relevé chronologique des séances réellement assurées : contenu traité, travail donné à la maison, observations. Chaque ligne est rattachée à une séance datée de la répartition.</p>
-    </div>
+  const t = todayISO(), period = ["3SI1","4SI2"].filter(c=>cahCls==="both"||cahCls===c).flatMap(c=>sessionsOf(c,cahTri));
+  const pending = s => { const o=store.seances[s.cls+"|"+s.n]||{};return s.iso<t&&o.done!==true&&o.done!==false; };
+  const list=period.filter(s=>cahStatus==="all"||cahStatus==="pending"&&pending(s)||cahStatus==="done"&&seanceState(s)==="faite"||cahStatus==="reported"&&store.seances[s.cls+"|"+s.n]?.done===false).sort((a,b)=>b.iso.localeCompare(a.iso)||a.cls.localeCompare(b.cls)||b.n-a.n);
+  const done=period.filter(s=>seanceState(s)==="faite").length;
+  const filled=period.filter(s=>Object.keys(store.seances[s.cls+"|"+s.n]||{}).length>0).length;
+  const labels={pending:"Dernières séances à confirmer",all:"Toutes les séances",done:"Séances assurées",reported:"Séances reportées"};
+  const scope=(cahCls==="both"?"3SI1 + 4SI2":cahCls)+" • "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"Tous les trimestres");
+  const box=document.getElementById("v-cahier");
+  box.innerHTML=`
+  <div class="sec-head"><div><h2>${ic("pen")} Cahier de textes numérique</h2>
+    <p class="lead">Par défaut : les dates passées sans confirmation, de la plus récente à la plus ancienne. Les séances assurées ou reportées sont exclues de cette liste, mais restent accessibles dans les filtres.</p></div>
     <div class="row no-print">
-      <select style="width:auto" onchange="cahCls=this.value;renderCahier()">
-        <option value="both" ${cahCls==="both"?"selected":""}>Les deux classes</option>
-        <option value="3SI1" ${cahCls==="3SI1"?"selected":""}>3SI1</option>
-        <option value="4SI2" ${cahCls==="4SI2"?"selected":""}>4SI2</option>
-      </select>
-      <select style="width:auto" onchange="cahTri=+this.value;renderCahier()">
-        <option value="1" ${cahTri===1?"selected":""}>1<sup>er</sup> trimestre</option>
-        <option value="2" ${cahTri===2?"selected":""}>2<sup>e</sup> trimestre</option>
-        <option value="3" ${cahTri===3?"selected":""}>3<sup>e</sup> trimestre</option>
-      </select>
+      <select id="cah-class" aria-label="Classe du cahier" style="width:auto"><option value="both" ${cahCls==="both"?"selected":""}>Les deux classes</option><option value="3SI1" ${cahCls==="3SI1"?"selected":""}>3SI1</option><option value="4SI2" ${cahCls==="4SI2"?"selected":""}>4SI2</option></select>
+      <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre</option>`).join("")}</select>
+      <select id="cah-status" aria-label="État des séances du cahier" style="width:auto"><option value="pending" ${cahStatus==="pending"?"selected":""}>À confirmer (dates passées)</option><option value="all" ${cahStatus==="all"?"selected":""}>Toutes les séances</option><option value="done" ${cahStatus==="done"?"selected":""}>Assurées</option><option value="reported" ${cahStatus==="reported"?"selected":""}>Reportées</option></select>
       <button class="btn btn-xs btn-line" onclick="window.print()">${ic("print")} Imprimer</button>
     </div>
   </div>
-
   <div class="grid g3" style="margin-bottom:16px">
-    <div class="kpi"><div class="lbl">${ic("list")} Séances de la période</div><div class="val">${list.length}</div><div class="foo">${cahCls==="both"?"3SI1 + 4SI2":cahCls} • ${cahTri}<sup>${cahTri===1?"er":"e"}</sup> trimestre</div></div>
-    <div class="kpi k-teal"><div class="lbl">${ic("check")} Séances assurées</div><div class="val">${done}</div><div class="foo">${list.length?Math.round(done/list.length*100):0}% du trimestre</div></div>
-    <div class="kpi k-amber"><div class="lbl">${ic("pen")} Fiches renseignées</div><div class="val">${Object.keys(store.seances).length}</div><div class="foo">contenus, devoirs et observations enregistrés</div></div>
+    <div class="kpi"><div class="lbl">${ic("list")} Séances affichées</div><div class="val" id="cah-visible-count">${list.length}</div><div class="foo">${scope}</div></div>
+    <div class="kpi k-teal"><div class="lbl">${ic("check")} Séances assurées</div><div class="val">${done}</div><div class="foo">sur l’ensemble du périmètre sélectionné</div></div>
+    <div class="kpi k-amber"><div class="lbl">${ic("pen")} Fiches renseignées</div><div class="val">${filled}</div><div class="foo">dans les classes et trimestres sélectionnés</div></div>
   </div>
-
-  <div class="card">
-    <div class="card-h"><h3>${ic("clock")} Relevé chronologique</h3><span class="badge b-grey">${list.length} entrées</span></div>
-    <div class="card-b">
-      <div class="tl">
-        ${list.map(s => {
-          const o = store.seances[s.cls+"|"+s.n] || {};
-          const st = seanceState(s);
-          const flag = s.blk && s.blk.k!=="cours";
-          return `<div class="tl-item ${flag?"t-eval":""}">
-            <div class="spread">
-              <div>
-                <div class="d">${fmtLong(s.iso)} • <span class="badge ${clsChip(s.cls)}">${s.cls}</span>
-                  ${st==="faite"?'<span class="badge b-green">assurée</span>':st==="passee"?'<span class="badge b-amber">à confirmer</span>':st==="reportee"?'<span class="badge b-rose">reportée</span>':'<span class="badge b-grey">à venir</span>'}
-                </div>
-                <div class="t">Séance n°${s.n} — ${escapeHtml(titleOf(s,store))}</div>
-                <div class="s">${o.contenu ? escapeHtml(o.contenu) : (s.blk ? s.blk.det : "—")}</div>
-                <div class="tiny muted" style="margin-top:3px">${slotsTxt(s.cls, s.iso)}</div>
-                ${o.devoirs ? '<div class="tiny" style="margin-top:4px;color:var(--amber)">📚 Travail donné : '+escapeHtml(o.devoirs)+'</div>':""}
-                ${o.obs ? '<div class="tiny muted">📝 '+escapeHtml(o.obs)+'</div>':""}
-              </div>
-              <button class="btn btn-xs btn-soft no-print" onclick="openModal('${s.cls}',${s.n})">${ic("edit")} Modifier</button>
-            </div>
-          </div>`;
-        }).join("") || '<p class="muted tiny">Aucune séance pour ce filtre.</p>'}
-      </div>
-    </div>
-  </div>`;
+  <div class="card"><div class="card-h"><h3>${ic("clock")} ${labels[cahStatus]}</h3><span class="badge b-grey">${list.length} entrées</span></div><div class="card-b">
+    <p class="tiny muted" style="margin-bottom:14px">${cahStatus==="pending"?"Ni « assurée », ni « reportée » ; dates antérieures à aujourd’hui. Aucune séance n’est confirmée automatiquement.":"Tri de la plus récente à la plus ancienne. Le statut enregistré est conservé."}</p>
+    <div class="tl" id="cah-timeline">${list.map(s=>{
+      const o=store.seances[s.cls+"|"+s.n]||{},st=seanceState(s),flag=s.blk&&s.blk.k!=="cours";
+      return `<div class="tl-item ${flag?"t-eval":""}" data-cah-key="${s.cls}|${s.n}" data-cah-date="${s.iso}"><div class="spread"><div>
+        <div class="d">${fmtLong(s.iso)} • <span class="badge ${clsChip(s.cls)}">${s.cls}</span> ${st==="faite"?'<span class="badge b-green">assurée</span>':st==="reportee"?'<span class="badge b-rose">reportée</span>':s.iso<t?'<span class="badge b-amber">à confirmer</span>':s.iso===t?'<span class="badge b-grey">aujourd’hui</span>':'<span class="badge b-grey">à venir</span>'}</div>
+        <div class="t">Séance n°${s.n} — ${escapeHtml(titleOf(s,store))}</div>
+        <div class="s">${o.contenu?escapeHtml(o.contenu):"Contenu réalisé non renseigné."}</div>
+        ${!o.contenu&&s.blk?.det?'<div class="tiny muted" style="margin-top:4px">Préparation prévue : '+escapeHtml(s.blk.det)+'</div>':""}
+        <div class="tiny muted" style="margin-top:3px">${slotsTxt(s.cls,s.iso)}</div>
+        ${o.devoirs?'<div class="tiny" style="margin-top:4px;color:var(--amber)">📚 Travail donné : '+escapeHtml(o.devoirs)+'</div>':""}
+        ${o.obs?'<div class="tiny muted">📝 '+escapeHtml(o.obs)+'</div>':""}
+      </div><button class="btn btn-xs btn-soft no-print" onclick="openModal('${s.cls}',${s.n})">${ic("edit")} ${cahStatus==="pending"?"Vérifier la fiche":"Modifier"}</button></div></div>`;
+    }).join("")||`<p class="muted tiny" id="cah-empty">${cahStatus==="pending"?"Aucune séance passée à confirmer dans ce périmètre. Les séances assurées et reportées restent accessibles avec le filtre d’état.":"Aucune séance pour ces filtres."}</p>`}</div>
+  </div></div>`;
+  box.querySelector('#cah-class').onchange=e=>{if(["both","3SI1","4SI2"].includes(e.target.value)){cahCls=e.target.value;renderCahier();}};
+  box.querySelector('#cah-term').onchange=e=>{const v=Number(e.target.value);if([0,1,2,3].includes(v)){cahTri=v;renderCahier();}};
+  box.querySelector('#cah-status').onchange=e=>{if(Object.hasOwn(labels,e.target.value)){cahStatus=e.target.value;renderCahier();}};
 }
 
 
