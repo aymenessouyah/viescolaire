@@ -1,0 +1,6 @@
+project_id = "oaahxobzbnmaohcmdrbu"
+
+# L'Agent STI exige une session professeur valide.
+# Ne jamais désactiver cette vérification pour la fonction publique appelée par le site.
+[functions.assistant-ia]
+verify_jwt = true

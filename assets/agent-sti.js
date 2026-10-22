@@ -1,0 +1,583 @@
+/* =========================================================================
+   AGENT STI — assistant pédagogique personnel
+   Interface connectée à une Supabase Edge Function. Aucune clé IA dans le
+   navigateur. Les résultats sont des propositions : toute écriture dans les
+   fiches ou le planning nécessite une action explicite de l'enseignant.
+   ========================================================================= */
+(function (root) {
+'use strict';
+
+const VERSION = '1.0.0';
+const HISTORY_KEY = 'sti_agent_history_v1';
+const MAX_IMAGES = 6;
+const TASKS = {
+  fiche: { label: 'Fiche pédagogique', short: 'Fiche', icon: 'file', desc: 'Préparer une séance complète à partir du planning.' },
+  exercices: { label: 'Séries d’exercices', short: 'Exercices', icon: 'layers', desc: 'Créer les énoncés, les corrigés et le barème.' },
+  correction: { label: 'Correction de copies', short: 'Correction', icon: 'check', desc: 'Analyser une copie texte ou photo, question par question.' },
+  cahier: { label: 'Cahier de textes', short: 'Cahier', icon: 'book', desc: 'Rédiger une entrée à partir du réalisé déclaré.' },
+  repartition: { label: 'Répartition', short: 'Répartition', icon: 'calendar', desc: 'Proposer une progression sans changer les dates.' }
+};
+const ICONS = {
+  spark: '<path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z"/><path d="m19 14 .8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/><path d="m5 14 .8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14Z"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/>',
+  layers: '<path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 17l9 5 9-5"/>',
+  check: '<path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m22 4-10 10-3-3"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4m8-4v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  print: '<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/>',
+  arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v5M14 11v5"/>'
+};
+
+let ctx = null;
+let tool = 'fiche';
+let classe = '3SI1';
+let busy = false;
+let error = '';
+let notice = '';
+let status = null;
+let attachments = [];
+let results = {};
+let resultMeta = {};
+let history = readHistory();
+const forms = {
+  fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '' },
+  exercices: { sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '' },
+  correction: { identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
+  cahier: { session: '', realise: '', devoirs: '', observations: '' },
+  repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' }
+};
+
+const el = id => document.getElementById(id);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nl = value => esc(value || '—').replace(/\n/g, '<br>');
+const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.spark}</svg>`;
+const asArray = value => Array.isArray(value) ? value : [];
+const keyOf = s => `${s.cls}|${s.n}`;
+const sessions = () => ctx?.sessions?.[classe] || [];
+const record = s => ctx?.store?.seances?.[keyOf(s)] || {};
+const titleOf = s => record(s).title || s.blk?.t || 'Séance à planifier';
+const dateLong = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+const today = () => root.todayISO ? root.todayISO() : new Date().toISOString().slice(0, 10);
+
+function readHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(value) ? value.filter(x => x && TASKS[x.task] && x.result).slice(0, 8) : [];
+  } catch (e) { return []; }
+}
+function writeHistory() {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 8))); } catch (e) { /* Le résultat reste disponible à l'écran. */ }
+}
+function findSession(key, cls = classe) {
+  return (ctx?.sessions?.[cls] || []).find(s => keyOf(s) === key) || null;
+}
+function defaultSession(mode) {
+  const list = sessions();
+  if (!list.length) return '';
+  let candidate;
+  if (mode === 'cahier') {
+    const past = list.filter(s => s.iso <= today());
+    candidate = past.reverse().find(s => record(s).contenu) || past[0];
+  } else {
+    candidate = list.find(s => s.iso >= today()) || list[list.length - 1];
+  }
+  return candidate ? keyOf(candidate) : '';
+}
+function ensureSessions() {
+  ['fiche', 'cahier'].forEach(name => {
+    if (!findSession(forms[name].session)) forms[name].session = defaultSession(name);
+  });
+}
+function sessionData(s) {
+  if (!s) return null;
+  const o = record(s);
+  const allowed = new Set(asArray(o.notions));
+  const notions = asArray(root.STI_DATA?.livresSTI?.[s.cls]?.items).filter(x => allowed.has(x.id)).map(x => ({ notion: x.label, domaine: x.domain, description: x.description }));
+  return {
+    classe: s.cls,
+    numero: s.n,
+    date: s.iso,
+    trimestre: s.tri,
+    titre: titleOf(s),
+    reference: s.blk ? { titre: s.blk.t, domaine: s.blk.d, supports: s.blk.o, type: s.blk.k, detail: s.blk.det } : null,
+    preparation: o.preparation || '',
+    contenu_reellement_declare: o.contenu || '',
+    travail_maison: o.devoirs || '',
+    observations: o.obs || '',
+    statut: o.done === true ? 'assurée' : o.done === false ? 'reportée' : 'non confirmé',
+    notions
+  };
+}
+function relatedNotions(topic) {
+  const words = String(topic || '').toLocaleLowerCase('fr').split(/[^\p{L}\p{N}_$]+/u).filter(x => x.length > 2);
+  const items = asArray(root.STI_DATA?.livresSTI?.[classe]?.items);
+  if (!words.length) return [];
+  return items.filter(x => {
+    const haystack = `${x.label} ${x.description} ${x.domain}`.toLocaleLowerCase('fr');
+    return words.some(w => haystack.includes(w));
+  }).slice(0, 12).map(x => ({ notion: x.label, domaine: x.domain, description: x.description }));
+}
+function programmeContext() {
+  return asArray(root.STI_DATA?.competences?.[classe]).map(x => ({ code: x.code, titre: x.t, domaine: x.domaine, attendus: x.attendu })).slice(0, 12);
+}
+function commonContext() {
+  return {
+    agent: 'Agent STI',
+    matiere: "Systèmes et Technologies de l'Informatique (STI)",
+    programme: 'Programme tunisien — enseignement secondaire',
+    annee_scolaire: '2026-2027',
+    classe,
+    date_du_jour: today()
+  };
+}
+
+function statusHtml() {
+  if (!status) return '<span class="agent-status neutral"><i></i> Connexion sécurisée à tester</span>';
+  if (status.configured) return `<span class="agent-status ok"><i></i> Configuration IA détectée · ${esc(status.model || 'modèle configuré')}</span>`;
+  return '<span class="agent-status warn"><i></i> Fonction déployée · clé IA à configurer</span>';
+}
+function contextCard() {
+  if (!['fiche', 'cahier'].includes(tool)) {
+    if (tool === 'repartition') {
+      const count = sessions().filter(s => s.tri === Number(forms.repartition.trimestre)).length;
+      return `<div class="agent-context-card"><span>Contexte automatique</span><strong>${classe} · T${forms.repartition.trimestre}</strong><p>${count} séances, leurs dates, les références officielles et votre avancement seront transmis.</p></div>`;
+    }
+    if (tool === 'exercices') {
+      return `<div class="agent-context-card"><span>Référentiel disponible</span><strong>Programme ${classe}</strong><p>L’agent peut mobiliser les compétences et les notions du Smart Book liées à votre sujet.</p></div>`;
+    }
+    return `<div class="agent-context-card"><span>Confidentialité</span><strong>Copie anonymisée</strong><p>Utilisez un identifiant de copie plutôt que le nom complet de l’élève. Aucune note n’est enregistrée automatiquement.</p></div>`;
+  }
+  const s = findSession(forms[tool].session);
+  if (!s) return '';
+  return `<div class="agent-context-card"><span>Séance sélectionnée</span><strong>${esc(s.cls)} · S${s.n}</strong><p>${esc(titleOf(s))}</p><small>${esc(dateLong(s.iso))} · ${esc(s.blk?.d || 'STI')}</small></div>`;
+}
+function sessionOptions() {
+  const selected = forms[tool]?.session || '';
+  return sessions().map(s => `<option value="${keyOf(s)}" ${selected === keyOf(s) ? 'selected' : ''}>${esc(`S${s.n} · ${dateLong(s.iso)} · ${titleOf(s)}`)}</option>`).join('');
+}
+function generateButton(label = 'Générer avec mon agent') {
+  return `<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
+}
+function formHtml() {
+  const f = forms[tool];
+  if (tool === 'fiche') return `
+    <div class="agent-form-grid">
+      <label class="agent-field full"><span>Séance du planning</span><select data-agent-field="session">${sessionOptions()}</select></label>
+      <label class="agent-field"><span>Méthode pédagogique</span><select data-agent-field="methode">${['Cours dialogué et TP guidé', 'TP principalement pratique', 'Apprentissage par projet', 'Révision et remédiation', 'Correction d’évaluation'].map(x => `<option ${f.methode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+      <label class="agent-field"><span>Objectif prioritaire <em>facultatif</em></span><input data-agent-field="objectif" value="${esc(f.objectif)}" placeholder="Ex. : savoir contrôler un formulaire"></label>
+      <label class="agent-field full"><span>Vos consignes <em>facultatif</em></span><textarea data-agent-field="consignes" rows="4" placeholder="Matériel disponible, difficultés des groupes, activité à privilégier…">${esc(f.consignes)}</textarea></label>
+    </div>${generateButton('Générer la fiche pédagogique')}`;
+  if (tool === 'exercices') return `
+    <div class="agent-form-grid">
+      <label class="agent-field full"><span>Notion ou thème</span><input data-agent-field="sujet" value="${esc(f.sujet)}" required placeholder="Ex. : JavaScript — événements et contrôle de saisie"></label>
+      <label class="agent-field"><span>Type de document</span><select data-agent-field="format">${['Série d’exercices', 'Travail pratique', 'Devoir de contrôle', 'Révision orientée bac'].map(x => `<option ${f.format === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+      <label class="agent-field"><span>Difficulté</span><select data-agent-field="difficulte">${['Progressive', 'Facile', 'Moyenne', 'Difficile', 'Niveau baccalauréat'].map(x => `<option ${f.difficulte === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+      <label class="agent-field"><span>Nombre d’exercices</span><input type="number" min="1" max="10" data-agent-field="nombre" value="${esc(f.nombre)}"></label>
+      <label class="agent-field"><span>Durée estimée (minutes)</span><input type="number" min="15" max="300" step="15" data-agent-field="duree" value="${esc(f.duree)}"></label>
+      <label class="agent-field full"><span>Contraintes <em>facultatif</em></span><textarea data-agent-field="contraintes" rows="3" placeholder="Ex. : utiliser un formulaire HTML, interdire les attributs d’événement inline, prévoir un exercice de remédiation…">${esc(f.contraintes)}</textarea></label>
+    </div>${generateButton('Générer les exercices et le corrigé')}`;
+  if (tool === 'cahier') {
+    const s = findSession(f.session);
+    return `<div class="agent-truth-note">${icon('shield')}<div><strong>Le cahier décrit le réellement effectué.</strong><span>L’agent reformule vos informations ; il ne doit pas déduire qu’un cours a été assuré à partir de sa seule date.</span></div></div>
+    <div class="agent-form-grid">
+      <label class="agent-field full"><span>Séance concernée</span><select data-agent-field="session">${sessionOptions()}</select></label>
+      <label class="agent-field full"><span>Ce qui a réellement été fait ${record(s).contenu ? '· contenu existant déjà disponible' : ''}</span><textarea data-agent-field="realise" rows="5" placeholder="Ex. : rappel de 10 min, démonstration de getElementById, TP2 commencé, exercices 1 et 2 terminés…">${esc(f.realise)}</textarea></label>
+      <label class="agent-field"><span>Travail donné <em>facultatif</em></span><input data-agent-field="devoirs" value="${esc(f.devoirs)}" placeholder="Ex. : terminer l’exercice 3"></label>
+      <label class="agent-field"><span>Observations <em>facultatif</em></span><input data-agent-field="observations" value="${esc(f.observations)}" placeholder="Ex. : reprendre les événements"></label>
+    </div>${generateButton('Rédiger l’entrée du cahier')}`;
+  }
+  if (tool === 'repartition') return `
+    <div class="agent-form-grid">
+      <label class="agent-field"><span>Trimestre</span><select data-agent-field="trimestre">${[1, 2, 3].map(x => `<option value="${x}" ${Number(f.trimestre) === x ? 'selected' : ''}>${x}${x === 1 ? 'er' : 'e'} trimestre</option>`).join('')}</select></label>
+      <label class="agent-field"><span>Classe et calendrier</span><input value="${classe} · dates et numéros conservés" disabled></label>
+      <label class="agent-field full"><span>Objectifs de la réorganisation</span><textarea data-agent-field="consignes" rows="5">${esc(f.consignes)}</textarea></label>
+    </div><div class="agent-truth-note">${icon('calendar')}<div><strong>Dates, vacances et évaluations restent repérables.</strong><span>L’application n’écrase ni le contenu réalisé ni les séances assurées. L’application de la proposition ne concerne que les séances à venir.</span></div></div>${generateButton('Proposer la répartition')}`;
+  return `
+    <div class="agent-form-grid">
+      <label class="agent-field"><span>Identifiant anonyme de la copie</span><input data-agent-field="identifiant" value="${esc(f.identifiant)}" maxlength="60"></label>
+      <label class="agent-field"><span>Note maximale</span><input type="number" min="1" max="1000" data-agent-field="sur" value="${esc(f.sur)}"></label>
+      <label class="agent-field full"><span>Sujet et corrigé de référence</span><textarea data-agent-field="sujet" rows="6" placeholder="Collez les questions et, si possible, les réponses attendues…">${esc(f.sujet)}</textarea></label>
+      <label class="agent-field full"><span>Barème détaillé</span><textarea data-agent-field="bareme" rows="3" placeholder="Ex. : Exercice 1 : 6 pts (Q1 : 2 pts, Q2 : 4 pts) ; exercice 2 : 8 pts…">${esc(f.bareme)}</textarea></label>
+      <label class="agent-field full"><span>Réponses de l’élève en texte <em>ou ajoutez des photos ci-dessous</em></span><textarea data-agent-field="copie" rows="6" placeholder="Collez ici la transcription de la copie, ou laissez vide si vous ajoutez des photos…">${esc(f.copie)}</textarea></label>
+      <label class="agent-field full agent-upload"><span>Photos de la copie · ${attachments.length}/${MAX_IMAGES}</span><input id="agent-copy-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPEG, PNG ou WebP. Les images sont réduites dans le navigateur avant l’envoi. 6 pages maximum par analyse.</small></label>
+      ${attachments.length ? `<div class="agent-attachments full">${attachments.map((a, i) => `<span>${esc(a.name)}<button type="button" data-agent-remove="${i}" aria-label="Retirer ${esc(a.name)}">×</button></span>`).join('')}</div>` : ''}
+      <label class="agent-field full"><span>Règles d’appréciation <em>facultatif</em></span><input data-agent-field="consignes" value="${esc(f.consignes)}" placeholder="Ex. : valoriser la démarche, ne pas pénaliser deux fois la même erreur"></label>
+    </div><div class="agent-truth-note">${icon('shield')}<div><strong>Correction assistée, jamais note automatique définitive.</strong><span>Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.</span></div></div>${generateButton('Analyser et proposer une correction')}`;
+}
+
+function resultHeader(title, subtitle, applyLabel = '') {
+  return `<div class="agent-result-top agent-no-print"><div><span>PROPOSITION DE L’AGENT · À VÉRIFIER</span><strong>${esc(title)}</strong>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</div><div class="agent-result-actions">${applyLabel ? `<button class="btn btn-primary" data-agent-apply>${icon('arrow')} ${esc(applyLabel)}</button>` : ''}<button class="btn btn-ghost" data-agent-download>${icon('download')} Exporter</button><button class="btn btn-ghost" data-agent-print>${icon('print')} Imprimer</button></div></div>`;
+}
+function chipList(items) {
+  return `<div class="agent-tags">${asArray(items).map(x => `<span>${esc(x)}</span>`).join('') || '<span>Non renseigné</span>'}</div>`;
+}
+function bulletList(items) {
+  return `<ul>${asArray(items).map(x => `<li>${nl(typeof x === 'object' ? Object.values(x).join(' — ') : x)}</li>`).join('') || '<li>Non renseigné</li>'}</ul>`;
+}
+function renderFiche(r, meta) {
+  const phases = asArray(r.deroulement);
+  return `${resultHeader(r.titre || 'Fiche pédagogique', `${meta.classe} · ${dateLong(meta.date)}`, 'Utiliser dans la fiche')}<div id="agent-result" class="agent-document">
+    <div class="agent-doc-heading"><span>FICHE PÉDAGOGIQUE · ${esc(meta.classe)}</span><h2>${esc(r.titre || 'Séance STI')}</h2><p>${esc(dateLong(meta.date))}</p></div>
+    <div class="agent-doc-grid"><section><h3>Objectifs</h3>${bulletList(r.objectifs)}</section><section><h3>Prérequis</h3>${bulletList(r.prerequis)}</section></div>
+    <section><h3>Déroulement proposé</h3><div class="agent-phases">${phases.map((p, i) => `<div><span>${String(i + 1).padStart(2, '0')}</span><div><strong>${esc(p.phase || `Phase ${i + 1}`)} <em>${esc(p.duree || '')}</em></strong><p><b>Enseignant :</b> ${nl(p.activite_enseignant || p.enseignant)}</p><p><b>Élèves :</b> ${nl(p.activite_eleve || p.eleves)}</p>${p.trace ? `<p><b>Trace / évaluation :</b> ${nl(p.trace)}</p>` : ''}</div></div>`).join('') || '<p>Déroulement non renseigné.</p>'}</div></section>
+    <section><h3>Notions mobilisées</h3>${chipList(r.notions)}</section>
+    <div class="agent-doc-grid"><section><h3>Travail à la maison</h3><p>${nl(r.travail_maison)}</p></section><section><h3>Supports</h3>${bulletList(r.supports)}</section></div>
+    <div class="agent-doc-grid"><section><h3>Évaluation des acquis</h3><p>${nl(r.evaluation)}</p></section><section><h3>Remédiation</h3><p>${nl(r.remediation)}</p></section></div>
+  </div>`;
+}
+function renderExercices(r, meta) {
+  const exos = asArray(r.exercices);
+  return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`)}<div id="agent-result" class="agent-document">
+    <div class="agent-doc-heading"><span>${esc(r.format || 'SÉRIE D’EXERCICES')} · ${esc(meta.classe)}</span><h2>${esc(r.titre || 'Exercices STI')}</h2><p>${esc(r.duree || forms.exercices.duree + ' min')}${r.bareme_total ? ` · Barème : ${esc(r.bareme_total)}` : ''}</p></div>
+    ${r.introduction ? `<p class="agent-intro">${nl(r.introduction)}</p>` : ''}
+    ${exos.map((ex, i) => `<section class="agent-exercise"><h3>Exercice ${i + 1}${ex.titre ? ` — ${esc(ex.titre)}` : ''}${ex.points ? `<span>${esc(ex.points)}</span>` : ''}</h3><p>${nl(ex.enonce)}</p>${asArray(ex.questions).length ? `<ol>${asArray(ex.questions).map(q => `<li>${nl(typeof q === 'object' ? q.enonce || q.question : q)}${typeof q === 'object' && q.bareme ? `<em class="agent-points">${esc(q.bareme)}</em>` : ''}</li>`).join('')}</ol>` : ''}<details class="agent-correction"><summary>Voir le corrigé</summary><div>${nl(ex.correction)}${asArray(ex.corrige).length ? `<ol>${asArray(ex.corrige).map(q => `<li>${nl(typeof q === 'object' ? [q.reponse, q.explication].filter(Boolean).join(' — ') : q)}</li>`).join('')}</ol>` : ''}</div></details></section>`).join('') || '<p>Aucun exercice structuré dans la réponse.</p>'}
+    ${asArray(r.competences).length ? `<section><h3>Compétences travaillées</h3>${chipList(r.competences)}</section>` : ''}
+  </div>`;
+}
+function renderCahier(r, meta) {
+  return `${resultHeader(`Cahier de textes · S${meta.numero}`, `${meta.classe} · ${dateLong(meta.date)}`, 'Insérer dans la fiche')}<div id="agent-result" class="agent-document">
+    <div class="agent-doc-heading"><span>CAHIER DE TEXTES · ${esc(meta.classe)} · SÉANCE ${esc(meta.numero)}</span><h2>${esc(r.titre || meta.titre)}</h2><p>${esc(dateLong(meta.date))}</p></div>
+    <section><h3>Contenu réellement effectué · formulation à valider</h3><p>${nl(r.contenu)}</p></section>
+    <section><h3>Notions abordées</h3>${chipList(r.notions)}</section>
+    <div class="agent-doc-grid"><section><h3>Travail à la maison</h3><p>${nl(r.travail_maison)}</p></section><section><h3>Observations</h3><p>${nl(r.observations)}</p></section></div>
+    ${r.points_a_reprendre ? `<section><h3>Points à reprendre</h3><p>${nl(r.points_a_reprendre)}</p></section>` : ''}
+  </div>`;
+}
+function renderRepartition(r, meta) {
+  const rows = asArray(r.seances);
+  return `${resultHeader(r.titre || `Répartition ${meta.classe} · T${meta.trimestre}`, `${rows.length} séance(s) proposée(s) · dates inchangées`, 'Appliquer aux séances à venir')}<div id="agent-result" class="agent-document">
+    <div class="agent-doc-heading"><span>RÉPARTITION PÉDAGOGIQUE · ${esc(meta.classe)} · TRIMESTRE ${esc(meta.trimestre)}</span><h2>${esc(r.titre || 'Progression proposée')}</h2></div>
+    ${asArray(r.avertissements).length ? `<div class="agent-uncertainties"><strong>Points de vigilance</strong>${bulletList(r.avertissements)}</div>` : ''}
+    <div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>N° / date</th><th>Séance proposée</th><th>Objectif et travail</th></tr></thead><tbody>${rows.map(s => `<tr><td><strong>S${esc(s.numero ?? s.n)}</strong><br>${esc(s.date || '')}</td><td><strong>${esc(s.titre)}</strong><br><small>${esc(s.domaine || '')}${s.type ? ` · ${esc(s.type)}` : ''}</small></td><td>${nl(s.objectif)}${s.travail_maison ? `<p><b>Devoir :</b> ${nl(s.travail_maison)}</p>` : ''}</td></tr>`).join('')}</tbody></table></div>
+  </div>`;
+}
+function renderCorrection(r, meta) {
+  const questions = asArray(r.questions);
+  const uncertain = asArray(r.transcription_incertaine);
+  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · note proposée à contrôler`)}<div id="agent-result" class="agent-document">
+    <div class="agent-doc-heading"><span>CORRECTION ASSISTÉE · ${esc(meta.classe)} · ${esc(meta.identifiant)}</span><h2>Proposition d’évaluation</h2></div>
+    <div class="agent-grade"><div><strong>${esc(r.note ?? '—')}</strong><span>/ ${esc(r.sur ?? meta.sur)}</span></div><p><b>Confiance de lecture :</b> ${esc(r.confiance || 'à vérifier')}<br>Cette note n’est pas enregistrée automatiquement.</p></div>
+    ${uncertain.length ? `<div class="agent-uncertainties"><strong>Passages à relire sur la copie</strong>${bulletList(uncertain)}</div>` : ''}
+    <section><h3>Détail question par question</h3><div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>Question</th><th>Points</th><th>Justification</th></tr></thead><tbody>${questions.map(q => `<tr><td><strong>${esc(q.question || q.numero)}</strong></td><td><strong>${esc(q.points_attribues ?? '—')} / ${esc(q.points_max ?? '—')}</strong></td><td>${nl(q.justification)}${asArray(q.erreurs).length ? `<p><b>Erreurs :</b> ${esc(asArray(q.erreurs).join(' ; '))}</p>` : ''}${asArray(q.elements_corrects).length ? `<p><b>Réussites :</b> ${esc(asArray(q.elements_corrects).join(' ; '))}</p>` : ''}</td></tr>`).join('')}</tbody></table></div></section>
+    <section><h3>Appréciation proposée</h3><p>${nl(r.appreciation)}</p></section><section><h3>Remédiation conseillée</h3>${bulletList(r.remediation)}</section>
+  </div>`;
+}
+function renderResult() {
+  const r = results[tool];
+  if (!r) return '';
+  const meta = resultMeta[tool] || { classe };
+  try {
+    if (tool === 'fiche') return renderFiche(r, meta);
+    if (tool === 'exercices') return renderExercices(r, meta);
+    if (tool === 'cahier') return renderCahier(r, meta);
+    if (tool === 'repartition') return renderRepartition(r, meta);
+    return renderCorrection(r, meta);
+  } catch (e) {
+    return `${resultHeader('Résultat de l’agent', 'Affichage brut')}<pre id="agent-result" class="agent-raw">${esc(JSON.stringify(r, null, 2))}</pre>`;
+  }
+}
+function historyHtml() {
+  if (!history.length) return '';
+  return `<section class="agent-history agent-no-print"><div class="agent-history-head"><div><span>VOS DOCUMENTS</span><h2>Générations récentes</h2></div><button class="btn btn-ghost" data-agent-clear-history>${icon('trash', 15)} Effacer l’historique</button></div><div class="agent-history-list">${history.map(h => `<button data-agent-history="${esc(h.id)}"><span>${icon(TASKS[h.task].icon)}</span><div><strong>${esc(h.title)}</strong><small>${esc(TASKS[h.task].short)} · ${esc(h.classe)} · ${esc(new Date(h.created).toLocaleDateString('fr-FR'))}</small></div>${icon('arrow', 15)}</button>`).join('')}</div><p>Les corrections de copies ne sont pas ajoutées à cet historique.</p></section>`;
+}
+function draw() {
+  const zone = el('v-agent');
+  if (!zone || !ctx) return;
+  ensureSessions();
+  zone.innerHTML = `<div class="agent-shell">
+    <header class="agent-hero agent-no-print"><div><span class="agent-eyebrow">${icon('spark', 16)} VOTRE AGENT PÉDAGOGIQUE PERSONNEL</span><h1>Agent <em>STI</em></h1><p>Il connaît votre contexte, prépare vos documents et vous laisse la décision finale.</p><div class="agent-hero-status">${statusHtml()}<span>Version ${VERSION}</span></div></div><div class="agent-hero-actions"><label>Classe de travail<select data-agent-class><option ${classe === '3SI1' ? 'selected' : ''}>3SI1</option><option ${classe === '4SI2' ? 'selected' : ''}>4SI2</option></select></label><button class="btn btn-ghost" data-agent-test>${icon('shield')} Tester la connexion</button></div></header>
+    <div class="agent-workspace">
+      <aside class="agent-sidebar agent-no-print"><span class="agent-menu-label">OUTILS DE L’AGENT</span>${Object.entries(TASKS).map(([id, t]) => `<button class="agent-tool ${tool === id ? 'active' : ''}" data-agent-tool="${id}"><span>${icon(t.icon)}</span><div><strong>${t.label}</strong><small>${t.desc}</small></div></button>`).join('')}${contextCard()}<div class="agent-security">${icon('shield', 16)}<p>La clé IA reste dans Supabase. Les élèves et les notes ne sont jamais envoyés en bloc.</p></div></aside>
+      <main class="agent-main"><section class="agent-request agent-no-print"><div class="agent-request-title"><span>${icon(TASKS[tool].icon, 21)}</span><div><small>DEMANDE À L’AGENT</small><h2>${TASKS[tool].label}</h2></div></div>${formHtml()}</section>
+      ${busy ? `<div class="agent-loading" role="status"><span></span><div><strong>L’agent analyse votre demande…</strong><p>La génération peut prendre une à deux minutes pour une répartition ou une copie avec photos.</p></div></div>` : ''}
+      ${error ? `<div class="agent-message error agent-no-print" role="alert"><strong>La demande n’a pas abouti</strong><p>${nl(error)}</p></div>` : ''}
+      ${notice ? `<div class="agent-message success agent-no-print"><p>${nl(notice)}</p></div>` : ''}
+      ${renderResult() || (!busy && !error ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez vérifier, exporter ou appliquer le résultat.</p></div>` : '')}</main>
+    </div>${historyHtml()}</div>`;
+}
+
+function validate() {
+  const f = forms[tool];
+  if (['fiche', 'cahier'].includes(tool) && !findSession(f.session)) return 'Sélectionnez une séance du planning.';
+  if (tool === 'cahier') {
+    const s = findSession(f.session);
+    if (!f.realise.trim() && !record(s).contenu.trim()) return 'Décrivez ce qui a réellement été fait, ou renseignez d’abord le contenu de la fiche. L’agent ne doit pas inventer le déroulement d’une séance.';
+  }
+  if (tool === 'exercices' && !f.sujet.trim()) return 'Indiquez la notion ou le thème des exercices.';
+  if (tool === 'correction') {
+    if (!f.sujet.trim()) return 'Ajoutez le sujet et, si possible, le corrigé de référence.';
+    if (!f.bareme.trim()) return 'Ajoutez le barème détaillé pour obtenir une correction contrôlable.';
+    if (!f.copie.trim() && !attachments.length) return 'Ajoutez les réponses de l’élève en texte ou au moins une photo de la copie.';
+  }
+  if (tool === 'repartition' && !sessions().some(s => s.tri === Number(f.trimestre))) return 'Aucune séance n’est disponible pour ce trimestre.';
+  return '';
+}
+function makeMeta() {
+  const base = { classe, task: tool };
+  if (['fiche', 'cahier'].includes(tool)) {
+    const s = findSession(forms[tool].session);
+    return { ...base, session: keyOf(s), numero: s.n, date: s.iso, titre: titleOf(s) };
+  }
+  if (tool === 'repartition') return { ...base, trimestre: Number(forms.repartition.trimestre) };
+  if (tool === 'correction') return { ...base, identifiant: forms.correction.identifiant.trim() || 'Copie anonyme', sur: Number(forms.correction.sur) || 20 };
+  return base;
+}
+function buildPayload(meta) {
+  const f = forms[tool];
+  const base = { context: { ...commonContext(), ...meta }, input: {} };
+  if (tool === 'fiche') {
+    base.input = { seance: sessionData(findSession(f.session)), methode: f.methode, objectif_prioritaire: f.objectif, consignes: f.consignes, competences: programmeContext() };
+  } else if (tool === 'exercices') {
+    base.input = { ...f, notions_du_referentiel: relatedNotions(f.sujet), competences: programmeContext() };
+  } else if (tool === 'cahier') {
+    base.input = { seance: sessionData(findSession(f.session)), realise_precise_par_enseignant: f.realise, travail_donne_precise: f.devoirs, observations_precisees: f.observations };
+  } else if (tool === 'repartition') {
+    base.input = {
+      trimestre: Number(f.trimestre), consignes: f.consignes,
+      seances: sessions().filter(s => s.tri === Number(f.trimestre)).map(sessionData),
+      calendrier: { vacances: root.VACANCES || [], fin_annee: root.SCHOOL?.finAnnee }
+    };
+  } else {
+    base.input = { ...f, note_maximale: Number(f.sur) || 20, regles: 'Attribuer les points uniquement à partir du sujet, du barème et de la copie. Signaler toute illisibilité.' };
+  }
+  return base;
+}
+async function callAgent(task, payload = {}) {
+  if (!root.cloudReady || !root.cloudReady()) throw new Error('La connexion Supabase n’est pas configurée. Ouvrez les réglages Cloud de votre plateforme.');
+  const token = await root.authToken();
+  if (!token) {
+    if (root.openAuth) root.openAuth();
+    throw new Error('Connectez-vous à votre espace professeur pour utiliser votre agent.');
+  }
+  const cfg = root.cloudCfg();
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 110000);
+  try {
+    const response = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/assistant-ia`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: cfg.key, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ task, ...payload, attachments: task === 'correction' ? attachments : [] }),
+      signal: controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Le serveur de l’agent a répondu avec le code ${response.status}.`);
+    return data;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Le délai d’attente est dépassé. Vérifiez la fonction Supabase et réessayez avec une demande plus courte.');
+    throw e;
+  } finally { clearTimeout(timer); }
+}
+function resultTitle(task, r, meta) {
+  return String(r.titre || (task === 'correction' ? `Correction ${meta.identifiant}` : TASKS[task].label)).slice(0, 140);
+}
+async function generate() {
+  if (busy) return;
+  error = validate();
+  notice = '';
+  if (error) { draw(); return; }
+  const task = tool;
+  const meta = makeMeta();
+  const payload = buildPayload(meta);
+  busy = true;
+  results[task] = null;
+  draw();
+  try {
+    const data = await callAgent(task, payload);
+    if (!data.result || typeof data.result !== 'object') throw new Error('La réponse de l’agent ne contient pas de document exploitable.');
+    results[task] = data.result;
+    resultMeta[task] = meta;
+    status = { configured: true, model: data.meta?.model || status?.model };
+    if (task !== 'correction') {
+      history.unshift({ id: root.crypto?.randomUUID?.() || `agent-${Date.now()}`, created: new Date().toISOString(), task, classe: meta.classe, title: resultTitle(task, data.result, meta), result: data.result, meta });
+      history = history.slice(0, 8);
+      writeHistory();
+    }
+    if (task === 'correction') attachments = [];
+  } catch (e) {
+    error = e.message || String(e);
+  } finally {
+    busy = false;
+    draw();
+  }
+}
+async function testConnection() {
+  if (busy) return;
+  busy = true; error = ''; notice = '';
+  draw();
+  try {
+    const data = await callAgent('status');
+    status = data;
+    notice = data.configured ? `Fonction Supabase accessible et configuration détectée pour « ${data.model} ». Lancez une courte génération pour valider aussi le compte du fournisseur IA.` : 'La fonction Supabase répond, mais le secret AI_API_KEY ou le modèle IA doit encore être configuré. Suivez le guide AGENT_IA.md.';
+  } catch (e) { error = e.message || String(e); }
+  finally { busy = false; draw(); }
+}
+function ficheText(r) {
+  const lines = ['OBJECTIFS', ...asArray(r.objectifs).map(x => `• ${x}`), '', 'PRÉREQUIS', ...asArray(r.prerequis).map(x => `• ${x}`), '', 'DÉROULEMENT PROPOSÉ'];
+  asArray(r.deroulement).forEach((p, i) => {
+    lines.push(`${i + 1}. ${p.phase || 'Phase'}${p.duree ? ` (${p.duree})` : ''}`);
+    if (p.activite_enseignant || p.enseignant) lines.push(`Enseignant : ${p.activite_enseignant || p.enseignant}`);
+    if (p.activite_eleve || p.eleves) lines.push(`Élèves : ${p.activite_eleve || p.eleves}`);
+    if (p.trace) lines.push(`Trace / évaluation : ${p.trace}`);
+  });
+  if (asArray(r.notions).length) lines.push('', `NOTIONS : ${asArray(r.notions).join(' ; ')}`);
+  if (r.evaluation) lines.push('', `ÉVALUATION : ${r.evaluation}`);
+  if (r.remediation) lines.push('', `REMÉDIATION : ${r.remediation}`);
+  return lines.join('\n');
+}
+function applyResult() {
+  const r = results[tool];
+  const meta = resultMeta[tool];
+  if (!r || !meta) return;
+  if (['fiche', 'cahier'].includes(tool)) {
+    const s = findSession(meta.session, meta.classe);
+    if (!s) { error = 'La séance liée à ce résultat est introuvable.'; draw(); return; }
+    root.openModal(meta.classe, s.n);
+    if (tool === 'fiche') {
+      el('m-titre').value = r.titre || meta.titre;
+      el('m-preparation').value = ficheText(r);
+      el('m-devoirs').value = r.travail_maison || '';
+      root.toast('Préparation insérée. Vérifiez puis cliquez sur Enregistrer.');
+    } else {
+      el('m-contenu').value = r.contenu || '';
+      el('m-devoirs').value = r.travail_maison || '';
+      el('m-obs').value = [r.observations, r.points_a_reprendre ? `À reprendre : ${r.points_a_reprendre}` : ''].filter(Boolean).join(' | ');
+      root.toast('Brouillon inséré sans confirmer la séance. Vérifiez puis enregistrez.');
+    }
+    return;
+  }
+  if (tool === 'repartition') {
+    const candidates = asArray(r.seances).map(x => ({ proposal: x, session: (ctx.sessions[meta.classe] || []).find(s => s.n === Number(x.numero ?? x.n) && s.tri === meta.trimestre) })).filter(x => x.session && x.session.iso >= today() && record(x.session).done !== true);
+    if (!candidates.length) { error = 'Aucune séance future modifiable dans cette proposition.'; draw(); return; }
+    if (!confirm(`Appliquer les titres et préparations proposés à ${candidates.length} séance(s) à venir de ${meta.classe} ? Les dates, le réalisé et les statuts seront conservés.`)) return;
+    candidates.forEach(({ proposal, session }) => {
+      const key = keyOf(session);
+      const previous = ctx.store.seances[key] || {};
+      ctx.store.seances[key] = { ...previous, title: String(proposal.titre || titleOf(session)), preparation: String(proposal.objectif || previous.preparation || '') };
+    });
+    root.save(true);
+    root.setRep(meta.classe);
+    root.setTri(meta.trimestre);
+    root.go('v-rep');
+    root.toast(`${candidates.length} séance(s) à venir mise(s) à jour.`);
+  }
+}
+function downloadResult() {
+  const content = el('agent-result');
+  if (!content) return;
+  const printable = content.cloneNode(true);
+  printable.querySelectorAll('details').forEach(details => { details.open = true; });
+  const meta = resultMeta[tool] || { classe };
+  const title = resultTitle(tool, results[tool], meta);
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)}</title><style>body{max-width:960px;margin:40px auto;padding:0 24px;color:#18251f;font:15px/1.6 system-ui,sans-serif}h1,h2,h3{line-height:1.25}section{margin:22px 0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccd5cf;padding:10px;text-align:left;vertical-align:top}th{background:#f0f4f1}.agent-doc-heading{border-bottom:3px solid #173f35;padding-bottom:16px}.agent-doc-heading>span{font-size:12px;letter-spacing:.1em}.agent-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.agent-phases>div{display:flex;gap:15px;border-top:1px solid #ddd;padding:14px 0}.agent-phases>div>span{font-weight:800;color:#276fa7}.agent-tags span{display:inline-block;background:#eef3ef;padding:4px 8px;margin:3px;border-radius:6px}.agent-exercise{border-top:1px solid #ccd5cf}.agent-exercise h3 span{float:right}.agent-points{float:right}.agent-grade{display:flex;gap:30px;align-items:center;background:#f0f4f1;padding:18px}.agent-grade strong{font-size:44px}.agent-correction{background:#f6f7f4;padding:12px}.agent-uncertainties{border:1px solid #cc8a32;padding:14px;background:#fff8e9}@media(max-width:650px){.agent-doc-grid{grid-template-columns:1fr}}@media print{body{margin:0;max-width:none}.agent-correction{display:block}.agent-correction>div{display:block}}</style></head><body>${printable.innerHTML}</body></html>`;
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${tool}-${meta.classe || classe}-${new Date().toISOString().slice(0, 10)}.html`;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function printResult() {
+  const content = el('agent-result');
+  if (!content) return;
+  const details = Array.from(content.querySelectorAll('details'));
+  const previous = details.map(x => x.open);
+  details.forEach(x => { x.open = true; });
+  document.body.classList.add('agent-printing');
+  const done = () => {
+    document.body.classList.remove('agent-printing');
+    details.forEach((x, i) => { x.open = previous[i]; });
+  };
+  window.addEventListener('afterprint', done, { once: true });
+  window.print();
+  setTimeout(done, 1000);
+}
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(blob); });
+}
+async function compressImage(file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error(`${file.name} : format non pris en charge.`);
+  if (file.size > 12 * 1024 * 1024) throw new Error(`${file.name} : image supérieure à 12 Mo.`);
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = reject; image.src = url; });
+    let scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    let quality = 0.82;
+    let blob;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+      const brush = canvas.getContext('2d');
+      brush.fillStyle = '#fff'; brush.fillRect(0, 0, canvas.width, canvas.height);
+      brush.drawImage(img, 0, 0, canvas.width, canvas.height);
+      blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+      if (blob && blob.size <= 1300000) break;
+      scale *= 0.8; quality = 0.7;
+    }
+    if (!blob) throw new Error(`${file.name} : impossible de préparer l’image.`);
+    return { name: file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_'), mime: 'image/jpeg', data: await blobToDataUrl(blob) };
+  } finally { URL.revokeObjectURL(url); }
+}
+async function addImages(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length || busy) return;
+  if (attachments.length + files.length > MAX_IMAGES) { error = `Vous pouvez analyser au maximum ${MAX_IMAGES} images à la fois.`; draw(); return; }
+  busy = true; error = ''; notice = '';
+  draw();
+  try {
+    for (const file of files) attachments.push(await compressImage(file));
+    notice = `${files.length} image(s) préparée(s). Vous pouvez lancer l’analyse.`;
+  } catch (e) { error = e.message || 'Impossible de lire cette image.'; }
+  finally { busy = false; draw(); }
+}
+
+function fieldValue(target) {
+  if (target.type === 'checkbox') return target.checked;
+  if (target.type === 'number') return Number(target.value);
+  return target.value;
+}
+document.addEventListener('input', e => {
+  const field = e.target.closest('[data-agent-field]');
+  if (!field || !forms[tool] || !(field.dataset.agentField in forms[tool])) return;
+  forms[tool][field.dataset.agentField] = fieldValue(field);
+});
+document.addEventListener('change', e => {
+  if (e.target.matches('[data-agent-class]')) {
+    classe = e.target.value === '4SI2' ? '4SI2' : '3SI1';
+    forms.fiche.session = ''; forms.cahier.session = '';
+    error = ''; notice = '';
+    draw(); return;
+  }
+  if (e.target.id === 'agent-copy-files') { addImages(e.target.files); return; }
+  const field = e.target.closest('[data-agent-field]');
+  if (field && field.tagName === 'SELECT') {
+    forms[tool][field.dataset.agentField] = fieldValue(field);
+    error = ''; draw();
+  }
+});
+document.addEventListener('click', e => {
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-history],[data-agent-clear-history]');
+  if (!button) return;
+  if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
+  if (button.hasAttribute('data-agent-generate')) generate();
+  if (button.hasAttribute('data-agent-test')) testConnection();
+  if (button.hasAttribute('data-agent-apply')) applyResult();
+  if (button.hasAttribute('data-agent-download')) downloadResult();
+  if (button.hasAttribute('data-agent-print')) printResult();
+  if (button.dataset.agentRemove !== undefined) { attachments.splice(Number(button.dataset.agentRemove), 1); draw(); }
+  if (button.dataset.agentHistory) {
+    const item = history.find(x => x.id === button.dataset.agentHistory);
+    if (item) { tool = item.task; classe = item.classe; results[tool] = item.result; resultMeta[tool] = item.meta; error = ''; notice = ''; draw(); }
+  }
+  if (button.hasAttribute('data-agent-clear-history') && confirm('Effacer l’historique local des documents générés ?')) { history = []; writeHistory(); draw(); }
+});
+
+root.STI_AGENT = {
+  version: VERSION,
+  render(context) { ctx = context; draw(); },
+  _test: { ficheText, relatedNotions, validate, buildPayload: () => buildPayload(makeMeta()) }
+};
+})(window);

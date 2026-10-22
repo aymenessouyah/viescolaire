@@ -260,7 +260,17 @@ Après modification : `git add . && git commit -m "…" && git push`.
 
 ---
 
-## 8. Vérifications techniques (facultatif)
+## 8. Agent STI — assistant pédagogique IA
+
+La version **1.5.0** ajoute un véritable agent pédagogique dans le menu **Agent STI · IA** : fiches pédagogiques, séries d'exercices avec corrigés, correction de copies texte ou photos, cahier de textes et propositions de répartition.
+
+L'interface appelle une fonction sécurisée `supabase/functions/assistant-ia`. La clé privée du fournisseur d'IA reste dans les secrets Supabase et n'est jamais publiée sur GitHub Pages. Chaque résultat est affiché pour vérification ; l'agent ne confirme pas une séance et n'enregistre pas une note automatiquement.
+
+**Installation, choix du modèle, déploiement et vérifications : consultez [`AGENT_IA.md`](AGENT_IA.md).**
+
+---
+
+## 9. Vérifications techniques (facultatif)
 
 Les tests automatisés valident l'assemblage réel du site (117 assertions : onglets, horaires, calendrier,
 répartition, compétences, annexes, recherche, sauvegarde distante simulée, PWA) :

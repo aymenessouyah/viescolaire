@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.4.5-cahier-confirmation";
+const APP_VER = "v1.5.0-agent-sti";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -193,6 +193,7 @@ const TABS = [
   { id:"v-fiche", t:"Fiche pédagogique", ico:"book" },
   { id:"v-avancement", t:"Avancement des cours", ico:"target" },
   { id:"v-devoirs", t:"Répartition des devoirs", ico:"pen" },
+  { id:"v-agent", t:"Agent STI · IA", ico:"cpu" },
 
   { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
@@ -224,6 +225,7 @@ function renderAll(silent){
   renderCahier();
   renderRef();
   if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
+  if (window.STI_AGENT) window.STI_AGENT.render({store:store,sessions:SESSIONS,view:currentTab});
   renderCompte();
   renderLoginInvite();
   if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
@@ -1585,6 +1587,8 @@ function openModal(cls, n){
     </div>
     <div style="margin-bottom:12px"><label class="f">Titre / contenu prévu de la séance (modifiable)</label>
       <input type="text" id="m-titre" value="${escapeHtml(o.title || (s.blk ? s.blk.t : "Séance à planifier"))}"></div>
+    <div style="margin-bottom:12px"><label class="f">Préparation pédagogique de référence (avant la séance)</label>
+      <textarea id="m-preparation" placeholder="Objectifs, prérequis, phases de la séance, activités et évaluation…">${escapeHtml(o.preparation || "")}</textarea></div>
     <div style="margin-bottom:12px"><label class="f">Déroulement réellement effectué en classe</label>
       <textarea id="m-contenu" placeholder="Ex. : activités menées, notions abordées, exercices traités…">${escapeHtml(o.contenu || "")}</textarea></div>
     <div style="margin-bottom:12px"><label class="f">Travail donné à la maison</label>
@@ -1619,6 +1623,7 @@ function saveModal(){
     notions: window.STI_TRACK ? window.STI_TRACK.selection(mCtx.cls) : (previous.notions || []),
     notionsVersion: window.STI_TRACK ? window.STI_TRACK.version : previous.notionsVersion,
     title: document.getElementById("m-titre").value.trim(),
+    preparation: document.getElementById("m-preparation").value.trim(),
     contenu: document.getElementById("m-contenu").value.trim(),
     devoirs: document.getElementById("m-devoirs").value.trim(),
     obs: document.getElementById("m-obs").value.trim(),
