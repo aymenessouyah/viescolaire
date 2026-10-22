@@ -7,13 +7,14 @@
 (function (root) {
 'use strict';
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
+const MAX_CODE_FILES = 8;
 const TASKS = {
   fiche: { label: 'Fiche pédagogique', short: 'Fiche', icon: 'file', desc: 'Préparer une séance complète à partir du planning.' },
-  exercices: { label: 'Séries d’exercices', short: 'Exercices', icon: 'layers', desc: 'Créer les énoncés, les corrigés et le barème.' },
-  correction: { label: 'Correction de copies', short: 'Correction', icon: 'check', desc: 'Analyser une copie texte ou photo, question par question.' },
+  exercices: { label: 'Séries d’exercices', short: 'Exercices', icon: 'layers', desc: 'Créer des exercices théoriques ou pratiques avec corrigés.' },
+  correction: { label: 'Correction de copies', short: 'Correction', icon: 'check', desc: 'Analyser texte, photos ou code avec un barème validé.' },
   cahier: { label: 'Cahier de textes', short: 'Cahier', icon: 'book', desc: 'Rédiger une entrée à partir du réalisé déclaré.' },
   repartition: { label: 'Répartition', short: 'Répartition', icon: 'calendar', desc: 'Proposer une progression sans changer les dates.' }
 };
@@ -39,13 +40,14 @@ let error = '';
 let notice = '';
 let status = null;
 let attachments = [];
+let codeFiles = [];
 let results = {};
 let resultMeta = {};
 let history = readHistory();
 const forms = {
   fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '' },
-  exercices: { sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '' },
-  correction: { identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
+  exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '' },
+  correction: { type_devoir: 'théorique', mode_bareme: 'fourni', identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
   cahier: { session: '', realise: '', devoirs: '', observations: '' },
   repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' }
 };
@@ -158,6 +160,9 @@ function sessionOptions() {
   const selected = forms[tool]?.session || '';
   return sessions().map(s => `<option value="${keyOf(s)}" ${selected === keyOf(s) ? 'selected' : ''}>${esc(`S${s.n} · ${dateLong(s.iso)} · ${titleOf(s)}`)}</option>`).join('');
 }
+function assignmentTypeOptions(value) {
+  return ['théorique', 'pratique'].map(x => `<option value="${x}" ${value === x ? 'selected' : ''}>${x === 'pratique' ? 'Pratique' : 'Théorique'}</option>`).join('');
+}
 function generateButton(label = 'Générer avec mon agent') {
   return `<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
 }
@@ -173,6 +178,7 @@ function formHtml() {
   if (tool === 'exercices') return `
     <div class="agent-form-grid">
       <label class="agent-field full"><span>Notion ou thème</span><input data-agent-field="sujet" value="${esc(f.sujet)}" required placeholder="Ex. : JavaScript — événements et contrôle de saisie"></label>
+      <label class="agent-field"><span>Type de devoir</span><select data-agent-field="type_devoir">${assignmentTypeOptions(f.type_devoir)}</select></label>
       <label class="agent-field"><span>Type de document</span><select data-agent-field="format">${['Série d’exercices', 'Travail pratique', 'Devoir de contrôle', 'Révision orientée bac'].map(x => `<option ${f.format === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Difficulté</span><select data-agent-field="difficulte">${['Progressive', 'Facile', 'Moyenne', 'Difficile', 'Niveau baccalauréat'].map(x => `<option ${f.difficulte === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Nombre d’exercices</span><input type="number" min="1" max="10" data-agent-field="nombre" value="${esc(f.nombre)}"></label>
@@ -195,17 +201,23 @@ function formHtml() {
       <label class="agent-field"><span>Classe et calendrier</span><input value="${classe} · dates et numéros conservés" disabled></label>
       <label class="agent-field full"><span>Objectifs de la réorganisation</span><textarea data-agent-field="consignes" rows="5">${esc(f.consignes)}</textarea></label>
     </div><div class="agent-truth-note">${icon('calendar')}<div><strong>Dates, vacances et évaluations restent repérables.</strong><span>L’application n’écrase ni le contenu réalisé ni les séances assurées. L’application de la proposition ne concerne que les séances à venir.</span></div></div>${generateButton('Proposer la répartition')}`;
+  const practical = f.type_devoir === 'pratique';
+  const proposeRubric = f.mode_bareme === 'proposer';
+  const rubricFirst = proposeRubric && !f.bareme.trim();
   return `
     <div class="agent-form-grid">
+      <label class="agent-field"><span>Type de devoir</span><select data-agent-field="type_devoir">${assignmentTypeOptions(f.type_devoir)}</select></label>
+      <label class="agent-field"><span>Mode de barème</span><select data-agent-field="mode_bareme"><option value="fourni" ${f.mode_bareme === 'fourni' ? 'selected' : ''}>Je fournis le barème</option><option value="proposer" ${proposeRubric ? 'selected' : ''}>L’agent propose le barème</option></select></label>
       <label class="agent-field"><span>Identifiant anonyme de la copie</span><input data-agent-field="identifiant" value="${esc(f.identifiant)}" maxlength="60"></label>
       <label class="agent-field"><span>Note maximale</span><input type="number" min="1" max="1000" data-agent-field="sur" value="${esc(f.sur)}"></label>
-      <label class="agent-field full"><span>Sujet et corrigé de référence</span><textarea data-agent-field="sujet" rows="6" placeholder="Collez les questions et, si possible, les réponses attendues…">${esc(f.sujet)}</textarea></label>
-      <label class="agent-field full"><span>Barème détaillé</span><textarea data-agent-field="bareme" rows="3" placeholder="Ex. : Exercice 1 : 6 pts (Q1 : 2 pts, Q2 : 4 pts) ; exercice 2 : 8 pts…">${esc(f.bareme)}</textarea></label>
-      <label class="agent-field full"><span>Réponses de l’élève en texte <em>ou ajoutez des photos ci-dessous</em></span><textarea data-agent-field="copie" rows="6" placeholder="Collez ici la transcription de la copie, ou laissez vide si vous ajoutez des photos…">${esc(f.copie)}</textarea></label>
-      <label class="agent-field full agent-upload"><span>Photos de la copie · ${attachments.length}/${MAX_IMAGES}</span><input id="agent-copy-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPEG, PNG ou WebP. Les images sont réduites dans le navigateur avant l’envoi. 6 pages maximum par analyse.</small></label>
+      <label class="agent-field full"><span>${practical ? 'Sujet, consignes techniques et corrigé de référence' : 'Sujet et corrigé de référence'}</span><textarea data-agent-field="sujet" rows="6" placeholder="${practical ? 'Décrivez le travail attendu, les fichiers à produire, les technologies imposées et les critères de fonctionnement…' : 'Collez les questions et, si possible, les réponses attendues…'}">${esc(f.sujet)}</textarea></label>
+      <label class="agent-field full"><span>${proposeRubric ? 'Barème proposé · à relire et modifier avant la correction' : 'Barème détaillé'}</span><textarea data-agent-field="bareme" rows="4" placeholder="${proposeRubric ? 'Laissez vide pour que l’agent propose d’abord un barème. Vous pourrez ensuite le modifier ici.' : 'Ex. : Exercice 1 : 6 pts (Q1 : 2 pts, Q2 : 4 pts) ; exercice 2 : 8 pts…'}">${esc(f.bareme)}</textarea>${proposeRubric ? '<small>Première étape : proposition du barème. Deuxième étape : correction avec le texte que vous aurez validé.</small>' : ''}</label>
+      ${practical ? `<label class="agent-field full agent-upload"><span>Fichiers de code de l’élève · ${codeFiles.length}/${MAX_CODE_FILES}</span><input id="agent-code-files" type="file" accept=".html,.htm,.css,.js,.php,.sql,.txt,.json" multiple><small>HTML, CSS, JS, PHP, SQL, TXT ou JSON · 8 fichiers, 200 Ko chacun. Leur contenu est lu localement puis transmis avec la demande.</small></label>${codeFiles.length ? `<div class="agent-attachments full">${codeFiles.map((file, i) => `<span>${esc(file.name)}<button type="button" data-agent-remove-code="${i}" aria-label="Retirer ${esc(file.name)}">×</button></span>`).join('')}</div>` : ''}` : ''}
+      <label class="agent-field full"><span>${practical ? 'Code ou réponses de l’élève en texte' : 'Réponses de l’élève en texte'} <em>formats combinables avec les fichiers et images</em></span><textarea data-agent-field="copie" rows="6" placeholder="${practical ? 'Collez ici le code de l’élève ou les résultats de ses tests…' : 'Collez ici la transcription de la copie, ou laissez vide si vous ajoutez des photos…'}">${esc(f.copie)}</textarea></label>
+      <label class="agent-field full agent-upload"><span>${practical ? 'Captures du code, du rendu ou des tests' : 'Photos de la copie'} · ${attachments.length}/${MAX_IMAGES}</span><input id="agent-copy-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPEG, PNG ou WebP. Les images sont réduites dans le navigateur avant l’envoi. 6 images maximum par analyse.</small></label>
       ${attachments.length ? `<div class="agent-attachments full">${attachments.map((a, i) => `<span>${esc(a.name)}<button type="button" data-agent-remove="${i}" aria-label="Retirer ${esc(a.name)}">×</button></span>`).join('')}</div>` : ''}
       <label class="agent-field full"><span>Règles d’appréciation <em>facultatif</em></span><input data-agent-field="consignes" value="${esc(f.consignes)}" placeholder="Ex. : valoriser la démarche, ne pas pénaliser deux fois la même erreur"></label>
-    </div><div class="agent-truth-note">${icon('shield')}<div><strong>Correction assistée, jamais note automatique définitive.</strong><span>Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.</span></div></div>${generateButton('Analyser et proposer une correction')}`;
+    </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${generateButton(rubricFirst ? 'Proposer d’abord le barème' : 'Analyser et proposer une correction')}`;
 }
 
 function resultHeader(title, subtitle, applyLabel = '') {
@@ -231,7 +243,7 @@ function renderFiche(r, meta) {
 function renderExercices(r, meta) {
   const exos = asArray(r.exercices);
   return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`)}<div id="agent-result" class="agent-document">
-    <div class="agent-doc-heading"><span>${esc(r.format || 'SÉRIE D’EXERCICES')} · ${esc(meta.classe)}</span><h2>${esc(r.titre || 'Exercices STI')}</h2><p>${esc(r.duree || forms.exercices.duree + ' min')}${r.bareme_total ? ` · Barème : ${esc(r.bareme_total)}` : ''}</p></div>
+    <div class="agent-doc-heading"><span>${esc(r.format || 'SÉRIE D’EXERCICES')} · ${esc(meta.classe)} · ${esc((meta.type_devoir || 'théorique').toUpperCase())}</span><h2>${esc(r.titre || 'Exercices STI')}</h2><p>${esc(r.duree || forms.exercices.duree + ' min')}${r.bareme_total ? ` · Barème : ${esc(r.bareme_total)}` : ''}</p></div>
     ${r.introduction ? `<p class="agent-intro">${nl(r.introduction)}</p>` : ''}
     ${exos.map((ex, i) => `<section class="agent-exercise"><h3>Exercice ${i + 1}${ex.titre ? ` — ${esc(ex.titre)}` : ''}${ex.points ? `<span>${esc(ex.points)}</span>` : ''}</h3><p>${nl(ex.enonce)}</p>${asArray(ex.questions).length ? `<ol>${asArray(ex.questions).map(q => `<li>${nl(typeof q === 'object' ? q.enonce || q.question : q)}${typeof q === 'object' && q.bareme ? `<em class="agent-points">${esc(q.bareme)}</em>` : ''}</li>`).join('')}</ol>` : ''}<details class="agent-correction"><summary>Voir le corrigé</summary><div>${nl(ex.correction)}${asArray(ex.corrige).length ? `<ol>${asArray(ex.corrige).map(q => `<li>${nl(typeof q === 'object' ? [q.reponse, q.explication].filter(Boolean).join(' — ') : q)}</li>`).join('')}</ol>` : ''}</div></details></section>`).join('') || '<p>Aucun exercice structuré dans la réponse.</p>'}
     ${asArray(r.competences).length ? `<section><h3>Compétences travaillées</h3>${chipList(r.competences)}</section>` : ''}
@@ -257,10 +269,12 @@ function renderRepartition(r, meta) {
 function renderCorrection(r, meta) {
   const questions = asArray(r.questions);
   const uncertain = asArray(r.transcription_incertaine);
-  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · note proposée à contrôler`)}<div id="agent-result" class="agent-document">
-    <div class="agent-doc-heading"><span>CORRECTION ASSISTÉE · ${esc(meta.classe)} · ${esc(meta.identifiant)}</span><h2>Proposition d’évaluation</h2></div>
+  const limitations = asArray(r.limites_analyse);
+  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · ${meta.type_devoir || 'théorique'} · note proposée à contrôler`)}<div id="agent-result" class="agent-document">
+    <div class="agent-doc-heading"><span>CORRECTION ${esc((meta.type_devoir || 'théorique').toUpperCase())} · ${esc(meta.classe)} · ${esc(meta.identifiant)}</span><h2>Proposition d’évaluation</h2></div>
     <div class="agent-grade"><div><strong>${esc(r.note ?? '—')}</strong><span>/ ${esc(r.sur ?? meta.sur)}</span></div><p><b>Confiance de lecture :</b> ${esc(r.confiance || 'à vérifier')}<br>Cette note n’est pas enregistrée automatiquement.</p></div>
     ${uncertain.length ? `<div class="agent-uncertainties"><strong>Passages à relire sur la copie</strong>${bulletList(uncertain)}</div>` : ''}
+    ${limitations.length ? `<div class="agent-uncertainties"><strong>Limites de l’analyse${meta.type_devoir === 'pratique' ? ' pratique' : ''}</strong>${bulletList(limitations)}</div>` : ''}
     <section><h3>Détail question par question</h3><div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>Question</th><th>Points</th><th>Justification</th></tr></thead><tbody>${questions.map(q => `<tr><td><strong>${esc(q.question || q.numero)}</strong></td><td><strong>${esc(q.points_attribues ?? '—')} / ${esc(q.points_max ?? '—')}</strong></td><td>${nl(q.justification)}${asArray(q.erreurs).length ? `<p><b>Erreurs :</b> ${esc(asArray(q.erreurs).join(' ; '))}</p>` : ''}${asArray(q.elements_corrects).length ? `<p><b>Réussites :</b> ${esc(asArray(q.elements_corrects).join(' ; '))}</p>` : ''}</td></tr>`).join('')}</tbody></table></div></section>
     <section><h3>Appréciation proposée</h3><p>${nl(r.appreciation)}</p></section><section><h3>Remédiation conseillée</h3>${bulletList(r.remediation)}</section>
   </div>`;
@@ -309,8 +323,9 @@ function validate() {
   if (tool === 'exercices' && !f.sujet.trim()) return 'Indiquez la notion ou le thème des exercices.';
   if (tool === 'correction') {
     if (!f.sujet.trim()) return 'Ajoutez le sujet et, si possible, le corrigé de référence.';
-    if (!f.bareme.trim()) return 'Ajoutez le barème détaillé pour obtenir une correction contrôlable.';
-    if (!f.copie.trim() && !attachments.length) return 'Ajoutez les réponses de l’élève en texte ou au moins une photo de la copie.';
+    const rubricFirst = f.mode_bareme === 'proposer' && !f.bareme.trim();
+    if (!rubricFirst && !f.bareme.trim()) return 'Ajoutez le barème détaillé ou choisissez « L’agent propose le barème ».';
+    if (!rubricFirst && !f.copie.trim() && !attachments.length && !(f.type_devoir === 'pratique' && codeFiles.length)) return 'Ajoutez les réponses de l’élève : texte, fichier de code ou image selon le type de devoir.';
   }
   if (tool === 'repartition' && !sessions().some(s => s.tri === Number(f.trimestre))) return 'Aucune séance n’est disponible pour ce trimestre.';
   return '';
@@ -322,7 +337,8 @@ function makeMeta() {
     return { ...base, session: keyOf(s), numero: s.n, date: s.iso, titre: titleOf(s) };
   }
   if (tool === 'repartition') return { ...base, trimestre: Number(forms.repartition.trimestre) };
-  if (tool === 'correction') return { ...base, identifiant: forms.correction.identifiant.trim() || 'Copie anonyme', sur: Number(forms.correction.sur) || 20 };
+  if (tool === 'correction') return { ...base, type_devoir: forms.correction.type_devoir, mode_bareme: forms.correction.mode_bareme, identifiant: forms.correction.identifiant.trim() || 'Copie anonyme', sur: Number(forms.correction.sur) || 20 };
+  if (tool === 'exercices') return { ...base, type_devoir: forms.exercices.type_devoir };
   return base;
 }
 function buildPayload(meta) {
@@ -341,9 +357,25 @@ function buildPayload(meta) {
       calendrier: { vacances: root.VACANCES || [], fin_annee: root.SCHOOL?.finAnnee }
     };
   } else {
-    base.input = { ...f, note_maximale: Number(f.sur) || 20, regles: 'Attribuer les points uniquement à partir du sujet, du barème et de la copie. Signaler toute illisibilité.' };
+    base.input = { ...f, fichiers_code: f.type_devoir === 'pratique' ? codeFiles : [], note_maximale: Number(f.sur) || 20, regles: 'Attribuer les points uniquement à partir du sujet, du barème validé et des éléments fournis. Signaler toute illisibilité et ne jamais prétendre avoir exécuté le code.' };
   }
   return base;
+}
+function buildRubricPayload(meta) {
+  const f = forms.correction;
+  return {
+    context: { ...commonContext(), ...meta, task: 'bareme' },
+    input: { type_devoir: f.type_devoir, sujet: f.sujet, note_maximale: Number(f.sur) || 20, consignes: f.consignes }
+  };
+}
+function rubricToText(r) {
+  const lines = [`Barème proposé — ${r.type_devoir || forms.correction.type_devoir} — total : ${r.total ?? forms.correction.sur} points`];
+  asArray(r.criteres).forEach(c => {
+    lines.push('', `${c.question || 'Critère'} : ${c.points ?? '—'} pts`);
+    asArray(c.criteres).forEach(x => lines.push(`• ${x}`));
+  });
+  if (asArray(r.regles).length) lines.push('', 'Règles :', ...asArray(r.regles).map(x => `• ${x}`));
+  return lines.join('\n');
 }
 async function callAgent(task, payload = {}) {
   if (!root.cloudReady || !root.cloudReady()) throw new Error('La connexion Supabase n’est pas configurée. Ouvrez les réglages Cloud de votre plateforme.');
@@ -378,24 +410,32 @@ async function generate() {
   error = validate();
   notice = '';
   if (error) { draw(); return; }
-  const task = tool;
+  const rubricFirst = tool === 'correction' && forms.correction.mode_bareme === 'proposer' && !forms.correction.bareme.trim();
+  const task = rubricFirst ? 'bareme' : tool;
   const meta = makeMeta();
-  const payload = buildPayload(meta);
+  const payload = rubricFirst ? buildRubricPayload(meta) : buildPayload(meta);
   busy = true;
-  results[task] = null;
+  results[tool] = null;
   draw();
   try {
     const data = await callAgent(task, payload);
     if (!data.result || typeof data.result !== 'object') throw new Error('La réponse de l’agent ne contient pas de document exploitable.');
-    results[task] = data.result;
-    resultMeta[task] = meta;
     status = { configured: true, model: data.meta?.model || status?.model };
+    if (rubricFirst) {
+      forms.correction.bareme = rubricToText(data.result);
+      notice = 'Le barème proposé est maintenant dans le champ modifiable. Relisez-le, ajustez les points si nécessaire, puis lancez la correction avec ce barème.';
+      return;
+    }
+    results[tool] = data.result;
+    resultMeta[tool] = meta;
     if (task !== 'correction') {
       history.unshift({ id: root.crypto?.randomUUID?.() || `agent-${Date.now()}`, created: new Date().toISOString(), task, classe: meta.classe, title: resultTitle(task, data.result, meta), result: data.result, meta });
       history = history.slice(0, 8);
       writeHistory();
+    } else {
+      attachments = [];
+      codeFiles = [];
     }
-    if (task === 'correction') attachments = [];
   } catch (e) {
     error = e.message || String(e);
   } finally {
@@ -521,6 +561,27 @@ async function compressImage(file) {
     return { name: file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_'), mime: 'image/jpeg', data: await blobToDataUrl(blob) };
   } finally { URL.revokeObjectURL(url); }
 }
+async function addCodeFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length || busy) return;
+  if (codeFiles.length + files.length > MAX_CODE_FILES) { error = `Vous pouvez ajouter au maximum ${MAX_CODE_FILES} fichiers de code par correction.`; draw(); return; }
+  busy = true; error = ''; notice = '';
+  draw();
+  try {
+    const prepared = [];
+    for (const file of files) {
+      const extension = file.name.split('.').pop().toLowerCase();
+      if (!['html', 'htm', 'css', 'js', 'php', 'sql', 'txt', 'json'].includes(extension)) throw new Error(`${file.name} : ce type de fichier n’est pas accepté.`);
+      if (file.size > 200 * 1024) throw new Error(`${file.name} : fichier supérieur à 200 Ko.`);
+      const content = await file.text();
+      if (content.includes('\u0000')) throw new Error(`${file.name} : le fichier semble binaire et ne peut pas être analysé comme du code.`);
+      prepared.push({ name: file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_'), language: extension, content });
+    }
+    codeFiles.push(...prepared);
+    notice = `${prepared.length} fichier(s) de code ajouté(s) à la correction.`;
+  } catch (e) { error = e.message || 'Impossible de lire ce fichier de code.'; }
+  finally { busy = false; draw(); }
+}
 async function addImages(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length || busy) return;
@@ -552,14 +613,16 @@ document.addEventListener('change', e => {
     draw(); return;
   }
   if (e.target.id === 'agent-copy-files') { addImages(e.target.files); return; }
+  if (e.target.id === 'agent-code-files') { addCodeFiles(e.target.files); return; }
   const field = e.target.closest('[data-agent-field]');
   if (field && field.tagName === 'SELECT') {
     forms[tool][field.dataset.agentField] = fieldValue(field);
+    if (tool === 'correction' && ['type_devoir', 'mode_bareme'].includes(field.dataset.agentField)) results.correction = null;
     error = ''; draw();
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-history],[data-agent-clear-history]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
@@ -568,6 +631,7 @@ document.addEventListener('click', e => {
   if (button.hasAttribute('data-agent-download')) downloadResult();
   if (button.hasAttribute('data-agent-print')) printResult();
   if (button.dataset.agentRemove !== undefined) { attachments.splice(Number(button.dataset.agentRemove), 1); draw(); }
+  if (button.dataset.agentRemoveCode !== undefined) { codeFiles.splice(Number(button.dataset.agentRemoveCode), 1); draw(); }
   if (button.dataset.agentHistory) {
     const item = history.find(x => x.id === button.dataset.agentHistory);
     if (item) { tool = item.task; classe = item.classe; results[tool] = item.result; resultMeta[tool] = item.meta; error = ''; notice = ''; draw(); }

@@ -5,8 +5,8 @@ L'**Agent STI** est un véritable agent pédagogique intégré à Vie Scolaire. 
 ## Outils inclus
 
 - **Fiche pédagogique** : objectifs, prérequis, phases de 2 h, notions, évaluation, travail et remédiation ; insertion possible dans la préparation d'une séance.
-- **Séries d'exercices** : énoncés, questions, corrigés et barème ; export HTML et impression.
-- **Correction de copies** : texte ou photos, justification question par question, note proposée, passages illisibles et remédiation. Aucune note n'est saisie automatiquement.
+- **Séries d'exercices** : énoncés théoriques ou pratiques, questions, corrigés et barème ; export HTML et impression.
+- **Correction de copies** : choix explicite entre devoir **théorique** et **pratique** ; texte, photos, captures et fichiers HTML/CSS/JS/PHP/SQL/TXT/JSON pour le pratique. Barème fourni par l'enseignant ou proposé d'abord par l'agent puis modifiable avant correction. Justification question par question, limites de l'analyse, note proposée et remédiation. Le code n'est jamais prétendu exécuté et aucune note n'est saisie automatiquement.
 - **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; la séance n'est jamais confirmée automatiquement.
 - **Répartition** : proposition séance par séance avec dates et numéros inchangés ; seules les séances futures peuvent recevoir la proposition.
 
@@ -92,16 +92,18 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 1. Ouvrir Vie Scolaire et se connecter avec le compte professeur.
 2. Ouvrir **Agent STI · IA** dans le menu principal.
 3. Cliquer sur **Tester la connexion**. Le modèle configuré doit apparaître.
-4. Générer d'abord une courte série de deux exercices pour vérifier l'API.
-5. Tester ensuite une fiche, puis une correction avec une copie fictive ou anonymisée.
-6. Vérifier les points et les faits avant toute application ou export.
+4. Générer d'abord une courte série théorique, puis une courte série pratique pour vérifier l'adaptation au type de devoir.
+5. Tester une correction théorique avec une copie fictive et un barème fourni.
+6. Tester une correction pratique avec de petits fichiers de code anonymisés : choisir **L’agent propose le barème**, relire et modifier la proposition, puis lancer la correction. Vérifier que le rapport distingue bien l'analyse du code du fonctionnement à tester.
+7. Vérifier les points et les faits avant toute application ou export.
 
 ## Protection des données
 
 - Envoyer uniquement la séance, le thème ou la copie nécessaire à la demande ; l'agent n'envoie pas la base complète des élèves.
 - Utiliser des identifiants anonymes (« Copie 1 ») plutôt que les noms complets.
 - Les images sont réduites dans le navigateur, limitées à six par demande, puis transmises à la fonction pour l'analyse.
-- Les corrections ne sont pas ajoutées à l'historique local des générations.
+- Les fichiers de code sont limités à huit fichiers de 200 Ko chacun ; ils sont lus localement et ne sont pas enregistrés dans l'historique.
+- Les corrections et les propositions de barème ne sont pas ajoutées à l'historique local des générations.
 - Les autres documents récents sont conservés dans le navigateur pour être rouverts ; ils peuvent être effacés depuis l'agent.
 - Aucune correction n'est enregistrée dans les notes et aucune séance n'est marquée assurée sans action de l'enseignant.
 

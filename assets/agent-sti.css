@@ -52,6 +52,7 @@
 #v-agent .agent-field.full,#v-agent .agent-attachments.full{grid-column:1/-1}
 #v-agent .agent-field>span{color:var(--agent-ink);font-size:11px;font-weight:750}
 #v-agent .agent-field>span em{color:var(--agent-muted);font-size:10px;font-style:normal;font-weight:450}
+#v-agent .agent-field>small{color:var(--agent-muted);font-size:10px;line-height:1.5}
 #v-agent .agent-field input,#v-agent .agent-field select,#v-agent .agent-field textarea{width:100%;min-width:0;border:1px solid #cfd8d1;border-radius:10px;color:var(--agent-ink);background:var(--agent-card);outline:none;transition:border-color .15s,box-shadow .15s}
 #v-agent .agent-field input,#v-agent .agent-field select{height:42px;padding:0 11px}
 #v-agent .agent-field textarea{min-height:80px;padding:11px;resize:vertical;line-height:1.5}

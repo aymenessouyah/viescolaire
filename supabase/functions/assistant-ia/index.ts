@@ -10,7 +10,7 @@ const CORS = {
   "Cache-Control": "no-store",
 };
 
-const TASKS = new Set(["fiche", "exercices", "correction", "cahier", "repartition"]);
+const TASKS = new Set(["fiche", "exercices", "correction", "bareme", "cahier", "repartition"]);
 const MAX_BODY = 12 * 1024 * 1024;
 const MAX_IMAGES = 6;
 
@@ -79,8 +79,14 @@ FORMAT JSON EXACT :
 
   exercices: `
 TÂCHE : créer le document demandé avec des exercices originaux et leur corrigé.
-Respecte exactement le nombre d'exercices demandé, le niveau, la durée et les
-contraintes. Les questions doivent être autonomes, sans renvoi à une ressource absente.
+Respecte exactement le nombre d'exercices demandé, le niveau, la durée, le type de
+devoir et les contraintes.
+- type_devoir = pratique : privilégie une réalisation sur machine, les fichiers à
+  produire, des consignes testables et les critères de fonctionnement. Le corrigé
+  doit fournir le code attendu et les vérifications à effectuer.
+- type_devoir = théorique : privilégie concepts, raisonnement, lecture ou écriture
+  de code sur papier et explications, sans exiger une machine sauf consigne contraire.
+Les questions doivent être autonomes, sans renvoi à une ressource absente.
 La difficulté progressive part de l'application directe vers le raisonnement ou la
 production. Pour un devoir, répartis un barème total cohérent sur 20 points, sauf
 instruction différente. Pour chaque exercice, la correction doit répondre à TOUTES
@@ -109,10 +115,21 @@ FORMAT JSON EXACT :
 
   correction: `
 TÂCHE : proposer une correction vérifiable d'une copie à partir du sujet, du corrigé
-de référence, du barème et des réponses de l'élève (texte et/ou images).
+de référence, du barème et des éléments de l'élève (texte, fichiers de code et/ou images).
+
+ADAPTATION AU TYPE DE DEVOIR
+- type_devoir = théorique : évalue les réponses, les connaissances, le raisonnement
+  et les résultats attendus, question par question.
+- type_devoir = pratique : analyse le code et les éléments fournis, le respect des
+  technologies et consignes, l'intégration entre fichiers, les erreurs visibles et
+  les tests documentés. Tu NE DISPOSES d'aucun environnement d'exécution : ne déclare
+  jamais qu'un programme fonctionne ou qu'un test réussit sans résultat fourni.
+  Distingue clairement l'analyse statique du fonctionnement réel à vérifier et indique
+  cette limite dans limites_analyse. Ne pénalise pas une qualité non demandée par le
+  sujet ou le barème.
 
 MÉTHODE :
-1. Lis la totalité de la copie avant d'attribuer les points.
+1. Lis la totalité de la copie ou des fichiers avant d'attribuer les points.
 2. Associe chaque réponse à sa question et au barème correspondant.
 3. Justifie chaque attribution par des éléments observables de la copie. Ne donne pas
    les points pour une réponse absente et ne déduis pas une intention non écrite.
@@ -140,10 +157,39 @@ FORMAT JSON EXACT :
   ],
   "appreciation": "appréciation courte, factuelle et encourageante",
   "remediation": ["travail précis conseillé"],
-  "transcription_incertaine": ["page, question ou passage à relire"]
+  "transcription_incertaine": ["page, question ou passage à relire"],
+  "limites_analyse": ["notamment : code non exécuté, fonctionnement à vérifier pour un devoir pratique"]
 }
-Les tableaux erreurs, elements_corrects, remediation et transcription_incertaine
-peuvent être vides, mais doivent rester des tableaux.`,
+Les tableaux erreurs, elements_corrects, remediation, transcription_incertaine et
+limites_analyse peuvent être vides, mais doivent rester des tableaux.`,
+
+  bareme: `
+TÂCHE : proposer un barème AVANT toute correction de copie, à partir du sujet, du
+type de devoir, du total demandé et des consignes de l'enseignant.
+Ne note aucun élève et ne produis aucune correction de copie. Le total des critères
+doit être exactement égal à note_maximale. Répartis les points de manière contrôlable
+et indique des critères observables.
+- Pour un devoir théorique : associe les points aux réponses, connaissances,
+  raisonnements et résultats attendus.
+- Pour un devoir pratique : associe les points aux productions attendues, au respect
+  des consignes, aux fonctionnalités à tester et au code. Comme aucun code ne sera
+  exécuté à cette étape, distingue les critères statiques des tests que l'enseignant
+  devra vérifier. N'invente pas de résultat de test.
+
+FORMAT JSON EXACT :
+{
+  "titre": "Barème proposé — titre du devoir",
+  "type_devoir": "théorique ou pratique",
+  "total": 20,
+  "criteres": [
+    {
+      "question": "Exercice, question ou production évaluée",
+      "points": 0,
+      "criteres": ["critère observable avec la répartition éventuelle des points"]
+    }
+  ],
+  "regles": ["règle d'attribution, de tolérance ou de vérification pratique"]
+}`,
 
   cahier: `
 TÂCHE : rédiger une entrée de cahier de textes UNIQUEMENT à partir du contenu
@@ -195,6 +241,7 @@ function validateResult(task: string, result: any): boolean {
   if (task === "fiche") return Array.isArray(result.objectifs) && Array.isArray(result.deroulement);
   if (task === "exercices") return Array.isArray(result.exercices) && result.exercices.length > 0;
   if (task === "correction") return Array.isArray(result.questions) && Number.isFinite(Number(result.note));
+  if (task === "bareme") return Array.isArray(result.criteres) && result.criteres.length > 0 && Number.isFinite(Number(result.total));
   if (task === "cahier") return typeof result.contenu === "string" && result.contenu.trim().length > 0;
   if (task === "repartition") return Array.isArray(result.seances) && result.seances.length > 0;
   return false;
@@ -222,6 +269,13 @@ function requestConsistencyError(task: string, result: any, payload: any): strin
     const maximum = Number(payload?.input?.note_maximale || payload?.input?.sur || sur);
     if (!Number.isFinite(sur) || sur <= 0 || note < 0 || note > sur) return "La note proposée est hors des limites du barème.";
     if (Number.isFinite(maximum) && maximum > 0 && sur !== maximum) return "Le total de la note ne correspond pas au maximum demandé.";
+  }
+  if (task === "bareme") {
+    const maximum = Number(payload?.input?.note_maximale);
+    const total = Number(result.total);
+    const sum = result.criteres.reduce((acc: number, item: any) => acc + Number(item?.points || 0), 0);
+    if (!Number.isFinite(maximum) || maximum <= 0 || total !== maximum) return "Le total du barème proposé ne correspond pas à la note maximale demandée.";
+    if (!Number.isFinite(sum) || Math.abs(sum - maximum) > 0.001) return "La somme des critères ne correspond pas au total du barème.";
   }
   return "";
 }
