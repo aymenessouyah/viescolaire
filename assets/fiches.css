@@ -1,0 +1,137 @@
+/* =====================================================================
+   Fiches pédagogiques 4SI2 — feuille de style du modèle « S8-9 v3 »
+   Reprise à l'identique de la géométrie du modèle Word/PDF :
+   page paysage 11 × 8,5 in, marges 0,45 / 0,35 / 0,5 / 0,5,
+   Arial, couleurs orange E4661F · crème FDF4EC · sarcelle 38968E · marine 1F3A5F.
+   ===================================================================== */
+
+/* ---- la page (aperçu à l'écran et impression) ---- */
+.fpage{
+  width:11in; min-height:8.5in; box-sizing:border-box;
+  padding:0.45in 0.5in 0.35in 0.5in;
+  background:#fff; color:#333; font-family:Arial,Helvetica,sans-serif;
+  font-size:8pt; line-height:1.22;
+  position:relative; overflow:hidden;
+  box-shadow:0 6px 24px rgba(15,35,60,.16); border-radius:4px;
+  margin:0 auto;
+}
+.fpage *{box-sizing:border-box}
+
+/* mise à l'échelle dans la boîte modale : la largeur réelle est réduite */
+.fiche-modal .fpage{transform-origin:top center}
+
+/* ---- en-tête ---- */
+.f-hdr{width:100%;border-collapse:collapse}
+.f-hdr td{vertical-align:top;padding:0}
+.f-t1{font-size:20pt;font-weight:bold;color:#E4661F;letter-spacing:.2pt;line-height:1.05}
+.f-t2{font-size:10pt;font-weight:bold;color:#1F3A5F;margin-top:3pt;line-height:1.2}
+.f-r1{font-size:9pt;font-weight:bold;color:#1F3A5F;text-align:right}
+.f-r2{font-size:8pt;color:#5c7186;text-align:right;margin-top:2pt}
+.f-rule{height:2.4pt;background:#E4661F;margin:4pt 0 5pt}
+
+/* ---- bandeau d'informations ---- */
+.f-info{width:100%;border-collapse:collapse;background:#FDF4EC;margin-bottom:4pt}
+.f-info td{padding:3pt 5pt;border-right:.6pt solid #fff;vertical-align:middle}
+.f-info td:last-child{border-right:0}
+.f-lab{font-size:6.2pt;font-weight:bold;color:#E4661F;letter-spacing:.5pt;text-transform:uppercase}
+.f-val{font-size:8pt;font-weight:bold;color:#1F3A5F;margin-top:1pt}
+
+/* ---- frise du temps ---- */
+.f-time{width:100%;border-collapse:collapse;margin-bottom:4pt}
+.f-time td{color:#fff;font-size:6.6pt;font-weight:bold;letter-spacing:.3pt;
+  padding:2.2pt 4pt;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+
+/* ---- titres de section ---- */
+.f-h4{font-size:8pt;font-weight:bold;color:#fff;background:#1F3A5F;
+  padding:2pt 6pt;letter-spacing:.7pt;text-transform:uppercase;margin:4pt 0 3pt}
+
+/* ---- objectifs ---- */
+.f-obj{width:100%;border-collapse:collapse;margin-bottom:2pt}
+.f-obj td{width:33.33%;vertical-align:top;padding:3pt 5pt;background:#EDF3F2;
+  border-right:2pt solid #fff}
+.f-obj td:last-child{border-right:0}
+.f-olab{font-size:7.4pt;font-weight:bold;color:#38968E;text-transform:uppercase;letter-spacing:.4pt}
+.f-oitems{font-size:7.4pt;color:#333;margin-top:2pt;line-height:1.25}
+.f-thin{height:2pt;background:#38968E;margin:3pt 0}
+
+/* ---- bandeau méthode / prérequis / critères ---- */
+.f-band{width:100%;border-collapse:collapse;margin-bottom:2pt}
+.f-band td{vertical-align:top;padding:3.4pt 6pt}
+.f-b1{background:#FDF4EC}
+.f-b2{background:#EDF3F2}
+.f-blab{font-size:6.4pt;font-weight:bold;letter-spacing:.5pt;text-transform:uppercase;margin-bottom:1.6pt}
+.f-btxt{font-size:7.2pt;color:#333;line-height:1.24}
+.f-it{font-style:italic}
+
+/* ---- déroulement ---- */
+.f-dev{width:100%;border-collapse:collapse;table-layout:fixed}
+.f-dev th{background:#1F3A5F;color:#fff;font-size:6.4pt;font-weight:bold;
+  letter-spacing:.5pt;text-transform:uppercase;padding:2.4pt 5pt;text-align:left}
+.f-dev td{border-bottom:.5pt solid #dfe6ea;vertical-align:top;padding:2.8pt 5pt;font-size:7.2pt;line-height:1.22}
+.f-dev tr:last-child td{border-bottom:1.4pt solid #1F3A5F}
+.f-etape{background:#FDF4EC}
+.f-num{display:inline-block;width:9pt;height:9pt;line-height:9pt;text-align:center;border-radius:50%;
+  background:#E4661F;color:#fff;font-size:6.4pt;font-weight:bold;margin-right:2pt}
+.f-nom{font-weight:bold;color:#1F3A5F;font-size:7.4pt}
+.f-duree{display:block;font-size:6.6pt;color:#E4661F;font-weight:bold;margin-top:1pt;margin-left:11pt}
+.f-act{color:#333}
+.f-moy{font-size:6.8pt;color:#4a6076;background:#f7f9fa}
+
+/* ---- pied de page ---- */
+.f-foot{position:absolute;left:0.5in;right:0.5in;bottom:0.16in;
+  border-top:.8pt solid #E4661F;padding-top:2.4pt;
+  font-size:6.6pt;color:#7a8b9c;text-align:center;letter-spacing:.2pt}
+
+/* ---- édition : champs modifiables ---- */
+[contenteditable="true"]{outline:1px dashed transparent;border-radius:2px;transition:background .12s}
+[contenteditable="true"]:hover{background:rgba(255,214,102,.22);outline-color:#E9B949}
+[contenteditable="true"]:focus{background:#fffbe9;outline:1.5px solid #E4661F}
+
+/* ---- boîte modale de la fiche ---- */
+.fiche-modal .box{max-width:1010px;width:96vw}
+.fiche-modal .box-b{overflow:auto;max-height:76vh;background:#eef2f5;padding:14px}
+.fiche-modal .box-f{align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+@media (max-width:1080px){
+  .fiche-modal .box-b{padding:8px}
+}
+
+/* aperçu de fiche dans la page (liste) */
+.fpage.preview{zoom:.5}
+
+/* ---- liste des fiches ---- */
+#v-fiches .sec-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+#v-fiches .tbl .n{font-weight:800;color:#1F3A5F;font-size:13px}
+#v-fiches .tbl .tt{font-weight:700;color:var(--ink,#12324d)}
+#v-fiches .tbl .det{font-size:11.5px;color:#5c7186;margin-top:2px;line-height:1.35}
+#v-fiches .tbl tr.is-eval td{background:#fdf6e8}
+#v-fiches .tbl td{vertical-align:top}
+#v-fiches .tbl .btn{margin:1px 1px}
+#v-fiches .fic-actions{white-space:nowrap}
+#v-fiches .fic-actions .btn{padding:4px 8px;font-size:11.5px;line-height:1.25;min-height:0;border-radius:8px;display:inline-block}
+#v-fiches .tbl-wrap{overflow-x:auto}
+#v-fiches .card-h{flex-wrap:wrap;gap:8px}
+#v-fiches .card-h .row{flex-flow:row wrap;justify-content:flex-end;align-items:center}
+#v-fiches #fic-q{width:230px}
+#v-fiches #fic-tri,#v-fiches #fic-nat{width:190px}
+#v-fiches .card-h .row select{padding:5px 8px;font-size:12px;border-radius:8px;border:1px solid var(--line,#dde5ec);background:#fff}
+#v-fiches .card-h .row input[type=search]{padding:5px 8px;font-size:12px;border-radius:8px;border:1px solid var(--line,#dde5ec)}
+#rep-4si2 .tbl .n{font-weight:800;color:#1F3A5F}
+#rep-4si2 .tbl .tt{font-weight:700;color:var(--ink,#12324d)}
+#rep-4si2 .tbl .det{font-size:11.5px;color:#5c7186;margin-top:2px;line-height:1.35}
+#rep-4si2 .tbl tr.is-eval td{background:#fdf6e8}
+#rep-4si2 .card-h .row select{padding:5px 8px;font-size:12px;border-radius:8px;border:1px solid var(--line,#dde5ec);background:#fff}
+
+/* ---- menu d'impression ---- */
+.prm-row{display:flex;justify-content:space-between;gap:12px;align-items:center;
+  padding:10px;border:1px solid #e2e9ef;border-radius:10px;margin-bottom:8px;flex-wrap:wrap}
+.prm-row>div:first-child{min-width:200px}
+
+/* ---- impression ---- */
+@page{size:11in 8.5in;margin:0}
+@media print{
+  body{background:#fff !important}
+  .no-print,.ref-ui.vs-workspace-top,.vs-sidebar,.topbar,footer{display:none !important}
+  .fpage{box-shadow:none;border-radius:0;margin:0;page-break-after:always}
+  .fpage:last-child{page-break-after:auto}
+  [contenteditable]{outline:0 !important;background:transparent !important}
+}
