@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.5.8-ouvrir-formulaire` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.0-avancement` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -17,6 +17,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | `data/repartition3SI1.js` | **La répartition 3SI1** : 54 séances datées (mardi et jeudi), devoirs, domaines et pages du Smart Book 3e. | 22 Ko |
 | `data/fiches3SI1.js` | **Les 54 fiches 3SI1** au modèle v3 (objectifs, méthode, prérequis, critères, déroulement, travail à la maison). | 208 Ko |
 | `docs/fiches-3si-2026/` | 27 PDF (deux séances par fichier) + `Fiches_3SI1_2026-2027.pdf` (recueil 54 pages). | 1,8 Mo |
+| `assets/annexes-fonctions.js` | référentiel d'avancement (5 domaines, 209 fonctions et propriétés) |
 | `assets/fiche-formulaire.html` | **La page du formulaire** (fournie par l'enseignant) : sert de contenu à la grande boîte « Modifier la fiche et les coches ». | 8 Ko |
 | `data/fiches.js` | **Les 50 fiches pédagogiques 4SI2** préremplies au modèle « Séance 8-9 v3 » : objectifs (3 colonnes), méthode active, prérequis, critères de réussite, 4 étapes du déroulement, travail à la maison. | 178 Ko |
 | `assets/fiches.js` | Module d'intégration : onglet « Fiches pédagogiques », boîte de fiche éditable, menu d'impression, bloc « nouvelle répartition », report des préparations. | 34 Ko |
@@ -28,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.5.8-ouvrir-formulaire` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.0-avancement` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -271,6 +272,40 @@ ouverture d'un `blob:` d'**une page** dont le titre de séance correspond, 0 err
 texte entre le document imprimé et `S13.pdf` : titres, objectifs, déroulement et travail à la maison
 identiques (seules différences : casse des titres mise en majuscules par la feuille d'impression, et
 une phrase répétée tronquée par le gabarit du PDF).
+
+### ③ sexies Avancement général par fonctions (HTML5, CSS3, JavaScript, SQL, PHP)
+
+Nouvelle partie en bas du formulaire (`assets/fiche-formulaire.html`), intitulée **« Avancement
+général — fonctions et propriétés »**, alimentée par le référentiel `assets/annexes-fonctions.js`
+extrait du document *Récapitulatif des fonctions et propriétés des annexes — 4ème SI*.
+
+| Domaine | Sous-catégories | Notions (cases à cocher) |
+|---|---|---|
+| HTML5 | 9 (structure, structuration, conteneurs, listes, tableaux, texte et média, formulaires, événements, attributs globaux) | 58 |
+| CSS3 | 12 (sélecteurs, pseudo-classes, texte, listes, arrière-plan, tableaux, boîtes et positionnement, bordures, transformation, filtres, transition, animation) | 62 |
+| JavaScript | 8 (opérateurs, entrées/sorties, conversion et test, Math, chaînes, Date, tableaux, DOM) | 42 |
+| SQL | 4 (LDD, LMD, fonctions de chaînes, fonctions de date) | 16 |
+| PHP | 9 (types, variables, mathématiques, chaînes, date, tableaux, langage, superglobales, MySQLi) | 31 |
+| **Total** | **42** | **209** |
+
+Fonctionnement :
+
+- **cinq pastilles filtre** (une par domaine) avec `couvert / total` et pourcentage ;
+- un **pourcentage global** et une barre de progression, plus un compteur `n / 209` ;
+- une **case par fonction / propriété / balise**, rangée sous sa sous-catégorie, avec sa description
+  en petit (ex. `ch.substring(d, f) — sous-câine`) ;
+- compteur par sous-catégorie (`3/3`, `4/6`…) mis à jour à chaque coche ;
+- boutons **Tout cocher / Tout décocher** pour le domaine affiché et **Tout décocher** (global, avec
+  confirmation) ;
+- **enregistrement par classe** dans `localStorage` (`sti_avancement_fonctions_v1|<classe>`) : 4SI2 et
+  3SI1 ont chacun leur avancement ;
+- l'en-tête de la boîte affiche une **mini-barre « Avancement n % (x/209 notions · classe) »** grâce à
+  `STI_FICHES.avUpdate()`, appelé depuis le formulaire (`window.parent.STI_FICHES`).
+
+Vérifié dans le navigateur : référentiel chargé (5 domaines, 209 notions), 58 cases pour HTML5 / 31
+pour PHP, coche de 3 notions → `1 % · 3/209`, « Tout cocher » HTML5 + 12 CSS3 + 7 JavaScript →
+`37 % · 77/209` et mini-barre de l'en-tête synchronisée, réouverture → **77 conservés**, passage en
+3SI1 → compteur **propre à la classe** (0/209), 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 

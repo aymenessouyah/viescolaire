@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.5.9-annexes-tracking';
+const VERSION='sti-espace-v1.6.0-avancement';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -7,7 +7,6 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/style.css",
   "./assets/app.js",
   "./assets/suivi-sti.js",
-  "./assets/suivi-annexes.js",
   "./assets/suivi-sti.css",
   "./assets/theme-classe.css",
   "./assets/theme-classe.js",
@@ -33,6 +32,7 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/fiches.js",
   "./assets/fiches.css",
   "./assets/fiche-formulaire.html",
+  "./assets/annexes-fonctions.js",
   "./data/fiches.js",
   "./data/fiches3SI1.js",
   "./data/repartition4SI2.js",

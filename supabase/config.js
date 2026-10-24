@@ -18,23 +18,22 @@
    Ne jamais utiliser la clé « service_role », qui contourne ces règles.
 
    Mode de fonctionnement une fois configuré :
-     • synchronisation bidirectionnelle après chaque enregistrement (auto: true) ;
-     • sur un nouvel appareil, l'espace Cloud est repris ; si des données locales
-       existent, l'application demande s'il faut les fusionner ou ouvrir le Cloud ;
-     • coupure réseau : travail local, puis reprise au retour du réseau.
+     • envoi automatique à chaque enregistrement (auto: true) ;
+     • sur un nouvel appareil, l'application propose de reprendre la dernière
+       sauvegarde du cloud avant toute saisie locale ;
+     • coupure réseau : travail local, puis reprise automatique de l'envoi.
 
-   Accès protégé (auth: true) : chaque professeur utilise son propre compte
-   Supabase (Authentication → Users). La connexion est requise sur chaque
-   appareil et la session y reste ouverte. Le nom d'appareil vide est généré
-   localement ; vous pouvez le personnaliser depuis les réglages Cloud.
+   Accès protégé (auth: true) : la base n'accepte que le compte unique créé
+   dans Supabase (Authentication → Users). L'application demande alors la
+   connexion (fenêtre « Connexion à la sauvegarde distante ») sur chaque
+   appareil et garde la session ouverte ensuite.
    ========================================================================= */
 window.STI_SUPABASE = {
   url:   "https://oaahxobzbnmaohcmdrbu.supabase.co",   // projet « aymenessouyah-vie-scolaire »
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hYWh4b2J6Ym5tYW9oY21kcmJ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNDE2MDAsImV4cCI6MjEwNjcxNzYwMH0.e6cVFx7_BoF8jFvIAows2i-awIEaM6MS3K4LdCq4INs",   // clé anon publique du projet
   table: "espace_pedagogique",        // table créée par supabase/schema.sql
-  // Nom automatique et distinct par navigateur ; modifiable dans Cloud → Configuration.
-  device: "",
-  auto:  true,                        // synchronisation automatique à chaque enregistrement
+  device: "Poste principal — Prof. Aymen",
+  auto:  true,                        // envoi automatique à chaque enregistrement
   auth:  true,                        // accès protégé par mot de passe
   admin: "aymenessouyah@gmail.com"    // compte administrateur : gestion des professeurs
 };

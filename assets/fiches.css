@@ -91,13 +91,7 @@
 .fiche-modal .box{max-width:1010px;width:96vw}
 .fiche-modal .box-b{overflow:auto;max-height:76vh;background:#eef2f5;padding:14px}
 .fiche-modal .box-f{align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-#fm-session-status{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 12px;margin:0 auto 12px;max-width:100%;border:1px solid var(--line,#dfe6ea);border-radius:9px;background:var(--card,#fff);color:var(--ink,#26394a);font:12px/1.4 system-ui,Arial,sans-serif}
-#fm-session-status>strong{margin-right:auto;color:var(--ink,#26394a)}
-#fm-session-status>label{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
-#fm-session-status input{accent-color:var(--blue,#267555)}
-#fm-session-status>small{flex-basis:100%;color:var(--ink-3,#6d8299);font-size:10px}
 @media (max-width:1080px){
-  #fm-session-status{margin-bottom:8px;padding:9px}
   .fiche-modal .box-b{padding:8px}
 }
 

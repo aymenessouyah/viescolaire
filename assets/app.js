@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.5.9-annexes-tracking";
+const APP_VER = "v1.5.1-types-devoirs";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -195,7 +195,7 @@ const TABS = [
   { id:"v-devoirs", t:"Répartition des devoirs", ico:"pen" },
   { id:"v-agent", t:"Agent STI · IA", ico:"cpu" },
 
-  { id:"v-suivi", t:"Suivi des notions & annexes", ico:"target" },
+  { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
   { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
   { id:"v-rep",    t:"Répartition annuelle", ico:"list" },
@@ -225,7 +225,6 @@ function renderAll(silent){
   renderCahier();
   renderRef();
   if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
-  if (window.STI_ANNEX_TRACK) window.STI_ANNEX_TRACK.render({store:store,sessions:SESSIONS});
   if (window.STI_AGENT) window.STI_AGENT.render({store:store,sessions:SESSIONS,view:currentTab});
   renderCompte();
   renderLoginInvite();
@@ -1275,20 +1274,6 @@ async function afterLogin(){
 
 /* ---------- synchronisation distante (Supabase) ---------- */
 const CLOUD_KEY = "sti_cloud_cfg";
-function defaultDeviceName(){
-  const key = "sti_device_name_v1";
-  try { const saved = localStorage.getItem(key); if (saved) return saved; } catch(e){}
-  const ua = navigator.userAgent || "";
-  const tablet = /iPad|Tablet/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
-  const mobile = !tablet && (navigator.userAgentData?.mobile === true || /Mobi|iPhone|iPod|Android/i.test(ua));
-  const type = tablet ? "Tablette" : mobile ? "Téléphone" : "Ordinateur";
-  let id;
-  try { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, "").slice(0, 4).toUpperCase(); }
-  catch(e){ id = Math.random().toString(36).slice(2, 6).toUpperCase(); }
-  const name = type + " · " + (id || "local");
-  try { localStorage.setItem(key, name); } catch(e){}
-  return name;
-}
 function cloudCfg(){
   let cfg = {};
   try { cfg = JSON.parse(localStorage.getItem(CLOUD_KEY) || "{}"); } catch(e){ cfg = {}; }
@@ -1297,10 +1282,10 @@ function cloudCfg(){
     url: cfg.url || w.url || "",
     key: cfg.key || w.anonKey || "",
     table: cfg.table || w.table || "espace_pedagogique",
-    device: cfg.device || w.device || defaultDeviceName(),
-    auto: cfg.auto !== undefined ? cfg.auto : (w.auto !== undefined ? w.auto : true),
-    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false),
-    admin: cfg.admin || w.admin || ""
+    device: cfg.device || w.device || (SCHOOL.prof + " — appareil principal"),
+    auto: cfg.auto !== undefined ? cfg.auto : true,  /* sauvegarde distante par défaut dès qu'un projet est configuré */
+    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false),  /* accès protégé par mot de passe */
+    admin: cfg.admin || w.admin || ""   /* compte administrateur (gestion des professeurs) */
   };
 }
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
@@ -1418,7 +1403,7 @@ function openCloudSettings(){
   b.querySelector("#cfg-url").value = c.url;
   b.querySelector("#cfg-key").value = c.key;
   b.querySelector("#cfg-table").value = (c.table && !c.table.includes("@")) ? c.table : "espace_pedagogique";
-  b.querySelector("#cfg-device").value = (c.device && !c.device.includes("@")) ? c.device : defaultDeviceName();
+  b.querySelector("#cfg-device").value = (c.device && !c.device.includes("@")) ? c.device : "Poste principal — Prof. Aymen";
   b.querySelector("#cfg-auto").checked = !!c.auto;
   const ca = b.querySelector("#cfg-auth"); if (ca) ca.checked = !!c.auth;
   b.classList.add("on");
@@ -1616,7 +1601,6 @@ function openModal(cls, n){
     </div>
     <div class="note tiny" style="margin-top:12px">Rappel du contenu prévu par la répartition officielle : ${s.blk ? s.blk.t + " — " + s.blk.det : "séance à planifier (le document de répartition fourni ne couvre que le 1<sup>er</sup> trimestre)."}</div>`;
   if (window.STI_TRACK) window.STI_TRACK.mountModal(cls,n,o);
-  if (window.STI_ANNEX_TRACK) window.STI_ANNEX_TRACK.mountModal(cls,n,o,"m-body");
   document.getElementById("m-done").addEventListener("change",function(){ if(this.checked) document.getElementById("m-rep").checked=false; });
   document.getElementById("m-rep").addEventListener("change",function(){ if(this.checked) document.getElementById("m-done").checked=false; });
   if (cls === "4SI2" && s.iso >= "2026-10-05" && s.iso <= "2026-12-28" && o.title && s.blk && o.title !== s.blk.t) {
@@ -1634,13 +1618,10 @@ function saveModal(){
   if (doneBox && s && s.iso > todayISO()) { toast("Une séance future ne peut pas être déclarée assurée."); return; }
   if (doneBox && repBox) { toast("Choisissez assurée ou reportée, pas les deux."); return; }
   const previous = store.seances[k] || {};
-  const annexSelection = window.STI_ANNEX_TRACK ? window.STI_ANNEX_TRACK.selection(mCtx.cls,mCtx.n) : null;
   store.seances[k] = {
     ...previous,
     notions: window.STI_TRACK ? window.STI_TRACK.selection(mCtx.cls) : (previous.notions || []),
     notionsVersion: window.STI_TRACK ? window.STI_TRACK.version : previous.notionsVersion,
-    annexes: annexSelection !== null ? annexSelection : (previous.annexes || []),
-    annexesVersion: annexSelection !== null && window.STI_ANNEX_TRACK ? window.STI_ANNEX_TRACK.version : previous.annexesVersion,
     title: document.getElementById("m-titre").value.trim(),
     preparation: document.getElementById("m-preparation").value.trim(),
     contenu: document.getElementById("m-contenu").value.trim(),
@@ -1675,9 +1656,9 @@ function cloudCard(){
     </div>
     <div class="card-b">
       <p class="tiny muted" style="margin-bottom:10px">
-        Vos données sont conservées sur cet appareil pour le travail hors ligne et synchronisées dans les deux sens avec
-        votre base <strong>Supabase</strong> quand l’application est ouverte et connectée. Retrouvez le même espace sur
-        votre téléphone, votre tablette et le poste du lycée.
+        Vos fiches de séance, horaires et cahier de textes sont enregistrés dans ce navigateur puis envoyés à votre base
+        <strong>Supabase</strong> (PostgreSQL + API REST). Vous pouvez ainsi retrouver les mêmes données sur le téléphone,
+        la tablette et le poste du lycée.
       </p>
       <div class="space-y" style="display:grid;gap:8px">
         <div class="spread"><span class="tiny muted">Projet</span><span class="tiny">${c.url ? c.url.replace(/^https?:\/\//,"").split(".")[0] + " • table " + c.table : "non configuré"}</span></div>
@@ -1688,7 +1669,8 @@ function cloudCard(){
         <div class="spread"><span class="tiny muted">Connexion</span><span class="tiny">${cloudWho()}</span></div>
       </div>
       <div class="row no-print" style="margin-top:12px;gap:8px">
-        <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Synchroniser maintenant</button>
+        <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Envoyer maintenant</button>
+        <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Recevoir et fusionner</button>
         ${authNeeded() ? (authSession()
             ? '<button class="btn btn-xs btn-line" onclick="doLogout()">' + ic("out") + ' Se déconnecter</button>'
             : '<button class="btn btn-xs btn-blue" onclick="openAuth()">' + ic("lock") + ' Se connecter</button>') : ""}
@@ -1697,9 +1679,9 @@ function cloudCard(){
         <button class="btn btn-xs btn-line" onclick="exportJSON()">${ic("file")} Export JSON</button>
       </div>
       <div class="note tiny" style="margin-top:10px">${ic("pin")}
-        ${authNeeded() && !authSession() ? 'Accès protégé par mot de passe : connectez-vous pour synchroniser vos données. ' : ""}
+        ${authNeeded() && !authSession() ? 'Accès protégé par mot de passe : connectez-vous pour envoyer et restaurer les données du cloud. ' : ""}
         ${cloudReady()
-          ? 'Base distante configurée. En cas d\'échec, vérifiez la table <code>' + c.table + '</code>, la clé publique, la fonction SQL et les règles RLS décrites dans le <code>README.md</code>.'
+          ? 'Base distante configurée. En cas d\'échec, vérifiez la table <code>' + c.table + '</code>, la clé publique et les règles RLS décrites dans le <code>README.md</code>.'
           : 'Aucune base distante configurée : les données restent dans ce navigateur (et dans l\'export JSON). Cliquez sur <strong>Configuration</strong> et renseignez l\'URL du projet Supabase et la clé publique — la table SQL est fournie dans <code>supabase/schema.sql</code>.'}
       </div>
     </div>

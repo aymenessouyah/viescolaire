@@ -30,9 +30,39 @@ input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color
 .meta{margin-top:12px}
 .moy{margin-top:12px}
 .bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+/* ---- avancement : fonctions et propriétés des annexes ---- */
+.av-card{background:var(--card);border-radius:10px;padding:12px 14px;border-top:4px solid var(--c3)}
+.av-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.av-big{font-size:30px;font-weight:800;line-height:1;color:var(--c3)}
+.av-lab{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.av-track{height:10px;border-radius:6px;background:#e9e2db;overflow:hidden;flex:1 1 240px;min-width:150px}
+.av-track>span{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--c1),var(--c3));transition:width .25s}
+.av-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+.chip{text-align:left;background:var(--field);border:1px solid var(--line);border-radius:8px;padding:7px 9px;cursor:pointer;font:inherit;color:var(--ink);font-weight:700;opacity:.85}
+.chip .cc{display:block;font-size:11px;font-weight:600;color:var(--mut);margin-top:2px}
+.chip .ct{display:block;height:4px;border-radius:3px;background:#e9e2db;margin-top:5px;overflow:hidden}
+.chip .ct>span{display:block;height:100%;width:0;background:currentColor}
+.chip.on{opacity:1;box-shadow:0 0 0 2px var(--c4) inset}
+.av-panel{margin-top:14px}
+.av-cat{margin-bottom:12px}
+.av-cat h4{margin:0 0 5px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--c1);display:flex;gap:8px;align-items:baseline}
+.av-cat h4 .n{font-weight:400;color:var(--mut);letter-spacing:0;text-transform:none}
+.av-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1px 16px}
+.av-item{display:flex;gap:7px;align-items:flex-start;font-size:12.5px;line-height:1.35;padding:2px 0;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.av-item input{margin:2px 0 0;accent-color:var(--c3);cursor:pointer}
+.av-item code{font:600 11.5px/1.35 ui-monospace,Consolas,monospace;background:var(--field);border:1px solid var(--line);
+  border-radius:4px;padding:0 4px;text-transform:none;letter-spacing:0;color:var(--ink);white-space:normal}
+.av-item .dd{color:var(--mut)}
+.av-item.ck code{background:#e6f3f1;border-color:#b8ddd8}
+.av-item.ck .dd{color:var(--ink)}
+.av-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
+.av-tools button{padding:5px 10px;font-size:12px}
+.av-note{font-size:11.5px;color:var(--mut);margin:6px 0 0}
 button{font:inherit;font-weight:700;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;background:var(--c1);color:#fff}
 button.sec{background:var(--mut)}
-@media (max-width:760px){.g4,.g3{grid-template-columns:1fr 1fr}.step{grid-template-columns:1fr}}
+@media (max-width:900px){.av-chips{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:760px){.g4,.g3{grid-template-columns:1fr 1fr}.step{grid-template-columns:1fr}.av-chips{grid-template-columns:1fr 1fr}}
 @media (max-width:480px){.g4,.g3{grid-template-columns:1fr}}
 @media print{.bar{display:none}input[type=text]{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:2px 0;background:transparent}body{font-size:12px}}
 </style>
@@ -71,6 +101,27 @@ button.sec{background:var(--mut)}
   <div class="g g3" id="moy"></div>
 </div>
 
+<h2>Avancement général — fonctions et propriétés</h2>
+<div class="av-card" id="av">
+  <div class="av-head">
+    <div>
+      <div class="av-lab">Avancement du cours</div>
+      <div class="av-big"><span id="av-pct">0 %</span></div>
+      <div class="av-lab" id="av-count">0 / 0 notions couvertes</div>
+    </div>
+    <div class="av-track" role="progressbar" aria-label="Avancement général"><span id="av-fill"></span></div>
+    <button type="button" class="sec" id="av-reset" onclick="AV.reset()">Tout décocher</button>
+  </div>
+  <div class="av-chips" id="av-chips"></div>
+  <div class="av-tools">
+    <button type="button" onclick="AV.all(true)">Tout cocher (domaine)</button>
+    <button type="button" class="sec" onclick="AV.all(false)">Tout décocher (domaine)</button>
+  </div>
+  <div class="av-panel" id="av-panel"></div>
+  <p class="av-note" id="av-note">Cochez une notion quand elle a été traitée en classe : le pourcentage
+     mesure l’avancement du programme par rapport au cours (HTML5, CSS3, JavaScript, SQL, PHP).</p>
+</div>
+
 <div class="bar">
   <button type="button" onclick="window.print()">Imprimer la fiche</button>
   <button type="button" class="sec" onclick="resetAll()">Rétablir les valeurs d’origine</button>
@@ -78,6 +129,7 @@ button.sec{background:var(--mut)}
 </form>
 </div>
 
+<script src="assets/annexes-fonctions.js"></script>
 <script>
 var OBJ=[
  ['HTML5',['Page index','Background','Liste','Details et summary']],
@@ -118,6 +170,143 @@ function resetAll(){
   document.getElementById('f').reset();build();
 }
 build();
+
+/* ======================= avancement : fonctions et propriétés =======================
+   Une case par balise / propriété / fonction des annexes, rangée en 5 domaines.
+   Le suivi est enregistré par classe (4SI2, 3SI1) et remonté à la page hôte. */
+var AV = (function () {
+  var KEY = 'sti_avancement_fonctions_v1';
+  var dom = 'HTML5', done = {}, ready = false;
+
+  function domaine() {
+    var v = (document.getElementById('classe') || {}).value || '';
+    if (/3/.test(v) && /SI/i.test(v)) return '3SI1';
+    if (/4/.test(v) && /SI/i.test(v)) return '4SI2';
+    return String(v).trim() || 'classe';
+  }
+  function cle() { return KEY + '|' + domaine(); }
+  function lire() { try { return JSON.parse(localStorage.getItem(cle()) || '{}') || {}; } catch (e) { return {}; } }
+  function ecrire() { try { localStorage.setItem(cle(), JSON.stringify(done)); } catch (e) {} }
+  function id(d, c, i) { return d + '::' + c + '::' + i; }
+  function total(d) {
+    var A = window.STI_ANNEXES; if (!A) return 0;
+    if (d) return A[d].cats.reduce(function (s, c) { return s + c.items.length; }, 0);
+    return Object.keys(A).reduce(function (s, k) { return s + total(k); }, 0);
+  }
+  function compte(d) {
+    var A = window.STI_ANNEXES, n = 0; if (!A) return 0;
+    (d ? [d] : Object.keys(A)).forEach(function (k) {
+      A[k].cats.forEach(function (c, ci) { c.items.forEach(function (it, ii) { if (done[id(k, ci, ii)]) n++; }); });
+    });
+    return n;
+  }
+  function pct(a, b) { return b ? Math.round(a * 100 / b) : 0; }
+
+  function rendre() {
+    var A = window.STI_ANNEXES, box = document.getElementById('av');
+    if (!box) return;
+    if (!A) {
+      box.querySelector('#av-note').textContent =
+        'Référentiel indisponible : le fichier assets/annexes-fonctions.js n’a pas été chargé.';
+      return;
+    }
+    var t = total(), n = compte(), p = pct(n, t);
+    document.getElementById('av-pct').textContent = p + ' %';
+    document.getElementById('av-count').textContent = n + ' / ' + t + ' notions couvertes · ' + domaine();
+    document.getElementById('av-fill').style.width = p + '%';
+
+    /* pastilles des 5 domaines */
+    document.getElementById('av-chips').innerHTML = Object.keys(A).map(function (k) {
+      var tt = total(k), nn = compte(k), pp = pct(nn, tt);
+      return '<button type="button" class="chip' + (k === dom ? ' on' : '') + '" data-d="' + k + '"' +
+             ' style="color:' + A[k].couleur + '" onclick="AV.show(\'' + k + '\')">' +
+             '<span style="color:var(--ink)">' + A[k].label + '</span>' +
+             '<span class="cc">' + nn + '/' + tt + ' · ' + pp + ' %</span>' +
+             '<span class="ct"><span style="width:' + pp + '%"></span></span></button>';
+    }).join('');
+
+    /* détail du domaine choisi */
+    var d = A[dom];
+    document.getElementById('av-panel').innerHTML = d.cats.map(function (c, ci) {
+      var items = c.items.map(function (it, ii) {
+        var k = id(dom, ci, ii), on = !!done[k];
+        return '<label class="av-item' + (on ? ' ck' : '') + '">' +
+               '<input type="checkbox"' + (on ? ' checked' : '') + ' data-k="' + k + '"' +
+               ' onchange="AV.toggle(this)">' +
+               '<span><code>' + esc(it.c) + '</code>' +
+               (it.d ? ' <span class="dd">— ' + esc(it.d) + '</span>' : '') + '</span></label>';
+      }).join('');
+      return '<div class="av-cat"><h4>' + esc(c.n) +
+             ' <span class="n">' + c.items.filter(function (_, ii) { return done[id(dom, ci, ii)]; }).length +
+             '/' + c.items.length + '</span></h4><div class="av-items">' + items + '</div></div>';
+    }).join('');
+    remonter(n, t, p);
+  }
+
+  function remonter(n, t, p) {
+    try {
+      var P = window.parent;
+      if (P && P !== window && P.STI_FICHES && typeof P.STI_FICHES.avUpdate === 'function')
+        P.STI_FICHES.avUpdate(p, n, t, domaine());
+    } catch (e) {}
+  }
+
+  return {
+    init: function () {
+      done = lire();
+      var A = window.STI_ANNEXES;
+      if (A && !A[dom]) dom = Object.keys(A)[0];
+      ready = true; rendre();
+    },
+    show: function (k) { dom = k; rendre(); },
+    toggle: function (el) {
+      var k = el.getAttribute('data-k');
+      if (el.checked) done[k] = 1; else delete done[k];
+      ecrire();
+      if (el.parentNode) el.parentNode.classList.toggle('ck', el.checked);
+      var A = window.STI_ANNEXES, ci = k.split('::')[1];
+      var h = document.querySelectorAll('#av-panel .av-cat h4')[Number(ci)];
+      if (h && A) {
+        var c = A[dom].cats[Number(ci)], nn = 0;
+        c.items.forEach(function (_, ii) { if (done[id(dom, Number(ci), ii)]) nn++; });
+        h.innerHTML = esc(c.n) + ' <span class="n">' + nn + '/' + c.items.length + '</span>';
+      }
+      rendreChiffres();
+    },
+    all: function (on) {
+      var A = window.STI_ANNEXES; if (!A) return;
+      A[dom].cats.forEach(function (c, ci) {
+        c.items.forEach(function (_, ii) {
+          var k = id(dom, ci, ii);
+          if (on) done[k] = 1; else delete done[k];
+        });
+      });
+      ecrire(); rendre();
+    },
+    reset: function () {
+      if (!confirm('Décocher toutes les notions du référentiel ?')) return;
+      done = {}; ecrire(); rendre();
+    },
+    /* pour la page hôte */
+    etat: function () { return { classe: domaine(), fait: compte(), total: total(), pct: pct(compte(), total()), detail: done }; }
+  };
+
+  function rendreChiffres() {
+    var t = total(), n = compte(), p = pct(n, t);
+    document.getElementById('av-pct').textContent = p + ' %';
+    document.getElementById('av-count').textContent = n + ' / ' + t + ' notions couvertes · ' + domaine();
+    document.getElementById('av-fill').style.width = p + '%';
+    Array.prototype.forEach.call(document.querySelectorAll('#av-chips .chip'), function (ch) {
+      var k = ch.getAttribute('data-d'), tt = total(k), nn = compte(k), pp = pct(nn, tt);
+      var cc = ch.querySelector('.cc'), bar = ch.querySelector('.ct>span');
+      if (cc) cc.textContent = nn + '/' + tt + ' · ' + pp + ' %';
+      if (bar) bar.style.width = pp + '%';
+    });
+    remonter(n, t, p);
+  }
+})();
+window.AV = AV;
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', AV.init); else AV.init();
 </script>
 </body>
 </html>
