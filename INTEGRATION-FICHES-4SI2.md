@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.5.7-pdf-fiche` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.5.8-ouvrir-formulaire` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -28,7 +28,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.5.7-pdf-fiche` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.5.8-ouvrir-formulaire` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -201,7 +201,38 @@ n'y étaient donc pas dessinées : bouton collé au texte, taille incohérente, 
 
 Vérifié : hauteurs identiques (26 px), clic sur **Ouvrir** → fiche de la séance, 0 erreur JS.
 
-### ③ quater Le bouton **PDF** de la liste — correctif du service worker
+### ③ quater Le bouton **Ouvrir** de la liste — il ouvre le formulaire
+
+Dans *Outils STI & données → Fiches pédagogiques*, le bouton bleu **Ouvrir** ouvrait la fiche sous
+forme de **document papier** (celui de l'impression) : on croyait voir un PDF ou une page d'impression
+au lieu du formulaire à corriger.
+
+Désormais :
+
+| Bouton de la ligne | Ce qu'il ouvre |
+|---|---|
+| **Ouvrir** | le **formulaire** `assets/fiche-formulaire.html` dans la grande boîte, **prérempli** avec la fiche de la séance et **entièrement rectifiable** |
+| **Imprimer** | le **document** au format du modèle v3 (paysage 11 × 8,5 in, une page) |
+| **PDF** | le **fichier** `docs/fiches-<classe>/S<n>.pdf`, une page, identique au document imprimé |
+
+Détails du correctif :
+
+- les trois boutons qui disaient « Ouvrir » (ligne de la liste, « Ouvrir la fiche n°1 » de
+  l'en-tête, encart « fiche ancrée ») appellent maintenant `STI_FICHES.form(n)` ;
+- la fenêtre du document papier reste accessible mais s'annonce « **Aperçu du document** — séance n »
+  pour ne pas être confondue avec le formulaire ;
+- le formulaire est **étiré à la largeur de la boîte** (`.wrap` sans `max-width`) et chaque champ
+  affiche son contenu complet au survol (`title`) avec ellipse visuelle : plus de texte coupé ;
+- **« Rétablir la fiche d'origine »** supprime réellement la modification enregistrée (avant, il
+  relisait la fiche déjà modifiée et semblait sans effet) ; confirmation demandée si la fiche a été
+  modifiée, puis la préparation du cahier de textes est régénérée depuis la fiche d'origine.
+
+Vérifié : *Ouvrir* sur 4SI2 séance 13 et 3SI1 séance 12 → boîte `flex`, titre « Fiche pédagogique —
+séance 13/12 », 70 champs, `classe`/`seance`/`projet`/`modules`/premier objectif corrects, **aucun
+onglet PDF ni page d'impression ouvert** ; enregistrement → valeur conservée et badge « modifiée » ;
+« Rétablir » → retour au texte d'origine.
+
+### ③ quinquies Le bouton **PDF** de la liste — correctif du service worker
 
 Le bouton *PDF* de chaque ligne (et, plus généralement, **tous les liens `.pdf` du site** : annexes,
 mémo, documents) ouvraient l'application à la place du fichier. Cause : le service worker renvoyait

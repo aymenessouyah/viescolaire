@@ -306,7 +306,7 @@ function render() {
         ${Object.keys(FICHES_CLS).map(c => `<button class="seg-btn ${c===ficCls?'active':''}" onclick="STI_FICHES.cls('${c}')">${c}</button>`).join('')}
       </div>
       <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">${ic('print')} Impression</button>
-      <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(${list().length ? list()[0].n : 1})">${ic('book')} Ouvrir la fiche n°1</button>
+      <button class="btn btn-xs btn-blue" onclick="STI_FICHES.form(${list().length ? list()[0].n : 1})">${ic('book')} Ouvrir le formulaire de la fiche n°1</button>
     </div>
   </div>
 
@@ -351,7 +351,8 @@ function render() {
               <td class="hide-sm"><span class="badge b-grey">${esc(f.domaines)}</span></td>
               <td><span class="badge ${f.nature==='cours'?'b-blue':f.nature==='correction'?'b-grey':'b-navy'}">${NAT[f.nature]||f.nature}</span></td>
               <td class="no-print fic-actions">
-                <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(${f.n})">Ouvrir</button>
+                <button class="btn btn-xs btn-blue" title="Ouvre le formulaire de la fiche, prérempli et rectifiable"
+                        onclick="STI_FICHES.form(${f.n})">Ouvrir</button>
                 <button class="btn btn-xs btn-line" onclick="STI_FICHES.printFiche(${f.n})">Imprimer</button>
                 <a class="btn btn-xs btn-line" href="${CF().docs}/S${f.n}.pdf"
                    target="_blank" rel="noopener" title="PDF de la fiche au format du modèle — même document que le bouton Imprimer"
@@ -473,7 +474,8 @@ function ensureFormBox() {
         <div class="row no-print" style="gap:6px;flex-wrap:wrap">
           <button class="btn btn-xs btn-line" title="Imprime la fiche au format du document (PDF), pas le formulaire"
                   onclick="STI_FICHES.formPrint()">${ic('print')} Imprimer le document</button>
-          <button class="btn btn-xs btn-line" onclick="STI_FICHES.formReset()">Rétablir la fiche</button>
+          <button class="btn btn-xs btn-line" title="Revient à la fiche d'origine (annule vos modifications)"
+                  onclick="STI_FICHES.formReset()">Rétablir la fiche d'origine</button>
           <button class="btn btn-xs btn-blue" onclick="STI_FICHES.formSave()">Enregistrer la fiche</button>
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
         </div>
@@ -518,6 +520,19 @@ function fillForm(n) {
      boîte : on les masque pour ne pas imprimer le formulaire par erreur */
   const bar = w.document.querySelector('.bar');
   if (bar) bar.style.display = 'none';
+  /* la boîte est plus large que la page du formulaire : on l'étire pour que les
+     champs soient lisibles en entier, et chaque champ affiche son texte au survol */
+  if (!w.__wide) {
+    const st = w.document.createElement('style');
+    st.textContent = '.wrap{max-width:none!important;padding:14px 18px 30px!important}' +
+                     'input[type=text]{text-overflow:ellipsis}';
+    w.document.head.appendChild(st);
+    w.__wide = true;
+  }
+  Array.prototype.forEach.call(w.document.querySelectorAll('input[type=text]'), function (i) {
+    i.title = i.value || '';
+    if (!i.__tip) { i.__tip = 1; i.addEventListener('input', function () { i.title = i.value; }); }
+  });
   const t = document.getElementById('ffm-title');
   const sub = document.getElementById('ffm-sub');
   if (t) t.textContent = 'Fiche pédagogique — séance ' + f.n + (isEdited(f.n) ? ' (modifiée)' : '');
@@ -556,7 +571,29 @@ function formPrint() {
   if (!f) return;
   printDoc(ficheHTML(f, false), true);
 }
-function formReset() { if (formN) fillForm(formN); if (root.toast) root.toast('Valeurs de la fiche rétablies'); }
+/* « Rétablir » rend la fiche d'origine : on supprime la modification enregistrée
+   (sinon le formulaire relisait la fiche déjà modifiée, ce qui donnait l'impression
+   que le bouton ne faisait rien). */
+function formReset() {
+  if (!formN) return;
+  const k = ficCls + '|' + formN;
+  const was = !!(edits && edits[k]);
+  if (was && root.confirm && !root.confirm('Rétablir la fiche d\'origine et perdre vos modifications ?')) return;
+  delete edits[k];
+  persist();
+  try {
+    const b = base()[String(formN)];
+    if (b && CF().synchro && root.store && root.store.seances) {
+      const st = root.store.seances[k] || (root.store.seances[k] = {});
+      st.preparation = prepText(b, ficCls);
+      st.title = b.titre;
+      if (typeof root.save === 'function') root.save(true);
+    }
+  } catch (e) {}
+  fillForm(formN);
+  render();
+  if (root.toast) root.toast(was ? 'Fiche d\'origine rétablie' : 'Valeurs de la fiche rechargées');
+}
 
 function readForm() {
   const fr = document.getElementById('ffm-frame');
@@ -676,7 +713,7 @@ function open(n) {
   if (!f) { if (root.toast) root.toast('Fiche indisponible pour cette séance'); return; }
   ensureBox();
   ctxN = n;
-  document.getElementById('fm-title').innerHTML = 'Fiche pédagogique — séance ' + n + ' · ' + esc(fmtShort(f.date));
+  document.getElementById('fm-title').innerHTML = 'Aperçu du document — séance ' + n + ' · ' + esc(fmtShort(f.date));
   document.getElementById('fm-body').innerHTML = ficheHTML(f, true);
   document.getElementById('fm-hint').innerHTML = isEdited(n)
     ? '<span class="badge b-amber">fiche modifiée</span> vos corrections sont conservées dans votre espace.'
@@ -968,7 +1005,7 @@ function anchorFiche() {
       </div>
       <div class="row" style="gap:6px;flex-wrap:wrap">
         <select id="fic-anchor-n" style="min-width:290px">${opts}</select>
-        <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(Number(document.getElementById('fic-anchor-n').value))">Ouvrir la fiche</button>
+        <button class="btn btn-xs btn-blue" onclick="STI_FICHES.form(Number(document.getElementById('fic-anchor-n').value))">Ouvrir le formulaire</button>
         <button class="btn btn-xs btn-soft" onclick="STI_FICHES.form(Number(document.getElementById('fic-anchor-n').value))">Modifier (formulaire)</button>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">Impression</button>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.show()">Les ${CF().nb} fiches</button>
