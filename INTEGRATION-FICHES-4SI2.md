@@ -160,8 +160,20 @@ formulaire `assets/fiche-formulaire.html`, **remplie avec la fiche de la séance
 | 4 étapes du déroulement | nom, durée, activités professeur, activités élèves |
 | Moyens didactiques | moyens distincts des étapes |
 
-Boutons de la boîte : **Imprimer** (la page s'imprime seule, sans les boutons), **Rétablir la fiche**
-(recharge les valeurs de la fiche), **Enregistrer la fiche**, **Fermer**. À l'enregistrement :
+Boutons de la boîte : **Imprimer le document**, **Rétablir la fiche** (recharge les valeurs de la
+fiche), **Enregistrer la fiche**, **Fermer**.
+
+**Impression = le document, jamais le formulaire.** « Imprimer le document » ne sort pas la page de
+saisie mais la **fiche au format du modèle** (paysage 11 × 8,5 in, une page, mêmes couleurs et
+encadrés que les PDF de `docs/`) ; les valeurs présentes à l'écran sont utilisées, **y compris celles
+qui ne sont pas encore enregistrées**. Les boutons internes de la page `Fformulaire.html`
+(« Imprimer la fiche » / « Rétablir ») sont masqués pour éviter la confusion.
+
+Même règle pour le bouton **« Imprimer la fiche » de l'onglet *Fiche pédagogique*** : il imprimait
+la page de l'application (barre latérale et bandeaux compris). Il est intercepté en phase de capture
+et imprime désormais le document du modèle de la séance sélectionnée (classe et numéro lus dans la
+liste des fiches, repli sur le tampon « SÉANCE n »). Vérifié : 1 page `.fpage`, 0 champ de saisie,
+`@page{size:11in 8.5in}`, classe et séance correctes (3SI1, séance 12 = DC1). À l'enregistrement :
 les champs reviennent dans la fiche (objectifs, prérequis, critères, étapes avec durées et moyens,
 modules), la **préparation du cahier de textes est régénérée**, la boîte papier du modèle v3 et la
 préparation du site affichent les nouvelles valeurs (aller-retour vérifié, 0 erreur JS).

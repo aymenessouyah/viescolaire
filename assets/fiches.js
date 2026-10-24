@@ -469,7 +469,8 @@ function ensureFormBox() {
           <div id="ffm-sub" class="tiny muted"></div>
         </div>
         <div class="row no-print" style="gap:6px;flex-wrap:wrap">
-          <button class="btn btn-xs btn-line" onclick="STI_FICHES.formPrint()">${ic('print')} Imprimer</button>
+          <button class="btn btn-xs btn-line" title="Imprime la fiche au format du document (PDF), pas le formulaire"
+                  onclick="STI_FICHES.formPrint()">${ic('print')} Imprimer le document</button>
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formReset()">Rétablir la fiche</button>
           <button class="btn btn-xs btn-blue" onclick="STI_FICHES.formSave()">Enregistrer la fiche</button>
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
@@ -511,6 +512,10 @@ function fillForm(n) {
   set('projet', f.projet || (ficCls === '3SI1' ? 'Site du club' : 'Fleurs Rafèha'));
   set('modules', f.modules || CF().modules);
   w.resetAll = function () { fillForm(n); };          // « Rétablir » = valeurs de la fiche
+  /* les boutons de la page (imprimer / rétablir) font doublon avec la barre de la
+     boîte : on les masque pour ne pas imprimer le formulaire par erreur */
+  const bar = w.document.querySelector('.bar');
+  if (bar) bar.style.display = 'none';
   const t = document.getElementById('ffm-title');
   const sub = document.getElementById('ffm-sub');
   if (t) t.textContent = 'Fiche pédagogique — séance ' + f.n + (isEdited(f.n) ? ' (modifiée)' : '');
@@ -540,11 +545,14 @@ function formClose() {
   document.body.style.overflow = '';
   render();
 }
+/* Impression depuis la boîte formulaire : on n'imprime pas la page de saisie mais
+   le DOCUMENT au format du modèle (paysage 11 x 8,5 in, une page), construit avec
+   les valeurs présentes à l'écran (y compris celles non encore enregistrées). */
 function formPrint() {
-  const fr = document.getElementById('ffm-frame');
-  if (!fr || !fr.contentWindow) return;
-  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
-  catch (e) { if (root.toast) root.toast('Impression bloquée par le navigateur'); }
+  const d = readForm();
+  const f = d ? applyForm(d) : (formN ? fiche(formN) : null);
+  if (!f) return;
+  printDoc(ficheHTML(f, false), true);
 }
 function formReset() { if (formN) fillForm(formN); if (root.toast) root.toast('Valeurs de la fiche rétablies'); }
 
@@ -596,9 +604,9 @@ function commit(f) {
   } catch (e) {}
 }
 
-function formSave() {
-  const d = readForm();
-  if (!d) return;
+/* reporte les valeurs du formulaire dans l'objet fiche (sans enregistrer) */
+function applyForm(d) {
+  if (!d || !formN) return null;
   const f = fiche(formN);
   const nObj = Math.max(3, d.obj.length);
   f.objectifs = [];
@@ -618,6 +626,14 @@ function formSave() {
   f.modules = d.modules || f.modules;
   f.duree = Number(String(d.duree).replace(/[^0-9]/g, '')) || f.duree;
   f.projet = d.projet;
+  return f;
+}
+
+function formSave() {
+  const d = readForm();
+  if (!d) return;
+  const f = applyForm(d);
+  if (!f) return;
   commit(f);
   formClose();
   if (root.toast) root.toast('Fiche n°' + f.n + ' enregistrée (formulaire)');
@@ -742,6 +758,29 @@ function reset() {
 }
 function openClassic() {
   if (typeof classic === 'function' && ctxN) { close(); classic(CLS, ctxN); }
+}
+
+/* ---------------------------------------- impression de la fiche sélectionnée
+   Le bouton « Imprimer la fiche » de l'onglet Fiche pédagogique imprimait la
+   page de l'application (barre latérale comprise). Il imprime désormais le
+   document au format du modèle, comme les PDF du dossier docs/.              */
+function printSelected() {
+  const it = document.querySelector('#v-fiche .fiche-item.active');
+  let cls = null, n = null;
+  if (it && it.dataset && it.dataset.key) {
+    const k = String(it.dataset.key).split('|');
+    if (k.length === 2 && FICHES_CLS[k[0]]) { cls = k[0]; n = Number(k[1]); }
+  }
+  if (!n) {
+    const st = document.querySelector('#ref-paper .stamp-line2');
+    const m = st && /S[EÉ]ANCE\s+(\d+)/i.exec(st.textContent || '');
+    if (m) n = Number(m[1]);
+    const ct = document.querySelector('#v-fiche .class-tab.active');
+    if (ct && FICHES_CLS[ct.textContent.trim()]) cls = ct.textContent.trim();
+  }
+  if (!cls) cls = ficCls;
+  if (n && FICHES_CLS[cls] && base(cls)[String(n)]) { ficCls = cls; printFiche(n); return; }
+  if (typeof root.print === 'function') root.print();
 }
 
 /* ------------------------------------------------------------ impression */
@@ -959,6 +998,17 @@ function install() {
     }
     root.__ficheRepHooked = true;
   }
+  /* le bouton « Imprimer la fiche » de l'onglet imprime le document du modèle */
+  if (!root.__fichePrintHooked) {
+    document.addEventListener('click', function (e) {
+      const t = e.target && e.target.closest ? e.target.closest('[data-ref="print-fiche"]') : null;
+      if (!t) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+      printSelected();
+    }, true);
+    root.__fichePrintHooked = true;
+  }
   /* greffes sur la navigation et sur le rendu global */
   if (!root.__ficheNavHooked) {
     const go0 = root.go, r0 = root.renderAll;
@@ -998,7 +1048,7 @@ root.STI_FICHES = {
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,
-  form: n => openForm(n), formSave, formClose, formPrint, formReset,
+  form: n => openForm(n), formSave, formClose, formPrint, formReset, printSelected,
   repTri: v => { repTri = v; const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
   repCls: c => { repCls = CLS_REP[c] ? c : '4SI2'; repTri = 0;
                  const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
