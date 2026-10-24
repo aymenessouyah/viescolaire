@@ -247,17 +247,29 @@
         },
         SQL: {
           label: 'SQL', couleur: '#1f3a5f',
+          /* cas pratique 3e SI : LDD, LMD avec SELECT simple, fonctions d'agrégat — sans jointure */
           cats: [
             { n: "LDD (définition des données)", items: [
-              { c: "CREATE TABLE", d: "CONSTRAINT, PRIMARY KEY, REFERENCES … ON DELETE CASCADE, NOT NULL, CHECK, DEFAULT" },
-              { c: "ALTER TABLE", d: "ADD / MODIFY / DROP COLUMN, ADD CONSTRAINT, ADD / DROP PRIMARY KEY, DISABLE / ENABLE KEYS, RENAME TO" },
+              { c: "CREATE TABLE", d: "CONSTRAINT, PRIMARY KEY, REFERENCES …, NOT NULL, CHECK, DEFAULT" },
+              { c: "ALTER TABLE", d: "ADD / MODIFY / DROP COLUMN, ADD CONSTRAINT, RENAME TO" },
               { c: "DROP TABLE / DROP DATABASE", d: "suppression" },
               { c: "types", d: "VARCHAR, INT, DECIMAL, DATE, TIME, DATETIME, TIMESTAMP, YEAR" },
             ]},
             { n: "LMD (manipulation des données)", items: [
-              { c: "commandes", d: "SELECT, FROM, WHERE, UPDATE … SET, INSERT, DELETE" },
-              { c: "clauses", d: "GROUP BY, ORDER BY, HAVING" },
-              { c: "opérateurs", d: "DISTINCT, BETWEEN, IN, LIKE" },
+              { c: "INSERT INTO", d: "insertion de lignes" },
+              { c: "UPDATE … SET … WHERE", d: "modification des lignes" },
+              { c: "DELETE FROM … WHERE", d: "suppression des lignes" },
+              { c: "SELECT simple", d: "colonnes, DISTINCT, FROM, alias de colonnes" },
+              { c: "WHERE", d: "AND, OR, NOT, IS NULL, BETWEEN, IN, LIKE" },
+              { c: "ORDER BY", d: "tri croissant / décroissant (ASC, DESC)" },
+            ]},
+            { n: "Fonctions d'agrégat", items: [
+              { c: "COUNT()", d: "compter les lignes ; COUNT(DISTINCT …)" },
+              { c: "SUM()", d: "somme des valeurs" },
+              { c: "AVG()", d: "moyenne des valeurs" },
+              { c: "MIN() / MAX()", d: "valeurs extrêmes" },
+              { c: "GROUP BY", d: "regroupement sur une ou deux colonnes" },
+              { c: "HAVING", d: "filtre sur les groupes (différence avec WHERE)" },
             ]},
           ]
         },

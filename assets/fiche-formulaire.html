@@ -75,7 +75,17 @@ input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color
 .liv-top input[type=text]{max-width:260px;margin:0}
 .liv-top select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink)}
 .liv-count{margin-left:auto;font-weight:800;color:var(--c4);font-size:13px}
-.liv-list{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:6px 10px}
+.liv-list{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:8px 12px}
+.liv-dom{margin:10px 0 4px;font:800 11.5px/1 'Segoe UI',system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--c4);
+  border-bottom:1px solid var(--line);padding-bottom:4px}
+.liv-cat{margin:8px 0 12px}
+.liv-cat h4{margin:0 0 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--c1);display:flex;gap:8px;align-items:baseline}
+.liv-cat h4 .n{font-weight:400;color:var(--mut);letter-spacing:0;text-transform:none}
+.liv-cat h4 .mini{margin-left:auto;display:flex;gap:5px}
+.liv-cat h4 .mini button{font:600 10.5px/1 'Segoe UI',system-ui;letter-spacing:.02em;text-transform:none;padding:3px 7px;
+  border-radius:5px;border:1px solid var(--line);background:var(--field);color:var(--mut);cursor:pointer}
+.liv-cat h4 .mini button:hover{color:var(--ink);border-color:var(--c4)}
+.liv-items{display:grid;grid-template-columns:1fr 1fr;gap:1px 18px}
 .liv-item{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.35;padding:2px 0;cursor:pointer;
   text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
 .liv-item input{margin:2px 0 0;accent-color:var(--c4);cursor:pointer}
@@ -275,50 +285,144 @@ window.SUIVI = SUIVI;
    Même référentiel que le suivi de l'application (data/livres-sti.js) : la sélection
    est enregistrée dans la séance, ce qui recalcule la couverture des deux livres. */
 var LIVRE = (function () {
-  var items = [], sel = {}, q = '', d = '';
+  var items = [], sel = {}, q = '', d = '', jeu = null;
   function esc2(v) { return esc(v); }
-  function visibles() {
+  function norm(v) {
+    return String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  /* domaine du livre → domaine de l'annexe */
+  function dom(v) {
+    return ({ 'SQL / BD': 'SQL', 'SQL': 'SQL', 'CSS': 'CSS3', 'CSS3': 'CSS3',
+              'HTML5': 'HTML5', 'JavaScript': 'JavaScript', 'PHP': 'PHP' })[v] || v;
+  }
+  /* code court d'une notion du livre : <html> → html, alert() → alert, SELECT … → select */
+  function code(it) {
+    var lab = String(it.label).trim(), m;
+    m = lab.match(/^<([a-z0-9]+)/i); if (m) return m[1].toLowerCase();
+    m = lab.match(/^([a-zA-Z_$][\w$]*)\s*\(/); if (m) return m[1].toLowerCase();
+    m = lab.match(/^((?:[A-Z][A-Z0-9]{1,8}\s*){1,3})/); if (m) return norm(m[1]);
+    return norm(lab.split(/[^A-Za-z0-9_-]/)[0] || '');
+  }
+  function toks(v) { return norm(v).split(/[^a-z0-9_@#.$-]+/).filter(Boolean); }
+  /* rattachement d'une notion à une sous-catégorie de l'annexe */
+  function categorie(it, cats) {
+    var c = code(it), lab = ' ' + norm(it.label + ' ' + (it.description || '')) + ' ', i, k;
+    if (/^h[1-6]$/.test(c)) {
+      for (i = 0; i < cats.length; i++) if (toks(cats[i].items.map(function (x) { return x.c; }).join(',')).indexOf('h1') >= 0) return cats[i].n;
+    }
+    for (i = 0; i < cats.length; i++)
+      if (toks(cats[i].items.map(function (x) { return x.c; }).join(',')).indexOf(c) >= 0) return cats[i].n;
+    var best = null, bs = 0;
+    for (i = 0; i < cats.length; i++) {
+      var sc = 0;
+      toks(cats[i].items.map(function (x) { return x.c; }).join(',')).forEach(function (t) {
+        if (t.length < 4) return;
+        if (new RegExp('(^|[^a-z0-9])' + t.replace(/-/g, '\\-') + '([^a-z0-9]|$)').test(lab)) sc += t.length;
+      });
+      if (sc > bs) { bs = sc; best = cats[i].n; }
+    }
+    return best;
+  }
+  /* groupes : domaine → sous-catégorie → notions (les autres vont dans « Autres notions ») */
+  function groupes() {
+    var A = jeu || {}, out = [], vus = {};
+    Object.keys(A).forEach(function (domaine) {
+      var cats = A[domaine].cats || [], map = {}, autres = [];
+      items.forEach(function (it) {
+        if (dom(it.domain) !== domaine) return;
+        var k = categorie(it, cats);
+        if (k) { (map[k] = map[k] || []).push(it); } else { autres.push(it); }
+      });
+      var g = cats.map(function (c) { return { cat: c.n, items: map[c.n] || [] }; });
+      if (autres.length) g.push({ cat: 'Autres notions de ' + domaine, items: autres });
+      g = g.filter(function (x) { return x.items.length; });
+      if (g.length) out.push({ domaine: domaine, groupes: g });
+    });
+    /* domaines du livre absents de l'annexe (sécurité) */
+    var connus = Object.keys(A);
+    var rest = items.filter(function (it) { return connus.indexOf(dom(it.domain)) < 0; });
+    if (rest.length) out.push({ domaine: 'Autres', groupes: [{ cat: 'Notions non classées', items: rest }] });
+    return out;
+  }
+  function visibles(liste) {
     var t = q.toLowerCase();
-    return items.filter(function (r) {
-      return (!d || r.domain === d) && (!t || (r.label + ' ' + r.description + ' ' + (r.detail || '')).toLowerCase().indexOf(t) >= 0);
+    return liste.filter(function (r) {
+      return (!d || dom(r.domain) === d || r.domain === d) &&
+        (!t || (r.label + ' ' + r.description + ' ' + (r.detail || '')).toLowerCase().indexOf(t) >= 0);
     });
   }
+  function ligne(r) {
+    return '<label class="liv-item"><input type="checkbox"' + (sel[r.id] ? ' checked' : '') +
+      ' data-id="' + r.id + '" onchange="LIVRE.toggle(this)">' +
+      '<span><code>' + esc2(r.label) + '</code>' +
+      (r.description ? ' <span class="dd">— ' + esc2(r.description) + '</span>' : '') +
+      (r.pages && r.pages.length ? ' <span class="pg">p. ' + r.pages.join(', ') + '</span>' : '') +
+      '</span></label>';
+  }
   function peindre() {
-    var list = visibles();
-    document.getElementById('liv-list').innerHTML = list.length ? list.map(function (r) {
-      return '<label class="liv-item"><input type="checkbox"' + (sel[r.id] ? ' checked' : '') +
-        ' data-id="' + r.id + '" onchange="LIVRE.toggle(this)">' +
-        '<span><code>' + esc2(r.label) + '</code>' +
-        (r.description ? ' <span class="dd">— ' + esc2(r.description) + '</span>' : '') +
-        (r.pages && r.pages.length ? ' <span class="pg">p. ' + r.pages.join(', ') + '</span>' : '') +
-        '</span></label>';
-    }).join('') : '<p class="av-note">Aucune notion ne correspond.</p>';
+    var html = '';
+    groupes().forEach(function (bloc) {
+      var gs = bloc.groupes.map(function (g) {
+        return { cat: g.cat, items: visibles(g.items), tous: g.items };
+      }).filter(function (g) { return g.items.length; });
+      if (!gs.length) return;
+      html += '<div class="liv-dom">' + esc2(bloc.domaine) + '</div>';
+      gs.forEach(function (g) {
+        var n = g.tous.filter(function (r) { return sel[r.id]; }).length;
+        html += '<div class="liv-cat"><h4>' + esc2(g.cat) +
+          ' <span class="n">' + n + '/' + g.tous.length + '</span>' +
+          '<span class="mini"><button type="button" onclick="LIVRE.cat(true,\'' +
+          esc2(bloc.domaine) + '\',\'' + esc2(g.cat).replace(/'/g, '&#39;') + '\')">tout cocher</button>' +
+          '<button type="button" onclick="LIVRE.cat(false,\'' + esc2(bloc.domaine) + '\',\'' +
+          esc2(g.cat).replace(/'/g, '&#39;') + '\')">tout décocher</button></span></h4>' +
+          '<div class="liv-items">' + g.items.map(ligne).join('') + '</div></div>';
+      });
+    });
+    document.getElementById('liv-list').innerHTML = html ||
+      '<p class="av-note">Aucune notion ne correspond à la recherche.</p>';
+    compter();
+  }
+  function compter() {
     var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
     var c = document.getElementById('liv-count');
     if (c) c.textContent = n + (n > 1 ? ' notions' : ' notion');
+    Array.prototype.forEach.call(document.querySelectorAll('#liv-list .liv-cat'), function (box) {
+      var boxes = box.querySelectorAll('input[type=checkbox]');
+      var ck = 0; Array.prototype.forEach.call(boxes, function (b) { if (b.checked) ck++; });
+      var sp = box.querySelector('h4 .n');
+      if (sp) sp.textContent = ck + '/' + boxes.length;
+    });
+  }
+  function paquet(domaine, cat) {
+    var out = [];
+    groupes().forEach(function (b) {
+      if (b.domaine !== domaine) return;
+      b.groupes.forEach(function (g) { if (g.cat === cat) out = out.concat(g.items); });
+    });
+    return out;
   }
   return {
-    build: function (arr) {
-      items = arr || []; sel = {};
+    build: function (arr, jeux) {
+      items = arr || []; sel = {}; jeu = jeux || null;
       var doms = [];
-      items.forEach(function (r) { if (doms.indexOf(r.domain) < 0) doms.push(r.domain); });
+      items.forEach(function (r) { var x = dom(r.domain); if (doms.indexOf(x) < 0) doms.push(x); });
       var s = document.getElementById('liv-dom');
       if (s) s.innerHTML = '<option value="">Tous les domaines (' + items.length + ')</option>' +
         doms.map(function (x) { return '<option value="' + esc2(x) + '">' + esc2(x) + '</option>'; }).join('');
       peindre();
     },
-    select: function (ids) {
-      sel = {}; (ids || []).forEach(function (i) { sel[i] = true; }); peindre();
-    },
+    select: function (ids) { sel = {}; (ids || []).forEach(function (i) { sel[i] = true; }); peindre(); },
     selection: function () { return Object.keys(sel).filter(function (k) { return sel[k]; }); },
-    toggle: function (el) {          /* pas de re-rendu : on garde le focus et la case cliquée */
+    toggle: function (el) {
       if (el.checked) sel[el.getAttribute('data-id')] = true; else delete sel[el.getAttribute('data-id')];
-      var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
-      var c = document.getElementById('liv-count');
-      if (c) c.textContent = n + (n > 1 ? ' notions' : ' notion');
+      compter();
+    },
+    cat: function (on, domaine, cat) {
+      paquet(domaine, cat).forEach(function (r) { if (on) sel[r.id] = true; else delete sel[r.id]; });
+      peindre();
     },
     tout: function (on) {
-      visibles().forEach(function (r) { if (on) sel[r.id] = true; else delete sel[r.id]; });
+      visibles(items).forEach(function (r) { if (on) sel[r.id] = true; else delete sel[r.id]; });
       peindre();
     },
     filtre: function () {

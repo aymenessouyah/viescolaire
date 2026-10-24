@@ -541,7 +541,8 @@ function fillForm(n) {
     if (w.SUIVI && w.SUIVI.init) w.SUIVI.init(seanceEtat(n));
     if (w.LIVRE) {
       const st = (root.store && root.store.seances && root.store.seances[ficCls + '|' + n]) || {};
-      w.LIVRE.build(notionsLivre());
+      if (w.AV && w.AV.jeu) w.LIVRE.build(notionsLivre(), w.AV.jeu().domaines || w.AV.jeu());
+      else w.LIVRE.build(notionsLivre());
       /* une fiche cumule les notions des séances précédentes (avancement) */
       const prev = [];
       Object.keys(root.store && root.store.seances || {}).forEach(function (k) {

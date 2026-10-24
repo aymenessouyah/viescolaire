@@ -2932,7 +2932,7 @@ const FICHES_3SI1 = {
    {
     "titre": "SELECT : filtres et tri",
     "items": [
-     "Diagnostiquer les besoins de remédiation avant les jointures."
+     "Diagnostiquer les besoins de remédiation avant les requêtes de sélection."
     ]
    }
   ],
@@ -2990,12 +2990,12 @@ const FICHES_3SI1 = {
   "objectifs_cours": [
    "Évaluer les acquis du domaine bases de données et SQL.",
    "Vérifier la capacité à écrire un script de création et des requêtes correctes.",
-   "Diagnostiquer les besoins de remédiation avant les jointures."
+   "Diagnostiquer les besoins de remédiation avant les requêtes de sélection."
   ]
  },
  "35": {
   "n": 35,
-  "titre": "Correction du DC4 et SQL — jointures",
+  "titre": "Correction du DC4 et SQL — requêtes de sélection",
   "date": "2027-02-18",
   "tri": 2,
   "nature": "correction",
@@ -3010,13 +3010,13 @@ const FICHES_3SI1 = {
     ]
    },
    {
-    "titre": "Jointure interne",
+    "titre": "SELECT simple et filtres",
     "items": [
-     "Écrire une jointure interne sur une clé étrangère."
+     "Écrire une requête SELECT avec WHERE et ORDER BY."
     ]
    },
    {
-    "titre": "Alias et requêtes sur deux tables",
+    "titre": "Alias de colonnes et tri du résultat",
     "items": [
      "Construire une requête sur deux ou trois tables avec alias."
     ]
@@ -3028,15 +3028,15 @@ const FICHES_3SI1 = {
    "séances 30 à 33"
   ],
   "criteres": [
-   "Une jointure rapproche deux tables par la clé étrangère ; sans condition de jointure on obtient le produit cartésien.",
+   "Une requête de sélection s'écrit SELECT … FROM … WHERE … ORDER BY : le WHERE filtre les lignes, l'ORDER BY trie le résultat.",
    "Produire : Correction guidée du DC4, question par question, avec reprise des scripts de création…",
-   "Éviter : Oublier la condition de jointure : produit cartésien."
+   "Éviter : Oublier le WHERE : toutes les lignes sont ramenées."
   ],
   "etapes": [
    {
     "etape": "Rappel",
     "duree": 10,
-    "prof": "Distribuer les copies et rappeler le barème : Deux tables, une question simple : « quelles activités suit chaque adhérent ? ». Sans jointure, les élèves…",
+    "prof": "Distribuer les copies et rappeler le barème : Deux tables, une question simple : « quelles activités suit chaque adhérent ? ». Sans requête de sélection, les élèves…",
     "eleves": "• Prennent connaissance de leur note et du barème",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
@@ -3050,33 +3050,33 @@ const FICHES_3SI1 = {
    {
     "etape": "Constatations",
     "duree": 85,
-    "prof": "Barème commenté ; remédiation sur les contraintes et les requêtes fautives ; jointure interne (INNER JOIN, ON), jointure implicite dans le WHERE, alias de tables. Exercices de rattrapage : Jointure adhérent–inscription–activité : construction pas à pas, alias, conditions, tri ; vérification du nombre de lignes obtenues.",
+    "prof": "Barème commenté ; remédiation sur les contraintes et les requêtes fautives ; SELECT avec WHERE, opérateurs AND / OR / NOT, BETWEEN, IN, LIKE, ORDER BY, alias de colonnes. Exercices de rattrapage : Sélection adhérent–inscription–activité : construction pas à pas, alias, conditions, tri ; vérification du nombre de lignes obtenues.",
     "eleves": "• Classent leurs erreurs • Refont les questions échouées",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Évaluation",
     "duree": 15,
-    "prof": "Faire formuler les règles : Une jointure rapproche deux tables par la clé étrangère ; sans condition de jointure on obtient le produit cartésien.",
+    "prof": "Faire formuler les règles : Une requête de sélection s'écrit SELECT … FROM … WHERE … ORDER BY : le WHERE filtre les lignes, l'ORDER BY trie le résultat.",
     "eleves": "• Recopient les règles • Fixent un objectif personnel",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    }
   ],
-  "maison": "Écrire trois requêtes de jointure sur le schéma de la bibliothèque.",
-  "trace": "Une jointure rapproche deux tables par la clé étrangère ; sans condition de jointure on obtient le produit cartésien.",
+  "maison": "Écrire trois requêtes SELECT avec filtre sur le schéma de la bibliothèque.",
+  "trace": "Une requête de sélection s'écrit SELECT … FROM … WHERE … ORDER BY : le WHERE filtre les lignes, l'ORDER BY trie le résultat.",
   "erreurs": [
-   "Oublier la condition de jointure : produit cartésien.",
+   "Oublier le WHERE : toutes les lignes sont ramenées.",
    "Alias déclaré mais non utilisé dans les colonnes."
   ],
   "prerequis_technique": "DC4 ; séances 30 à 33.",
   "axes": [
    "Correction et remédiation du DC4",
-   "Jointure interne",
-   "Alias et requêtes sur deux tables"
+   "SELECT simple et filtres",
+   "Alias de colonnes et tri du résultat"
   ],
   "objectifs_cours": [
    "Comprendre ses erreurs de contraintes et de requêtes et corriger sa copie.",
-   "Écrire une jointure interne sur une clé étrangère.",
+   "Écrire une requête SELECT avec WHERE et ORDER BY.",
    "Construire une requête sur deux ou trois tables avec alias."
   ]
  },
@@ -3113,7 +3113,7 @@ const FICHES_3SI1 = {
   ],
   "methode": "Les connaissances se construisent et ne s'apprennent pas : le point de départ est l'action, à partir de laquelle l'apprenant engage une réflexion sur les objectifs de la séance.",
   "prerequis": [
-   "Jointures (séance 35)"
+   "SELECT simple et filtres (séance 35)"
   ],
   "criteres": [
    "WHERE filtre les lignes avant le regroupement, HAVING filtre les groupes après ; un agrégat sans GROUP BY renvoie une seule ligne.",
@@ -3124,7 +3124,7 @@ const FICHES_3SI1 = {
    {
     "etape": "Rappel",
     "duree": 15,
-    "prof": "Poser des questions pour rappeler les bases : Jointures (séance 35).",
+    "prof": "Poser des questions pour rappeler les bases : SELECT simple et filtres (séance 35).",
     "eleves": "• Répondent aux questions",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
@@ -3138,7 +3138,7 @@ const FICHES_3SI1 = {
    {
     "etape": "Constatations",
     "duree": 90,
-    "prof": "COUNT, COUNT(DISTINCT), SUM, AVG, MIN, MAX ; GROUP BY sur une ou deux colonnes ; HAVING ; différence WHERE / HAVING ; ordre logique : FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY. Assister à la correction pour chaque élève ; Requêtes avec GROUP BY et HAVING (activités de plus de trois inscrits), combinaison jointure + agrégat + tri, vérification des résultats sur un jeu…",
+    "prof": "COUNT, COUNT(DISTINCT), SUM, AVG, MIN, MAX ; GROUP BY sur une ou deux colonnes ; HAVING ; différence WHERE / HAVING ; ordre logique : FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY. Assister à la correction pour chaque élève ; Requêtes avec GROUP BY et HAVING (activités de plus de trois inscrits), combinaison requête de sélection + agrégat + tri, vérification des résultats sur un jeu…",
     "eleves": "• Réalisent l'activité • Corrigent leurs erreurs avec l'aide de l'enseignant",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
@@ -3156,7 +3156,7 @@ const FICHES_3SI1 = {
    "Condition d'agrégat écrite dans WHERE.",
    "Colonne non regroupée et non agrégée dans le SELECT."
   ],
-  "prerequis_technique": "Jointures (séance 35).",
+  "prerequis_technique": "SELECT simple et filtres (séance 35).",
   "axes": [
    "Fonctions d'agrégat",
    "GROUP BY",
@@ -3170,7 +3170,7 @@ const FICHES_3SI1 = {
  },
  "37": {
   "n": 37,
-  "titre": "SQL — série d'exercices : requêtes sur deux tables",
+  "titre": "SQL — série d'exercices : filtres, tri et agrégats",
   "date": "2027-02-25",
   "tri": 2,
   "nature": "cours",
@@ -3181,15 +3181,15 @@ const FICHES_3SI1 = {
    {
     "titre": "SQL · BD",
     "items": [
-     "Série complète mêlant jointures, agrégats, filtres et tri",
-     "erreurs fréquentes (produit cartésien, agrégat sans regroupement, alias oublié)",
+     "Série complète mêlant filtres, agrégats, regroupements et tri",
+     "erreurs fréquentes (agrégat sans regroupement, colonne hors GROUP BY, alias oublié)",
      "méthode de vérification par requête de contrôle."
     ]
    },
    {
-    "titre": "Requêtes sur deux tables",
+    "titre": "Requêtes avec filtres et tri",
     "items": [
-     "Enchaîner jointure, filtre et agrégat dans une même requête."
+     "Enchaîner filtre, agrégat et tri dans une même requête."
     ]
    },
    {
@@ -3201,57 +3201,57 @@ const FICHES_3SI1 = {
   ],
   "methode": "Les connaissances se construisent et ne s'apprennent pas : le point de départ est l'action, à partir de laquelle l'apprenant engage une réflexion sur les objectifs de la séance.",
   "prerequis": [
-   "Jointures et agrégats (séances 35 et 36)"
+   "Sélection et fonctions d'agrégat (séances 35 et 36)"
   ],
   "criteres": [
-   "Avant d'écrire, formuler la question en clair : quelles tables, quelle condition de jointure, quel regroupement, quel tri.",
-   "Produire : Six requêtes guidées sur le schéma du club : jointure simple, jointure avec filtre…",
-   "Éviter : Jointure sans condition : résultat multiplié."
+   "Avant d'écrire, formuler la question en clair : quelle table, quelle condition de filtre, quel regroupement, quel tri.",
+   "Produire : Six requêtes guidées sur le schéma du club : SELECT simple, filtre, tri, agrégat…",
+   "Éviter : Agrégat sans GROUP BY : une seule ligne au lieu d'une par groupe."
   ],
   "etapes": [
    {
     "etape": "Rappel",
     "duree": 15,
-    "prof": "Poser des questions pour rappeler les bases : Jointures et agrégats (séances 35 et 36).",
+    "prof": "Poser des questions pour rappeler les bases : Sélection et fonctions d'agrégat (séances 35 et 36).",
     "eleves": "• Répondent aux questions",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Mise en situation",
     "duree": 10,
-    "prof": "Une série de huit énoncés est distribuée, tirée de sujets d'examen : chaque énoncé décrit un besoin en français. Les élèves doivent produire la requête et le résultat attendu avant d'exécuter. Présenter les consignes : Six requêtes guidées sur le schéma du club : jointure simple, jointure avec filtre, agrégat par groupe, jointure + agrégat.",
+    "prof": "Une série de huit énoncés est distribuée, tirée de sujets d'examen : chaque énoncé décrit un besoin en français. Les élèves doivent produire la requête et le résultat attendu avant d'exécuter. Présenter les consignes : Six requêtes guidées sur le schéma du club : requête de sélection simple, requête de sélection avec filtre, agrégat par groupe, requête de sélection + agrégat.",
     "eleves": "• Découvrent la situation et les consignes • Formulent le problème",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Constatations",
     "duree": 90,
-    "prof": "Série complète mêlant jointures, agrégats, filtres et tri ; erreurs fréquentes (produit cartésien, agrégat sans regroupement, alias oublié) ; méthode de vérification par requête de contrôle. Assister à la correction pour chaque élève ; Deux requêtes de synthèse en autonomie, puis correction commentée et rédaction collective de la fiche des erreurs fréquentes.",
+    "prof": "Série complète mêlant filtres, agrégats, regroupements et tri ; erreurs fréquentes (agrégat sans regroupement, colonne hors GROUP BY, alias oublié) ; méthode de vérification par requête de contrôle. Assister à la correction pour chaque élève ; Deux requêtes de synthèse en autonomie, puis correction commentée et rédaction collective de la fiche des erreurs fréquentes.",
     "eleves": "• Réalisent l'activité • Corrigent leurs erreurs avec l'aide de l'enseignant",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Évaluation",
     "duree": 5,
-    "prof": "Demander aux élèves : • Série complète mêlant jointures, agrégats, filtres et tri • erreurs fréquentes (produit cartésien, agrégat sans regroupement… • méthode de vérification par requête de contrôle. • Jointure sans condition : résultat multiplié. • Compter des lignes au lieu de compter des valeurs distinctes.",
+    "prof": "Demander aux élèves : • Série complète mêlant filtres, agrégats, regroupements et tri • erreurs fréquentes (lignes non filtrées, agrégat sans regroupement… • méthode de vérification par requête de contrôle. • Agrégat sans GROUP BY : une seule ligne au lieu d'une par groupe. • Compter des lignes au lieu de compter des valeurs distinctes.",
     "eleves": "• Répondent aux questions • Discutent entre eux pour valoriser leurs acquis",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    }
   ],
   "maison": "Terminer la série et rédiger pour chaque requête le résultat attendu en une phrase.",
-  "trace": "Avant d'écrire, formuler la question en clair : quelles tables, quelle condition de jointure, quel regroupement, quel tri.",
+  "trace": "Avant d'écrire, formuler la question en clair : quelle table, quelle condition de filtre, quel regroupement, quel tri.",
   "erreurs": [
-   "Jointure sans condition : résultat multiplié.",
+   "Agrégat sans GROUP BY : une seule ligne au lieu d'une par groupe.",
    "Compter des lignes au lieu de compter des valeurs distinctes."
   ],
-  "prerequis_technique": "Jointures et agrégats (séances 35 et 36).",
+  "prerequis_technique": "Sélection et fonctions d'agrégat (séances 35 et 36).",
   "axes": [
-   "Requêtes sur deux tables",
+   "Requêtes avec filtres et tri",
    "Agrégats et filtres combinés",
    "Méthode de vérification"
   ],
   "objectifs_cours": [
-   "Enchaîner jointure, filtre et agrégat dans une même requête.",
+   "Enchaîner filtre, agrégat et tri dans une même requête.",
    "Traiter une série d'exercices du type de ceux de l'examen.",
    "Vérifier un résultat par une requête de contrôle."
   ]
@@ -3434,7 +3434,7 @@ const FICHES_3SI1 = {
  },
  "40": {
   "n": 40,
-  "titre": "SQL — sous-requêtes et requêtes complexes",
+  "titre": "SQL — fonctions d'agrégat et regroupements",
   "date": "2027-04-01",
   "tri": 3,
   "nature": "cours",
@@ -3445,78 +3445,78 @@ const FICHES_3SI1 = {
    {
     "titre": "SQL · BD",
     "items": [
-     "Sous-requête non corrélée dans le WHERE",
-     "IN, =, > avec sous-requête",
+     "Fonctions d'agrégat : COUNT, SUM, AVG, MIN, MAX",
+     "GROUP BY sur une ou deux colonnes, HAVING",
      "comparaison à un agrégat"
     ]
    },
    {
-    "titre": "Sous-requête dans le WHERE",
+    "titre": "GROUP BY et HAVING",
     "items": [
-     "Écrire une sous-requête non corrélée avec IN et avec un opérateur de comparaison."
+     "Regrouper des lignes avec GROUP BY et filtrer les groupes avec HAVING."
     ]
    },
    {
     "titre": "Comparaison avec un agrégat",
     "items": [
-     "Comparer une valeur à un agrégat calculé par une sous-requête."
+     "Comparer des agrégats par groupe et vérifier le résultat à la main."
     ]
    }
   ],
   "methode": "Les connaissances se construisent et ne s'apprennent pas : le point de départ est l'action, à partir de laquelle l'apprenant engage une réflexion sur les objectifs de la séance.",
   "prerequis": [
-   "Jointures et agrégats (séances 35 et 36)"
+   "Sélection et fonctions d'agrégat (séances 35 et 36)"
   ],
   "criteres": [
-   "Une sous-requête s'exécute d'abord : on l'écrit et on la teste seule avant de l'insérer dans la requête principale.",
-   "Produire : Trois sous-requêtes guidées : adhérents d'une activité donnée (IN), cotisation supérieure…",
-   "Éviter : Sous-requête renvoyant plusieurs valeurs avec un opérateur =."
+   "Un agrégat sans regroupement ramène une seule ligne ; avec GROUP BY, il s'applique à chaque groupe.",
+   "Produire : Trois requêtes guidées avec COUNT, SUM et AVG, puis GROUP BY sur une colonne…",
+   "Éviter : Mélanger une colonne et un agrégat sans GROUP BY."
   ],
   "etapes": [
    {
     "etape": "Rappel",
     "duree": 15,
-    "prof": "Poser des questions pour rappeler les bases : Jointures et agrégats (séances 35 et 36).",
+    "prof": "Poser des questions pour rappeler les bases : Sélection et fonctions d'agrégat (séances 35 et 36).",
     "eleves": "• Répondent aux questions",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Mise en situation",
     "duree": 10,
-    "prof": "« Quels adhérents paient plus que la cotisation moyenne ? » La question est simple, la réponse demande deux temps : d'abord la moyenne, ensuite la comparaison. C'est la naissance de la sous-requête. Présenter les consignes : Trois sous-requêtes guidées : adhérents d'une activité donnée (IN), cotisation supérieure à la moyenne, activité la plus suivie.",
+    "prof": "« Quelle est la cotisation moyenne, et quels adhérents paient plus ? » La question demande deux temps : calculer l'agrégat, puis filtrer les groupes avec HAVING. Présenter les consignes : Trois agrégats et regroupements guidées : adhérents d'une activité donnée (IN), cotisation supérieure à la moyenne, activité la plus suivie.",
     "eleves": "• Découvrent la situation et les consignes • Formulent le problème",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Constatations",
     "duree": 90,
-    "prof": "Sous-requête non corrélée dans le WHERE ; IN, =, > avec sous-requête ; comparaison à un agrégat ; combinaison jointure + agrégat + sous-requête ; ordre de construction. Assister à la correction pour chaque élève ; Requête de synthèse combinant jointure, agrégat et sous-requête ; vérification de chaque étape par une requête intermédiaire affichée en commentaire.",
+    "prof": "Fonctions d'agrégat : COUNT, SUM, AVG, MIN, MAX ; GROUP BY sur une ou deux colonnes, HAVING ; comparaison à un agrégat ; combinaison filtre + agrégat + regroupement ; ordre de construction. Assister à la correction pour chaque élève ; Requête de synthèse combinant requête de sélection, agrégat et agrégat ; vérification de chaque étape par une requête intermédiaire affichée en commentaire.",
     "eleves": "• Réalisent l'activité • Corrigent leurs erreurs avec l'aide de l'enseignant",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Évaluation",
     "duree": 5,
-    "prof": "Demander aux élèves : • Sous-requête non corrélée dans le WHERE • IN, =, > avec sous-requête • comparaison à un agrégat • Sous-requête renvoyant plusieurs valeurs avec un opérateur =. • Parenthèses oubliées autour de la sous-requête.",
+    "prof": "Demander aux élèves : • Fonctions d'agrégat : COUNT, SUM, AVG, MIN, MAX • GROUP BY sur une ou deux colonnes, HAVING • comparaison à un agrégat • Mélanger une colonne et un agrégat sans GROUP BY. • Agrégat placé dans le WHERE au lieu du HAVING.",
     "eleves": "• Répondent aux questions • Discutent entre eux pour valoriser leurs acquis",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    }
   ],
-  "maison": "Écrire trois requêtes avec sous-requête sur le schéma de la bibliothèque.",
-  "trace": "Une sous-requête s'exécute d'abord : on l'écrit et on la teste seule avant de l'insérer dans la requête principale.",
+  "maison": "Écrire trois requêtes avec GROUP BY sur le schéma de la bibliothèque.",
+  "trace": "Un agrégat sans regroupement ramène une seule ligne ; avec GROUP BY, il s'applique à chaque groupe.",
   "erreurs": [
-   "Sous-requête renvoyant plusieurs valeurs avec un opérateur =.",
-   "Parenthèses oubliées autour de la sous-requête."
+   "Mélanger une colonne et un agrégat sans GROUP BY.",
+   "Agrégat placé dans le WHERE au lieu du HAVING."
   ],
-  "prerequis_technique": "Jointures et agrégats (séances 35 et 36).",
+  "prerequis_technique": "Sélection et fonctions d'agrégat (séances 35 et 36).",
   "axes": [
-   "Sous-requête dans le WHERE",
+   "GROUP BY et HAVING",
    "Comparaison avec un agrégat",
    "Requête complexe construite pas à pas"
   ],
   "objectifs_cours": [
-   "Écrire une sous-requête non corrélée avec IN et avec un opérateur de comparaison.",
-   "Comparer une valeur à un agrégat calculé par une sous-requête.",
+   "Regrouper des lignes avec GROUP BY et filtrer les groupes avec HAVING.",
+   "Comparer des agrégats par groupe et vérifier le résultat à la main.",
    "Construire une requête complexe en vérifiant chaque étape."
   ]
  },
@@ -3579,14 +3579,14 @@ const FICHES_3SI1 = {
    {
     "etape": "Constatations",
     "duree": 90,
-    "prof": "Révision structurée : schéma et contraintes, LDD, LMD, SELECT, jointures, agrégats, sous-requêtes ; batterie d'exercices tirés des sujets d'examen ; barème. Assister à la correction pour chaque élève ; Batterie de six exercices d'examen (requêtes) corrigés au barème, avec classement personnel des erreurs par famille.",
+    "prof": "Révision structurée : schéma et contraintes, LDD, LMD, SELECT avec filtres, agrégats et regroupements ; batterie d'exercices tirés des sujets d'examen ; barème. Assister à la correction pour chaque élève ; Batterie de six exercices d'examen (requêtes) corrigés au barème, avec classement personnel des erreurs par famille.",
     "eleves": "• Réalisent l'activité • Corrigent leurs erreurs avec l'aide de l'enseignant",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
    {
     "etape": "Évaluation",
     "duree": 5,
-    "prof": "Demander aux élèves : • Base de données • Table / relation • Clé composée • Réviser le cours sans écrire de requêtes. • Confondre jointure et sous-requête dans le choix de la solution.",
+    "prof": "Demander aux élèves : • Base de données • Table / relation • Clé composée • Réviser le cours sans écrire de requêtes. • Confondre WHERE et HAVING dans le choix de la solution.",
     "eleves": "• Répondent aux questions • Discutent entre eux pour valoriser leurs acquis",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    }
@@ -3595,13 +3595,13 @@ const FICHES_3SI1 = {
   "trace": "En SQL, la révision se fait en écrivant des requêtes, pas en relisant un cours : six familles, une requête par famille.",
   "erreurs": [
    "Réviser le cours sans écrire de requêtes.",
-   "Confondre jointure et sous-requête dans le choix de la solution."
+   "Confondre WHERE et HAVING dans le choix de la solution."
   ],
   "prerequis_technique": "Séances 30 à 40.",
   "axes": [
    "Schéma et contraintes",
    "LDD, LMD et SELECT",
-   "Jointures, agrégats et sous-requêtes"
+   "Sélection, filtres et fonctions d'agrégat"
   ],
   "objectifs_cours": [
    "Réviser de façon structurée l'ensemble du domaine SQL.",
@@ -4246,7 +4246,7 @@ const FICHES_3SI1 = {
     ]
    },
    {
-    "titre": "SQL : jointures, agrégats, sous-requêtes",
+    "titre": "SQL : sélection, filtres et agrégats",
     "items": [
      "Préparer le bac blanc de fin d'année."
     ]
@@ -4259,13 +4259,13 @@ const FICHES_3SI1 = {
   "criteres": [
    "Barème : pratique 60 %, théorie 40 % ; le bac blanc de mai portera sur le programme entier, celui-ci prépare la méthode.",
    "Produire : Partie théorique : lecture de code, complément de requêtes, correction d'une feuille de…",
-   "Éviter : Requête de jointure sans condition."
+   "Éviter : Requête de requête de sélection sans condition."
   ],
   "etapes": [
    {
     "etape": "Rappel",
     "duree": 5,
-    "prof": "Rappeler les consignes générales et le barème : CSS3 avancé (positionnement, media queries, états) ; JavaScript (DOM, événements, validation) ; SQL (jointures…",
+    "prof": "Rappeler les consignes générales et le barème : CSS3 avancé (positionnement, media queries, états) ; JavaScript (DOM, événements, validation) ; SQL (sélection…",
     "eleves": "• Écoutent les consignes • Préparent la machine et le matériel",
     "moyens": "Sujet · copies · machine"
    },
@@ -4294,14 +4294,14 @@ const FICHES_3SI1 = {
   "maison": "Aucun travail écrit ; relire les fiches 40 à 48 avant la séance de correction.",
   "trace": "Barème : pratique 60 %, théorie 40 % ; le bac blanc de mai portera sur le programme entier, celui-ci prépare la méthode.",
   "erreurs": [
-   "Requête de jointure sans condition.",
+   "Requête de requête de sélection sans condition.",
    "Script testé uniquement sur un cas favorable."
   ],
   "prerequis_technique": "Séances 40 à 48.",
   "axes": [
    "CSS3 avancé",
    "JavaScript : DOM, événements, validation",
-   "SQL : jointures, agrégats, sous-requêtes"
+   "SQL : sélection, filtres et agrégats"
   ],
   "objectifs_cours": [
    "Évaluer les acquis du 3e trimestre en théorie et en pratique.",
@@ -4422,9 +4422,9 @@ const FICHES_3SI1 = {
     ]
    },
    {
-    "titre": "SELECT, jointures et agrégats",
+    "titre": "SELECT, filtres et fonctions d'agrégat",
     "items": [
-     "Enchaîner jointure, agrégat et sous-requête dans une même requête."
+     "Enchaîner filtre, regroupement et tri dans une même requête."
     ]
    }
   ],
@@ -4433,7 +4433,7 @@ const FICHES_3SI1 = {
    "Séances 30 à 41 et 49"
   ],
   "criteres": [
-   "Une requête se vérifie en la simplifiant : si le résultat d'une jointure sur trois tables est faux, on la teste sur deux tables.",
+   "Une requête se vérifie en la simplifiant : on teste d'abord le WHERE seul, puis on ajoute le regroupement et le tri.",
    "Produire : Reprise des trois familles d'erreurs : requête modèle écrite au tableau, puis trois…",
    "Éviter : Écrire la requête avant d'avoir identifié les tables."
   ],
@@ -4455,7 +4455,7 @@ const FICHES_3SI1 = {
    {
     "etape": "Constatations",
     "duree": 90,
-    "prof": "Schéma relationnel et contraintes ; LDD et LMD ; SELECT et filtres ; jointures ; agrégats et regroupements ; sous-requêtes ; série d'exercices corrigés. Assister à la correction pour chaque élève ; Série de six exercices type bac blanc corrigés au barème, avec contrôle du résultat par une seconde requête.",
+    "prof": "Schéma relationnel et contraintes ; LDD et LMD ; SELECT, filtres et tri ; agrégats et regroupements ; série d'exercices corrigés. Assister à la correction pour chaque élève ; Série de six exercices type bac blanc corrigés au barème, avec contrôle du résultat par une seconde requête.",
     "eleves": "• Réalisent l'activité • Corrigent leurs erreurs avec l'aide de l'enseignant",
     "moyens": "XAMPP / phpMyAdmin · base d'examen"
    },
@@ -4468,7 +4468,7 @@ const FICHES_3SI1 = {
    }
   ],
   "maison": "Revoir les requêtes de la série et refaire celles qui ont échoué.",
-  "trace": "Une requête se vérifie en la simplifiant : si le résultat d'une jointure sur trois tables est faux, on la teste sur deux tables.",
+  "trace": "Une requête se vérifie en la simplifiant : on teste d'abord le WHERE seul, puis on ajoute le regroupement et le tri.",
   "erreurs": [
    "Écrire la requête avant d'avoir identifié les tables.",
    "Oublier le regroupement quand un agrégat côtoie une colonne."
@@ -4476,12 +4476,12 @@ const FICHES_3SI1 = {
   "prerequis_technique": "Séances 30 à 41 et 49.",
   "axes": [
    "Schéma, contraintes, LDD et LMD",
-   "SELECT, jointures et agrégats",
-   "Sous-requêtes et exercices corrigés"
+   "SELECT, filtres et fonctions d'agrégat",
+   "Agrégats et regroupements — exercices corrigés"
   ],
   "objectifs_cours": [
    "Reprendre le domaine SQL à partir des erreurs des devoirs.",
-   "Enchaîner jointure, agrégat et sous-requête dans une même requête.",
+   "Enchaîner filtre, regroupement et tri dans une même requête.",
    "Traiter une série d'exercices corrigés type bac blanc."
   ]
  },
