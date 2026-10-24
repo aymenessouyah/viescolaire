@@ -156,7 +156,7 @@ button.sec{background:var(--mut)}
 <div class="av-card" id="av">
   <div class="av-head">
     <div>
-      <div class="av-lab">Avancement du cours</div>
+      <div class="av-lab" id="av-title">Avancement du cours</div>
       <div class="av-big"><span id="av-pct">0 %</span></div>
       <div class="av-lab" id="av-count">0 / 0 notions couvertes</div>
     </div>
@@ -169,8 +169,9 @@ button.sec{background:var(--mut)}
     <button type="button" class="sec" onclick="AV.all(false)">Tout décocher (domaine)</button>
   </div>
   <div class="av-panel" id="av-panel"></div>
-  <p class="av-note" id="av-note">Cochez une notion quand elle a été traitée en classe : le pourcentage
-     mesure l’avancement du programme par rapport au cours (HTML5, CSS3, JavaScript, SQL, PHP).</p>
+  <p class="av-note" id="av-note"><b id="av-src">Annexe</b> — cochez une notion quand elle a été traitée
+     en classe : le pourcentage mesure l’avancement du programme par rapport au cours de la classe
+     affichée (3<sup>e</sup> SI suit l’annexe TT3STI, 4<sup>e</sup> SI l’annexe TT4STI).</p>
 </div>
 
 <div class="bar">
@@ -342,6 +343,20 @@ var AV = (function () {
     if (/4/.test(v) && /SI/i.test(v)) return '4SI2';
     return String(v).trim() || 'classe';
   }
+  /* jeu de données de la classe affichée : AnnexeTT3STI pour 3SI1, AnnexeTT4STI pour 4SI2 */
+  function jeu() {
+    var J = window.STI_ANNEXES_JEUX || {};
+    var c = domaine();
+    if (J[c]) return J[c];
+    /* repli : classe non reconnue → jeu 4SI2, sinon premier disponible */
+    return J['4SI2'] || J[Object.keys(J)[0]] || { domaines: window.STI_ANNEXES || {} };
+  }
+  function domaines() { return jeu().domaines || {}; }
+  function source() {
+    var j = jeu();
+    return (j.source ? 'Annexe ' + j.source.replace(/^Annexe/, '') : 'Annexe') +
+           (j.titre ? ' · ' + j.titre : '');
+  }
   function cle() { return KEY + '|' + domaine(); }
   /* la séance ouverte dans le formulaire */
   function seq() { return Number((document.getElementById('seance') || {}).value) || 0; }
@@ -360,19 +375,19 @@ var AV = (function () {
   function ecrire() { try { localStorage.setItem(cle(), JSON.stringify(done)); } catch (e) {} }
   function id(d, c, i) { return d + '::' + c + '::' + i; }
   function total(d) {
-    var A = window.STI_ANNEXES; if (!A) return 0;
+    var A = domaines(); if (!A) return 0;
     if (d) return A[d].cats.reduce(function (s, c) { return s + c.items.length; }, 0);
     return Object.keys(A).reduce(function (s, k) { return s + total(k); }, 0);
   }
   function compte(d) {
-    var A = window.STI_ANNEXES, n = 0; if (!A) return 0;
+    var A = domaines(), n = 0; if (!A) return 0;
     (d ? [d] : Object.keys(A)).forEach(function (k) {
       A[k].cats.forEach(function (c, ci) { c.items.forEach(function (it, ii) { if (acquise(id(k, ci, ii))) n++; }); });
     });
     return n;
   }
   function nbCat(ci) {
-    var A = window.STI_ANNEXES; if (!A) return [0, 0];
+    var A = domaines(); if (!A) return [0, 0];
     var c = A[dom].cats[ci], nn = 0;
     c.items.forEach(function (_, ii) { if (acquise(id(dom, ci, ii))) nn++; });
     return [nn, c.items.length];
@@ -380,16 +395,21 @@ var AV = (function () {
   function pct(a, b) { return b ? Math.round(a * 100 / b) : 0; }
 
   function rendre() {
-    var A = window.STI_ANNEXES, box = document.getElementById('av');
+    var A = domaines(), box = document.getElementById('av');
     if (!box) return;
-    if (!A) {
+    if (!A || !Object.keys(A).length) {
       box.querySelector('#av-note').textContent =
         'Référentiel indisponible : le fichier assets/annexes-fonctions.js n’a pas été chargé.';
       return;
     }
+    if (!A[dom]) dom = Object.keys(A)[0];
     var t = total(), n = compte(), p = pct(n, t);
     document.getElementById('av-pct').textContent = p + ' %';
     document.getElementById('av-count').textContent = n + ' / ' + t + ' notions couvertes · ' + domaine();
+    var src = document.getElementById('av-src');
+    if (src) src.textContent = source();
+    var tt = document.getElementById('av-title');
+    if (tt) tt.textContent = 'Avancement du cours — ' + domaine();
     document.getElementById('av-fill').style.width = p + '%';
 
     /* pastilles des 5 domaines */
@@ -436,10 +456,12 @@ var AV = (function () {
   return {
     init: function () {
       done = lire();
-      var A = window.STI_ANNEXES;
+      var A = domaines();
       if (A && !A[dom]) dom = Object.keys(A)[0];
       ready = true; rendre();
     },
+    jeu: jeu,
+    source: source,
     seq: seq,
     show: function (k) { dom = k; rendre(); },
     toggle: function (el) {
@@ -462,7 +484,7 @@ var AV = (function () {
       var h = document.querySelectorAll('#av-panel .av-cat h4')[ci];
       if (h) {
         var nb = nbCat(ci), mini = h.querySelector('.mini');
-        h.innerHTML = esc(window.STI_ANNEXES[dom].cats[ci].n) +
+        h.innerHTML = esc(domaines()[dom].cats[ci].n) +
           ' <span class="n">' + nb[0] + '/' + nb[1] + '</span>';
         if (mini) h.appendChild(mini);
       }
@@ -472,7 +494,7 @@ var AV = (function () {
     },
     /* tout cocher / tout décocher pour UN groupe (une sous-catégorie) */
     cat: function (on, ci) {
-      var A = window.STI_ANNEXES; if (!A) return;
+      var A = domaines(); if (!A) return;
       var n = seq(), c = A[dom].cats[ci];
       c.items.forEach(function (_, ii) {
         var k = id(dom, ci, ii);
@@ -482,7 +504,7 @@ var AV = (function () {
       ecrire(); rendre();
     },
     all: function (on) {
-      var A = window.STI_ANNEXES; if (!A) return;
+      var A = domaines(); if (!A) return;
       var n = seq();
       A[dom].cats.forEach(function (c, ci) {
         c.items.forEach(function (_, ii) {
@@ -519,10 +541,12 @@ var AV = (function () {
 })();
 window.AV = AV;
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', AV.init); else AV.init();
-/* si le numéro de séance change, l'avancement cumulé doit être recalculé */
+/* séance ou classe modifiées à la main : on relit l'état et on change de référentiel */
 (function () {
   var s = document.getElementById('seance');
   if (s) s.addEventListener('change', function () { AV.refresh(); });
+  var c = document.getElementById('classe');
+  if (c) c.addEventListener('change', function () { AV.refresh(); });
 })();
 </script>
 </body>

@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.6.1-suivi-seance` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.2-annexes-tt` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -29,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.6.1-suivi-seance` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.2-annexes-tt` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -343,6 +343,39 @@ Vérifié : case assurée préremplie et état « Assurée ✓ » après validat
 `0,2 % · 3SI1 0,4 % · 1/602` ; boutons de groupe 9 sous-catégories (`8/8` après « tout cocher »,
 `4 %`) ; héritage `S1` sur 8 notions et 2 notions du livre en séance 2 ; bouton *Fiche de séance* →
 fenêtre d'origine avec `#m-done` et `#sti-check-panel` ; 0 erreur JS.
+
+### ③ octies Un référentiel d'annexe par classe (AnnexeTT3STI / AnnexeTT4STI)
+
+Le cas pratique ne suit plus un référentiel unique : **chaque classe a son annexe**.
+
+| Classe | Annexe (PDF dans `docs/`) | Modules | Notions (cases) |
+|---|---|---|---|
+| **3<sup>e</sup> SI** | `AnnexeTT3STI.pdf` — 7 pages | HTML5, CSS3 (avec Animation), JavaScript, SQL (LDD, LMD) | **169** |
+| **4<sup>e</sup> SI** | `AnnexeTT4STI.pdf` — 9 pages | HTML5, CSS3 (**sans Animation**), JavaScript, **PHP**, SQL (LDD, LMD, fonctions de chaînes et de dates) | **202** |
+
+Modifications :
+
+- **`assets/annexes-fonctions.js`** restructuré en `STI_ANNEXES_JEUX` (`3SI1`, `4SI2`) avec, pour chaque
+  jeu, `source`, `pages`, `titre`, `fichier` et `domaines` ; `STI_ANNEXES_TOTAL = {3SI1:169, 4SI2:202}`.
+  La 4<sup>e</sup> SI perd la sous-catégorie *Animation* (absente de son annexe), la 3<sup>e</sup> SI perd
+  PHP et les fonctions SQL de chaînes / de dates (absentes de la sienne) ;
+- **formulaire** : le bloc d'avancement lit le jeu de la classe affichée (`AV.jeu()`), affiche la source
+  (« Annexe TT3STI · HTML5, CSS3, JavaScript, SQL »), le titre « Avancement du cours — 3SI1/4SI2 » et
+  les pastilles correspondantes (4 en 3<sup>e</sup> SI, 5 en 4<sup>e</sup> SI) ; changer la classe dans le
+  champ *Classe* recharge le référentiel (les compteurs restent propres à chaque classe) ;
+- **`docs/AnnexeTT3STI.pdf`** et **`docs/AnnexeTT4STI.pdf`** sont déposés dans le site, ajoutés à
+  `DOC_ASSETS` (110 documents hors ligne) et référencés dans `data/docs.js` (groupe *Annexes de cours*) ;
+- **`data/competences.js`** : chaque compétence pointe d'abord vers l'annexe de sa classe
+  (`AnnexeTT3STI.pdf` pour 3SI1, `AnnexeTT4STI.pdf` pour 4SI2) avant les annexes par module ;
+- **`data/annexes.js`** : champ `classes` par annexe (PHP réservé à la 4<sup>e</sup> SI) et nouveau
+  repère `STI_ANNEXE_REF` ; la page *Annexes intégrales* affiche désormais un badge
+  « 3<sup>e</sup> et 4<sup>e</sup> SI » ou « 4<sup>e</sup> SI uniquement ».
+
+Vérifié dans le navigateur : 3SI1 → source `Annexe TT3STI`, **0/169**, pastilles HTML5 · CSS3 ·
+JavaScript · SQL, sous-catégories SQL réduites à LDD et LMD ; 4SI2 → source `Annexe TT4STI`, **0/202**,
+5 pastilles dont PHP, 9 sous-catégories, aucune *Animation* ; coche « tout cocher » HTML5 → `34 % ·
+58/169` en 3SI1 ; les deux PDF sont servis en `application/pdf` ; liens de compétences et badges
+corrects ; cache `108/110` ; 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 

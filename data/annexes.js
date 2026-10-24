@@ -4,7 +4,7 @@
 (function (root) {
 'use strict';
 const ANNEXES = [
-  { id:"html", t:"Annexe HTML5", ico:"code", pdf:"Annexe HTML5 By A.E.pdf", pages:"6 pages",
+  { id:"html", classes:['3SI1','4SI2'], t:"Annexe HTML5", ico:"code", pdf:"Annexe HTML5 By A.E.pdf", pages:"6 pages",
     res:"Balises HTML5, attributs détaillés et exemples issus du projet « Le fleuriste du Rafèha ».",
     apports:["Attributs détaillés de &lt;link&gt;, &lt;script&gt;, &lt;ol&gt; et &lt;img&gt; (href, rel, type, src, reversed, start, alt, srcset)","Exemples de code pour chaque famille de balises (tableau complet, figure + vidéo + sources, details/summary, formulaire fieldset + datalist)","Événements complémentaires : onchange, onkeydown, onkeyup","Tableau des types et attributs &lt;input&gt; conservé à l'identique"],
     sections:[
@@ -90,7 +90,7 @@ const ANNEXES = [
         ["<code>&lt;input&gt;</code> — types","button, reset, submit (name, value, disabled) &bull; text, email, tel (name, value, placeholder, readonly, required, disabled, list) &bull; password (name, value, placeholder, readonly, required, disabled) &bull; number, range (name, value, readonly, required, disabled, min, max) &bull; date, time (name, value, required, disabled, min, max) &bull; checkbox, radio (name, value, required, disabled, checked)","&lt;fieldset&gt;\n  &lt;legend&gt;&lt;mark&gt;Remplir le formulaire&lt;/mark&gt;&lt;/legend&gt;\n  &lt;label for=\"age\"&gt;Votre âge :&lt;/label&gt;\n  &lt;input type=\"range\" name=\"age\" id=\"age\" min=\"10\" max=\"120\"&gt;\n  &lt;output name=\"resultatage\"&gt;ans&lt;/output&gt;\n&lt;/fieldset&gt;"]
       ]}
     ]},
-  { id:"css", t:"Annexe CSS3", ico:"palette", pdf:"Annexe CSS3 By A.E.pdf", pages:"9 pages",
+  { id:"css", classes:['3SI1','4SI2'], t:"Annexe CSS3", ico:"palette", pdf:"Annexe CSS3 By A.E.pdf", pages:"9 pages",
     res:"Sélecteurs, propriétés, transformations et animations, avec un exemple commenté pour chaque propriété.",
     apports:["Sélecteurs d'attributs avancés : <code>^=</code>, <code>*=</code>, <code>$=</code>, indicateurs <code>i</code> et <code>s</code>","Exemples CSS pour list-style, arrière-plan (couleurs, repeat, size, super-propriété) et bordures","Détail des fonctions de transformation (rotate, skew, scale, translate) et des filtres (blur, grayscale, invert)","Exemple complet de transition au survol + note « différence entre animations et transitions »"],
     sections:[
@@ -172,7 +172,7 @@ const ANNEXES = [
         ["Animations","Offrent davantage de liberté et de contrôle sur le déclenchement et la progression du changement de valeur des propriétés animées (états clés, répétitions, direction).",""]
       ]}
     ]},
-  { id:"js", t:"Annexe JavaScript", ico:"js", pdf:"Annexe JavaScript By A.E.pdf", pages:"4 pages",
+  { id:"js", classes:['3SI1','4SI2'], t:"Annexe JavaScript", ico:"js", pdf:"Annexe JavaScript By A.E.pdf", pages:"4 pages",
     res:"Opérateurs, entrées/sorties, objets, sélection et modification des éléments HTML.",
     apports:["Tableaux comparatifs <code>prompt / alert / confirm</code> et <code>document.write / innerHTML / textContent</code>","Détail de <code>play()</code> et <code>pause()</code> (currentTime, volume, playbackRate)","<code>Number.isNaN()</code> vs <code>isNaN()</code> et table de conversion <code>Number(ch)</code>","Fonction <code>substring()</code> détaillée avec exemples, 9 constructeurs de <code>Date</code> et 3 formats de chaînes de date"],
     sections:[
@@ -238,7 +238,7 @@ const ANNEXES = [
         ["<code>play()</code> / <code>pause()</code>","Démarrer la lecture / mettre en pause. Aucun paramètre, mais on peut préparer le média : <code>currentTime</code> (position en s), <code>volume</code> (0 à 1), <code>playbackRate</code> (vitesse 0.5 à 2).","nvideo.currentTime = 10;\nnvideo.volume = 0.5;\nnvideo.playbackRate = 1.5;\nnvideo.play();\nnvideo.pause();"]
       ]}
     ]},
-  { id:"php", t:"Annexe PHP", ico:"server", pdf:"Annexe PHP By A.E.pdf", pages:"10 pages",
+  { id:"php", classes:['4SI2'], t:"Annexe PHP", ico:"server", pdf:"Annexe PHP By A.E.pdf", pages:"10 pages",
     res:"Pages web dynamiques : variables, chaînes, tableaux, MySQL et fonctions date/heure.",
     apports:["Fonctions de manipulation de variables : <code>gettype</code>, <code>settype</code>, <code>is_*</code>, <code>isset</code>, <code>unset</code>","Nouvelles fonctions de chaînes : <code>implode</code>, <code>explode</code>, <code>strrev</code>, <code>chr</code>, <code>ord</code>, <code>strpos</code>, <code>strcmp</code>","Tableaux : initialisation, parcours (pointeur interne) et tri","Accès MySQL en PHP : <code>mysqli_connect</code>, <code>mysqli_query</code>, <code>mysqli_fetch_array</code>, <code>mysqli_num_rows</code>…","Fonctions date/heure : <code>checkdate</code>, <code>date</code>, <code>getdate</code>, <code>time</code>, <code>mktime</code>, <code>strtotime</code>"],
     sections:[
@@ -302,7 +302,7 @@ const ANNEXES = [
         ["<code>Session / cookie</code>","Prendre connaissance du <code>var_dump($_GET)</code> en TP pour visualiser le contenu des superglobales.",""]
       ]}
     ]},
-  { id:"sql", t:"Annexe SQL", ico:"db", pdf:"Annexe SQL By A.E.pdf", pages:"7 pages",
+  { id:"sql", classes:['3SI1','4SI2'], t:"Annexe SQL", ico:"db", pdf:"Annexe SQL By A.E.pdf", pages:"7 pages",
     res:"Fonctions standards, opérateurs et clauses optionnelles — partie LDD et partie LMD.",
     apports:["LDD détaillé avec exemples complets (<code>CREATE TABLE</code> Vehicule / Location / Client, toutes les variantes d'<code>ALTER TABLE</code>)","Fonctions de chaînes SQL : <code>CONCAT</code>, <code>LENGTH</code>, <code>SUBSTRING</code> (4 syntaxes), <code>LEFT</code>, <code>RIGHT</code>","Fonctions de dates : <code>TIMESTAMP</code>, <code>DAY*</code>, <code>MONTH</code>, <code>YEAR</code>, <code>NOW</code>, <code>DATEADD</code>, <code>DATEDIFF</code>","Astuce <code>timestamp</code> pour la valeur par défaut <code>CURRENT_TIMESTAMP</code>, exemples de <code>UPDATE</code> avec <code>SUBSTR</code>"],
     sections:[
@@ -353,5 +353,12 @@ const ANNEXES = [
     ]}
 ];
 root.STI_DATA = root.STI_DATA || {};
+/* Repère de lecture : le cas pratique suit l'annexe de sa classe.
+   3e SI → AnnexeTT3STI (HTML5, CSS3 avec Animation, JavaScript, SQL LDD/LMD)
+   4e SI → AnnexeTT4STI (HTML5, CSS3 sans Animation, JavaScript, PHP, SQL complet) */
+root.STI_ANNEXE_REF = {
+  '3SI1': { fichier:'docs/AnnexeTT3STI.pdf', pages:7, modules:['HTML5','CSS3','JavaScript','SQL'] },
+  '4SI2': { fichier:'docs/AnnexeTT4STI.pdf', pages:9, modules:['HTML5','CSS3','JavaScript','PHP','SQL'] }
+};
 root.STI_DATA.annexes = ANNEXES;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1505,13 +1505,15 @@ function renderRef(){
 
   <div class="card" style="margin-bottom:16px">
     <div class="card-h"><h3>${ic("book")} Annexes intégrales — versions élaborées par A. Essouyah</h3>
-      <span class="badge b-grey">HTML5 &bull; CSS3 &bull; JS &bull; PHP &bull; SQL</span></div>
+      <span class="badge b-grey">3<sup>e</sup> SI : HTML5 &bull; CSS3 &bull; JS &bull; SQL &nbsp;|&nbsp; 4<sup>e</sup> SI : + PHP</span></div>
     <div class="card-b">
       <div id="ann-zone">
         ${ANNEXES.map(a => `
           <details class="acc" style="margin-bottom:10px">
             <summary>${ic(a.ico)} ${a.t} — ${a.res}
               <span class="badge b-blue" style="margin-left:8px">${a.pages}</span>
+              <span class="badge ${a.classes && a.classes.length===1 ? 'b-navy' : 'b-green'}" style="margin-left:6px">${
+                a.classes && a.classes.length===1 ? '4<sup>e</sup> SI uniquement' : '3<sup>e</sup> et 4<sup>e</sup> SI'}</span>
               <span class="arrow">${ic("chev")}</span></summary>
             <div class="acc-b">
               ${a.sections.map(sc => `

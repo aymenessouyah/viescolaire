@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.6.1-suivi-seance';
+const VERSION='sti-espace-v1.6.2-annexes-tt';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -89,6 +89,8 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./docs/fiches-4si-2026/S48.pdf",
   "./docs/fiches-4si-2026/S49.pdf",
   "./docs/fiches-4si-2026/S50.pdf",
+  "./docs/AnnexeTT3STI.pdf",
+  "./docs/AnnexeTT4STI.pdf",
   "./docs/sti-smart-book-3si-2026.pdf",
   "./docs/sti-smart-book-4si-2026.pdf",
   "./docs/fiches-3si-2026/Fiches_3SI1_2026-2027.pdf",
