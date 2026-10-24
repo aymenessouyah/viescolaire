@@ -107,7 +107,8 @@
 #v-fiches .tbl td{vertical-align:top}
 #v-fiches .tbl .btn{margin:1px 1px}
 #v-fiches .fic-actions{white-space:nowrap}
-#v-fiches .fic-actions .btn{padding:4px 8px;font-size:11.5px;line-height:1.25;min-height:0;border-radius:8px;display:inline-block}
+#v-fiches .fic-actions .btn{padding:4px 8px;font-size:11.5px;line-height:1.25;min-height:0;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;height:24px;vertical-align:middle}
 #v-fiches .tbl-wrap{overflow-x:auto}
 #v-fiches .card-h{flex-wrap:wrap;gap:8px}
 #v-fiches .card-h .row{flex-flow:row wrap;justify-content:flex-end;align-items:center}

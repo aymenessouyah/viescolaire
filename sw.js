@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.5.2-fiches4si2';
+const VERSION='sti-espace-v1.5.4-fiches-3si1';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -32,7 +32,9 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/fiches.js",
   "./assets/fiches.css",
   "./data/fiches.js",
-  "./data/repartition4SI2.js"
+  "./data/fiches3SI1.js",
+  "./data/repartition4SI2.js",
+  "./data/repartition3SI1.js"
 ],DOC_ASSETS=[
   "./docs/fiches-4si-2026/Fiches_4SI2_2026-2027.pdf",
   "./docs/fiches-4si-2026/S1-2.pdf",
@@ -75,7 +77,35 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./docs/Annexe-CSS3.pdf",
   "./docs/Annexe-JavaScript.pdf",
   "./docs/Annexe-PHP.pdf",
-  "./docs/Annexe-SQL.pdf"
+  "./docs/Annexe-SQL.pdf",
+  "./docs/fiches-3si-2026/Fiches_3SI1_2026-2027.pdf",
+  "./docs/fiches-3si-2026/S1-2.pdf",
+  "./docs/fiches-3si-2026/S11-12.pdf",
+  "./docs/fiches-3si-2026/S13-14.pdf",
+  "./docs/fiches-3si-2026/S15-16.pdf",
+  "./docs/fiches-3si-2026/S17-18.pdf",
+  "./docs/fiches-3si-2026/S19-20.pdf",
+  "./docs/fiches-3si-2026/S21-22.pdf",
+  "./docs/fiches-3si-2026/S23-24.pdf",
+  "./docs/fiches-3si-2026/S25-26.pdf",
+  "./docs/fiches-3si-2026/S27-28.pdf",
+  "./docs/fiches-3si-2026/S29-30.pdf",
+  "./docs/fiches-3si-2026/S3-4.pdf",
+  "./docs/fiches-3si-2026/S31-32.pdf",
+  "./docs/fiches-3si-2026/S33-34.pdf",
+  "./docs/fiches-3si-2026/S35-36.pdf",
+  "./docs/fiches-3si-2026/S37-38.pdf",
+  "./docs/fiches-3si-2026/S39-40.pdf",
+  "./docs/fiches-3si-2026/S41-42.pdf",
+  "./docs/fiches-3si-2026/S43-44.pdf",
+  "./docs/fiches-3si-2026/S45-46.pdf",
+  "./docs/fiches-3si-2026/S47-48.pdf",
+  "./docs/fiches-3si-2026/S49-50.pdf",
+  "./docs/fiches-3si-2026/S5-6.pdf",
+  "./docs/fiches-3si-2026/S51-52.pdf",
+  "./docs/fiches-3si-2026/S53-54.pdf",
+  "./docs/fiches-3si-2026/S7-8.pdf",
+  "./docs/fiches-3si-2026/S9-10.pdf"
 ];
 const corePaths=new Set(CORE_ASSETS.map(p=>new URL(p,self.registration.scope).pathname));
 self.addEventListener('install',event=>event.waitUntil((async()=>{

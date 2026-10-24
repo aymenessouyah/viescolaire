@@ -14,7 +14,18 @@
 'use strict';
 
 const KEY = 'sti_fiches_edits_v1';
-const CLS = '4SI2';
+const CLS = '4SI2';                 // classe du cahier de textes (préparations)
+/* deux jeux de fiches : 4SI2 (50 séances) et 3SI1 (54 séances) */
+const FICHES_CLS = {
+  '4SI2': { cle: 'fiches4SI2', label: '4ème SI', nom: '4<sup>e</sup> année SI (4SI2)',
+            modules: 'SQL · HTML5 · CSS · JavaScript · PHP', nb: 50, heures: '100 h',
+            docs: 'docs/fiches-4si-2026', evaluations: '9', synchro: true },
+  '3SI1': { cle: 'fiches3SI1', label: '3ème SI', nom: '3<sup>e</sup> année SI (3SI1)',
+            modules: 'HTML5 · CSS3 · JavaScript · SQL / BD', nb: 54, heures: '108 h',
+            docs: 'docs/fiches-3si-2026', evaluations: '9', synchro: true }
+};
+let ficCls = '4SI2';
+function CF() { return FICHES_CLS[ficCls]; }
 const JOURS = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
 const MOIS = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
 const NAT = { 'cours':'Cours / TP', 'devoir de contrôle':'Devoir de contrôle',
@@ -27,7 +38,7 @@ let ctxN = null;
 let classic = null;          // référence à l'ancienne modale (cahier de textes)
 
 /* ------------------------------------------------------------ utilitaires */
-function base() { return (root.STI_DATA && root.STI_DATA.fiches4SI2) || {}; }
+function base(c) { return (root.STI_DATA && root.STI_DATA[FICHES_CLS[c || ficCls].cle]) || {}; }
 function list() { return Object.values(base()).sort((a, b) => a.n - b.n); }
 function D(iso) { return new Date(iso + 'T00:00:00'); }
 function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -45,28 +56,182 @@ function fiche(n) {
   const b = base()[String(n)];
   if (!b) return null;
   const f = clone(b);
-  const e = edits[CLS + '|' + n];
+  const e = edits[ficCls + '|' + n];
   if (e) Object.assign(f, e);
-  if (!f.modules) f.modules = 'SQL · HTML5 · CSS · JavaScript · PHP';
+  if (!f.modules) f.modules = CF().modules;
   return f;
 }
-function isEdited(n) { return !!edits[CLS + '|' + n]; }
+function isEdited(n) { return !!edits[ficCls + '|' + n]; }
+
+/* ---------------------------------------------------------------------
+   Préparation du cahier de textes, construite À PARTIR DU FICHIER DE FICHES
+   (data/fiches.js) : mêmes objectifs, mêmes étapes, mêmes durées, mêmes
+   critères que la fiche imprimée. Texte multiligne, affiché tel quel par
+   l'application (les retours à la ligne sont conservés).
+   --------------------------------------------------------------------- */
+function plat(t) { return String(t || '').replace(/\s*\|\s*/g, ' ; ').replace(/\s+/g, ' ').trim(); }
+
+function prepText(f) {
+  const L = [];
+  L.push('Séance ' + f.n + ' — ' + plat(f.titre));
+  L.push(fmtLong(f.date) + ' · 2 h par groupe (' + f.duree + ' min) · ' + plat(f.domaines) +
+         (f.pages ? ' · Smart Book ' + plat(f.pages) : '') +
+         (f.nature !== 'cours' ? ' · ' + (NAT[f.nature] || f.nature) : ''));
+  L.push('');
+  L.push('OBJECTIFS');
+  f.objectifs.forEach((o, i) => L.push((i + 1) + ') ' + plat(o.titre) + ' — ' + o.items.map(plat).join(' ; ')));
+  L.push('');
+  L.push('MÉTHODE ACTIVE (de découverte)');
+  L.push(plat(f.methode));
+  L.push('');
+  L.push('PRÉREQUIS');
+  f.prerequis.forEach(p => L.push('• ' + plat(p)));
+  L.push('');
+  L.push('DÉROULEMENT (' + f.duree + ' min)');
+  f.etapes.forEach((e, i) => {
+    const dur = plat(e.duree);
+    L.push((i + 1) + '. ' + plat(e.etape) + ' — ' + (/min/.test(dur) ? dur : dur + ' min'));
+    L.push('   Professeur : ' + plat(e.prof));
+    L.push('   Élèves : ' + plat(e.eleves));
+    L.push('   Moyens : ' + plat(e.moyens));
+  });
+  L.push('');
+  L.push('CRITÈRES DE RÉUSSITE');
+  f.criteres.forEach(c => L.push('• ' + plat(c)));
+  L.push('');
+  L.push('TRAVAIL À LA MAISON');
+  L.push(plat(f.maison));
+  return L.join('\n');
+}
+
+/* Report automatique dans le cahier de textes : on remplit ce qui est vide,
+   on rafraîchit ce que la fiche avait elle-même rempli, et on ne touche
+   jamais à une préparation saisie ou modifiée par le professeur. */
+function syncPreparations() {
+  const st = root.store;
+  if (!st || !st.seances) return 0;
+  const sess = (root.SESSIONS && root.SESSIONS[CLS]) || [];
+  let changed = 0;
+  list().forEach(f => {
+    const k = CLS + '|' + f.n;
+    const cur = st.seances[k] || {};
+    const prep = prepText(f);
+    const o = Object.assign({}, cur);
+    if (!cur.preparation) { o.preparation = prep; o.prepFromFiche = true; }
+    else if (cur.prepFromFiche === true && cur.preparation !== prep) o.preparation = prep;
+    if (!cur.devoirs && f.maison) o.devoirs = plat(f.maison);
+    const s = sess.find(x => x.n === f.n);
+    const ref = s && s.blk ? s.blk.t : '';
+    if (!cur.title || cur.titleFromFiche === true || cur.title === ref) {
+      if (o.title !== f.titre) { o.title = f.titre; o.titleFromFiche = true; }
+    }
+    if (JSON.stringify(o) !== JSON.stringify(cur)) { st.seances[k] = o; changed++; }
+  });
+  if (changed && typeof root.save === 'function') root.save(true);
+  return changed;
+}
+
+/* ------------------------------- préparation de séance, prise DANS LA FICHE
+   Le texte de préparation du cahier de textes n'est plus saisi à la main :
+   il est construit à partir du fichier de fiches (data/fiches.js et
+   data/fiches3SI1.js) — objectifs, méthode active, prérequis, déroulement
+   détaillé sur 120 min avec les activités professeur / élèves et les moyens,
+   critères de réussite, trace et travail à la maison.                       */
+function prepText(f, classe) {
+  const c = classe || ficCls;
+  const rep = (root.STI_DATA && root.STI_DATA[(FICHES_CLS[c] || CF()).cle === 'fiches3SI1'
+                ? 'repartition3SI1' : 'repartition4SI2']) || [];
+  const p = rep.find ? rep.find(x => x.num === f.n) : null;
+  const date = p ? fmtLong(p.iso) : fmtLong(f.date);
+  const L = [];
+  L.push('Séance ' + f.n + ' — ' + f.titre);
+  L.push(date + ' · 2 h par groupe (120 min) · ' + f.domaines +
+         (f.pages && f.pages !== '—' ? ' · Smart Book ' + f.pages : ''));
+  L.push('');
+  L.push('OBJECTIFS');
+  (f.objectifs || []).forEach(o => L.push('— ' + o.titre + ' : ' + (o.items || []).join(' ; ')));
+  L.push('');
+  L.push('MÉTHODE ACTIVE (DE DÉCOUVERTE)');
+  L.push(f.methode || '');
+  L.push('');
+  L.push('PRÉREQUIS');
+  (f.prerequis || []).forEach(x => L.push('• ' + x));
+  L.push('');
+  L.push('DÉROULEMENT — 120 min');
+  (f.etapes || []).forEach(function (e, i) {
+    L.push((i + 1) + '. ' + e.etape + ' — ' + e.duree + ' min');
+    L.push('     Professeur : ' + String(e.prof || '').replace(/\s*\|\s*/g, ' ; '));
+    L.push('     Élèves : ' + String(e.eleves || '').replace(/\s*\|\s*/g, ' ; '));
+    L.push('     Moyens : ' + e.moyens);
+  });
+  L.push('');
+  L.push('CRITÈRES DE RÉUSSITE');
+  (f.criteres || []).forEach(x => L.push('• ' + x));
+  if (f.trace) { L.push(''); L.push('TRACE À RETENIR'); L.push(f.trace); }
+  L.push('');
+  L.push('TRAVAIL À LA MAISON');
+  L.push(f.maison || '');
+  if (f.erreurs && f.erreurs.length) {
+    L.push('');
+    L.push('ERREURS À ÉVITER');
+    f.erreurs.forEach(x => L.push('• ' + x));
+  }
+  return L.join('\n');
+}
+
+/* Remplit le cahier de textes avec les préparations des fiches.
+   Règle absolue : on ne remplace JAMAIS une préparation déjà écrite. */
+function fillPreparations(silent) {
+  if (!root.store || !root.store.seances) return 0;
+  let changed = 0;
+  Object.keys(FICHES_CLS).forEach(function (c) {
+    const set = base(c);
+    const parDate = {};
+    Object.keys(set).forEach(k => { parDate[set[k].date] = set[k]; });
+    const sess = (root.SESSIONS && root.SESSIONS[c]) || [];
+    sess.forEach(function (s) {
+      const f = parDate[s.iso] || set[String(s.n)];
+      if (!f) return;
+      const kk = c + '|' + s.n;
+      const o = root.store.seances[kk] || {};
+      if (o.preparation && String(o.preparation).trim()) return;   // préservée
+      root.store.seances[kk] = Object.assign({}, o, {
+        preparation: prepText(f, c),
+        devoirs: (o.devoirs && String(o.devoirs).trim()) ? o.devoirs : plat(f.maison),
+        title: f.titre,
+        prepFromFiche: true, titleFromFiche: true, ficheCls: c
+      });
+      changed++;
+    });
+  });
+  if (changed && !silent && typeof root.save === 'function') { try { root.save(true); } catch (e) {} }
+  return changed;
+}
 
 /* --------------------------------------------- nouvelle répartition 4SI2
    Bloc inséré en tête de l'onglet « Répartition annuelle » du site :
    les 50 séances datées, par trimestre, avec les évaluations et un accès
    direct à la fiche pédagogique de chaque séance. */
 let repTri = 0;
-function plan() { return (root.STI_DATA && root.STI_DATA.repartition4SI2) || []; }
+let repCls = '4SI2';
+const CLS_REP = {
+  '4SI2': { cle: 'repartition4SI2', nom: '4e année SI (4SI2)', h: '100 h', fiches: true },
+  '3SI1': { cle: 'repartition3SI1', nom: '3e année SI (3SI1)', h: '108 h', fiches: true }
+};
+function plan() { return (root.STI_DATA && root.STI_DATA[CLS_REP[repCls].cle]) || []; }
 function repHTML() {
   const p = plan();
   if (!p.length) return '';
+  const cfg = CLS_REP[repCls];
   const rows = p.filter(x => !repTri || x.tri === repTri);
   return `
   <div class="card" id="rep-4si2" style="margin-bottom:16px">
     <div class="card-h">
-      <h3>${ic('list')} Nouvelle répartition 4SI2 — 2026 / 2027 <span class="badge b-teal">50 séances · 100 h</span></h3>
+      <h3>${ic('list')} Nouvelle répartition ${cfg.nom} — 2026 / 2027 <span class="badge b-teal">${p.length} séances · ${cfg.h}</span></h3>
       <div class="row no-print" style="gap:6px;flex-wrap:wrap">
+        <div class="seg-wrap" role="group" aria-label="Choisir la classe">
+          ${Object.keys(CLS_REP).map(c => `<button class="seg-btn ${c===repCls?'active':''}" onclick="STI_FICHES.repCls('${c}')">${c}</button>`).join('')}
+        </div>
         <select onchange="STI_FICHES.repTri(Number(this.value))">
           <option value="0">Toute l'année</option>
           <option value="1"${repTri===1?' selected':''}>1<sup>er</sup> trimestre</option>
@@ -74,22 +239,23 @@ function repHTML() {
           <option value="3"${repTri===3?' selected':''}>3<sup>e</sup> trimestre</option>
         </select>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.printRepartition(${repTri})">${ic('print')} Imprimer</button>
-        <button class="btn btn-xs btn-soft" onclick="go('v-fiches')">Voir les fiches</button>
+        ${cfg.fiches ? `<button class="btn btn-xs btn-soft" onclick="go('v-fiches')">Voir les fiches</button>` : ''}
       </div>
     </div>
     <div class="card-b">
       <div class="tbl-wrap"><table class="tbl">
         <thead><tr><th style="width:44px">N°</th><th style="width:100px">Date</th><th>Contenu de la séance</th>
           <th style="width:150px" class="hide-sm">Domaines</th><th style="width:96px">Type</th></tr></thead>
-        <tbody>${rows.map(x => `<tr${x.k==='cours'?'':' class="is-eval"'} style="cursor:pointer" onclick="STI_FICHES.open(${x.n})">
-          <td class="n">${x.n}</td>
+        <tbody>${rows.map(x => `<tr${x.k==='cours'?'':' class="is-eval"'}${cfg.fiches?' style="cursor:pointer" onclick="STI_FICHES.openCls('+repCls+', '+x.num+')"':''}>
+          <td class="n">${x.num}</td>
           <td style="white-space:nowrap">${fmtShort(x.iso)}<div class="tiny muted">${JOURS[D(x.iso).getDay()]}</div></td>
           <td><div class="tt">${esc(x.t)}</div><div class="det">${esc(x.det)}</div></td>
           <td class="hide-sm"><span class="badge b-grey">${esc(x.d)}</span></td>
           <td><span class="badge ${x.k==='cours'?'b-blue':x.k==='corr'?'b-grey':'b-navy'}">${
             {cours:'cours', dc:'DC', ds:'DS', corr:'correction'}[x.k] || x.k}</span></td></tr>`).join('')}
         </tbody></table></div>
-      <div class="tiny muted" style="margin-top:8px">Cliquez sur une ligne pour ouvrir la fiche pédagogique préremplie de la séance.</div>
+      <div class="tiny muted" style="margin-top:8px">Cliquez sur une ligne pour ouvrir la fiche pédagogique préremplie de la séance.
+        ${repCls === '3SI1' ? 'Répartition de la classe de 3e année SI : mardi 8 h-12 h et jeudi 13 h-17 h, du 15/09/2026 au 20/05/2027 ; devoir de contrôle n°1 le mardi 3 novembre 2026.' : ''}</div>
     </div>
   </div>`;
 }
@@ -120,21 +286,24 @@ function render() {
   host.innerHTML = `
   <div class="sec-head">
     <div>
-      <h2>Fiches pédagogiques — 4<sup>e</sup> année SI (4SI2)</h2>
-      <p class="lead">Les 50 fiches du modèle « Séance 8-9 », préremplies automatiquement à partir de la
+      <h2>Fiches pédagogiques — ${CF().nom}</h2>
+      <p class="lead">Les ${CF().nb} fiches du modèle « Séance 8-9 », préremplies automatiquement à partir de la
       répartition et du Smart Book. Chaque champ est modifiable : vos corrections sont enregistrées dans
       votre espace et reprises à l'impression.</p>
     </div>
     <div class="row no-print" style="gap:8px">
+      <div class="seg-wrap" role="group" aria-label="Choisir la classe">
+        ${Object.keys(FICHES_CLS).map(c => `<button class="seg-btn ${c===ficCls?'active':''}" onclick="STI_FICHES.cls('${c}')">${c}</button>`).join('')}
+      </div>
       <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">${ic('print')} Impression</button>
-      <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(1)">${ic('book')} Ouvrir la fiche n°1</button>
+      <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(${list().length ? list()[0].n : 1})">${ic('book')} Ouvrir la fiche n°1</button>
     </div>
   </div>
 
   <div class="chips-row" style="margin-bottom:16px">
-    ${card('Fiches', '50', '3 trimestres')}
-    ${card('Séances', '100 h', '2 h × 2 par semaine')}
-    ${card('Évaluations', '9', '6 DC · 3 DS')}
+    ${card('Fiches', CF().nb, '3 trimestres')}
+    ${card('Séances', CF().heures, '2 h × 2 par semaine')}
+    ${card('Évaluations', CF().evaluations, '6 DC · 3 DS')}
     ${card('Modifiées', nbEdit, 'enregistrées dans ce navigateur')}
     ${card('Affichées', shown.length, 'selon les filtres')}
   </div>
@@ -174,7 +343,7 @@ function render() {
               <td class="no-print fic-actions">
                 <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(${f.n})">Ouvrir</button>
                 <button class="btn btn-xs btn-line" onclick="STI_FICHES.printFiche(${f.n})">Imprimer</button>
-                <a class="btn btn-xs btn-line" href="docs/fiches-4si-2026/S${(Math.floor((f.n-1)/2)*2)+1}-${(Math.floor((f.n-1)/2)*2)+2}.pdf" target="_blank" rel="noopener" title="PDF du modèle officiel (deux séances par fichier)">PDF</a>
+                <a class="btn btn-xs btn-line" href="${CF().docs}/S${(Math.floor((f.n-1)/2)*2)+1}-${(Math.floor((f.n-1)/2)*2)+2}.pdf" target="_blank" rel="noopener" title="PDF du modèle officiel (deux séances par fichier)">PDF</a>
               </td>
             </tr>`).join('') || '<tr><td colspan="6" class="muted">Aucune fiche ne correspond aux filtres.</td></tr>'}
           </tbody>
@@ -216,10 +385,10 @@ function ficheHTML(f, editable) {
         <div class="f-r2">Enseignant : Aymen Essouyah</div></td></tr></table>
     <div class="f-rule"></div>
     <table class="f-info"><tr>
-      <td class="first" style="width:20%"><div class="f-lab">CLASSE</div><div class="f-val">4ème SI</div></td>
+      <td class="first" style="width:20%"><div class="f-lab">CLASSE</div><div class="f-val">${CF().label}</div></td>
       <td style="width:19%"><div class="f-lab">DURÉE TOTALE</div><div class="f-val">${f.duree} min</div></td>
       <td style="width:43%"><div class="f-lab">MODULES</div>
-        <div class="f-val" ${E ? 'contenteditable="true" data-f="modules"' : ''}>SQL · HTML5 · CSS · JavaScript · PHP</div></td>
+        <div class="f-val" ${E ? 'contenteditable="true" data-f="modules"' : ''}>${esc(f.modules || CF().modules)}</div></td>
       <td style="width:18%"><div class="f-lab">SÉANCE</div><div class="f-val">${f.n}</div></td></tr></table>
     <table class="f-time"><tr>${f.etapes.map((e, i) =>
       `<td style="width:${[16.2, 19.5, 49.3, 15][i]}%;background:${['#E4661F','#EFA868','#38968E','#1F3A5F'][i]}">${esc(e.etape)} · ${esc(e.duree)} min</td>`).join('')}</tr></table>
@@ -242,7 +411,7 @@ function ficheHTML(f, editable) {
     <div class="f-h4">Travail à la maison</div>
     <table class="f-band"><tr><td class="f-c1 f-b1" style="width:100%">
       <div class="f-btxt" ${E ? 'contenteditable="true" data-f="maison"' : ''}>${esc(f.maison)}</div></td></tr></table>
-    <div class="f-foot">Lycée Rafèha · 4ème SI · Séance ${f.n} · Enseignant : Aymen Essouyah</div>
+    <div class="f-foot">Lycée Rafèha · ${CF().label} · Séance ${f.n} · Enseignant : Aymen Essouyah</div>
   </div>`;
 }
 
@@ -335,7 +504,7 @@ function collect() {
 function save() {
   if (!ctxN) return;
   const f = collect();
-  edits[CLS + '|' + ctxN] = {
+  edits[ficCls + '|' + ctxN] = {
     titre: f.titre, modules: f.modules, methode: f.methode, maison: f.maison,
     objectifs: f.objectifs, prerequis: f.prerequis, criteres: f.criteres,
     etapes: f.etapes, version: 1, modifie: new Date().toISOString()
@@ -343,14 +512,12 @@ function save() {
   persist();
   /* report facultatif vers le cahier de textes de l'application */
   try {
-    if (root.store && typeof root.save === 'function') {
-      const k = CLS + '|' + ctxN;
-      const prep = [f.titre,
-        'Objectifs : ' + f.objectifs.map(o => o.titre + ' (' + o.items.join(' ; ') + ')').join(' — '),
-        'Prérequis : ' + f.prerequis.join(' ; '),
-        'Déroulement : ' + f.etapes.map(e => e.etape + ' ' + e.duree + ' min').join(' · ')
-      ].join('\n');
-      root.store.seances[k] = Object.assign({}, root.store.seances[k] || {}, { preparation: prep, devoirs: f.maison });
+    if (CF().synchro && root.store && typeof root.save === 'function') {
+      const k = ficCls + '|' + ctxN;
+      const prep = prepText(f);
+      root.store.seances[k] = Object.assign({}, root.store.seances[k] || {},
+        { preparation: prep, devoirs: plat(f.maison), title: f.titre,
+          prepFromFiche: false, titleFromFiche: false });
       root.save(true);
     }
   } catch (e) {}
@@ -359,7 +526,7 @@ function save() {
 }
 function reset() {
   if (!ctxN) return;
-  delete edits[CLS + '|' + ctxN];
+  delete edits[ficCls + '|' + ctxN];
   persist();
   open(ctxN);
   if (root.toast) root.toast('Fiche n°' + ctxN + ' restaurée');
@@ -418,7 +585,7 @@ function printRepartition(tri) {
       <td>${f.n}</td><td style="white-space:nowrap">${fmtShort(f.date)}</td>
       <td>${esc(f.titre)}</td><td>${esc(f.domaines)}</td><td>${NAT[f.nature] || f.nature}</td></tr>`).join('');
   const html = `<div class="rp">
-    <h1>Répartition ${tri ? 'trimestrielle' : 'annuelle'} — 4<sup>e</sup> année SI (4SI2) — matière STI</h1>
+    <h1>Répartition ${tri ? 'trimestrielle' : 'annuelle'} — ${CF().nom} — matière STI</h1>
     <div class="sub">${titre} · ${all.length} séances × 2 h · Lycée Rafèha Ariana · Aymen Essouyah</div>
     <table class="rp"><thead><tr><th style="width:6%">N°</th><th style="width:14%">Date</th>
       <th>Contenu de la séance</th><th style="width:20%">Domaines</th><th style="width:16%">Nature</th></tr></thead>
@@ -449,8 +616,8 @@ function ensurePrintMenu() {
         </div>
 
         <div class="prm-row">
-          <div><strong>Toutes les séances</strong><div class="tiny muted">Les 50 fiches, une page par séance (50 pages).</div></div>
-          <button class="btn btn-xs btn-blue" onclick="STI_FICHES.printAll()">Imprimer les 50 fiches</button>
+          <div><strong>Toutes les séances</strong><div class="tiny muted">Les ${CF().nb} fiches de la classe ${ficCls}, une page par séance (${CF().nb} pages).</div></div>
+          <button class="btn btn-xs btn-blue" onclick="STI_FICHES.printAll()">Imprimer les ${CF().nb} fiches</button>
         </div>
 
         <div class="prm-row">
@@ -466,12 +633,12 @@ function ensurePrintMenu() {
         </div>
 
         <div class="prm-row">
-          <div><strong>Répartition annuelle</strong><div class="tiny muted">Les 50 séances de l'année sur un seul document.</div></div>
+          <div><strong>Répartition annuelle</strong><div class="tiny muted">Les ${CF().nb} séances de l'année sur un seul document.</div></div>
           <button class="btn btn-xs btn-blue" onclick="STI_FICHES.printRepartition(0)">Imprimer l'année</button>
         </div>
 
         <div class="note tiny" style="margin-top:10px">Les PDF déjà générés (modèle officiel, deux séances par fichier,
-          et le recueil des 50 fiches) sont dans <code>docs/fiches-4si-2026/</code> — bouton « PDF » dans la liste.</div>
+          et le recueil des ${CF().nb} fiches) sont dans <code>${CF().docs}/</code> — bouton « PDF » dans la liste.</div>
       </div>
     </div>`;
   document.body.appendChild(d);
@@ -495,10 +662,12 @@ function syncTab() {
     b = document.createElement('button');
     b.id = 'tab-fiches';
     b.className = 'tab';
-    b.innerHTML = (root.ic ? root.ic('book') : '') + 'Fiches pédagogiques<span class="cnt">50</span>';
+    b.innerHTML = (root.ic ? root.ic('book') : '') + 'Fiches pédagogiques<span class="cnt">' + list().length + '</span>';
     b.onclick = () => show();
     bar.appendChild(b);
   }
+  const cnt = b.querySelector('.cnt');
+  if (cnt) cnt.textContent = list().length;
   b.classList.toggle('on', active());
 }
 
@@ -512,15 +681,15 @@ function anchorFiche() {
   host.insertAdjacentHTML('afterbegin', `<div class="card" id="fic-anchor" style="margin-bottom:16px;border-left:4px solid #E4661F">
     <div class="card-b" style="display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div style="min-width:260px">
-        <strong style="color:#12324d">Fiche pédagogique au modèle officiel (4<sup>e</sup> année SI)</strong>
-        <div class="tiny muted" style="margin-top:3px">Les 50 fiches du modèle « Séance 8-9 » : objectifs, méthode active, prérequis,
+        <strong style="color:#12324d">Fiche pédagogique au modèle officiel — ${CF().nom}</strong>
+        <div class="tiny muted" style="margin-top:3px">Les ${CF().nb} fiches du modèle « Séance 8-9 » : objectifs, méthode active, prérequis,
         critères de réussite, déroulement sur 120 min et travail à la maison. Contenu prérempli, modifiable et imprimable.</div>
       </div>
       <div class="row" style="gap:6px;flex-wrap:wrap">
         <select id="fic-anchor-n" style="min-width:290px">${opts}</select>
         <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(Number(document.getElementById('fic-anchor-n').value))">Ouvrir la fiche</button>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">Impression</button>
-        <button class="btn btn-xs btn-line" onclick="STI_FICHES.show()">Les 50 fiches</button>
+        <button class="btn btn-xs btn-line" onclick="STI_FICHES.show()">Les ${CF().nb} fiches</button>
       </div>
     </div></div>`);
   const sel = document.getElementById('fic-anchor-n');
@@ -535,7 +704,7 @@ function show() {
 
 function install() {
   load();
-  if (!root.STI_DATA || !root.STI_DATA.fiches4SI2) return;
+  if (!root.STI_DATA || (!root.STI_DATA.fiches4SI2 && !root.STI_DATA.fiches3SI1)) return;
   /* vue */
   if (!document.getElementById(TAB_ID)) {
     const main = document.querySelector('main.wrap');
@@ -554,7 +723,7 @@ function install() {
   if (typeof root.openModal === 'function' && !root.__ficheHooked) {
     classic = root.openModal;
     root.openModal = function (cls, n) {
-      if (cls === CLS && n) { open(n); return; }
+      if (FICHES_CLS[cls] && n) { ficCls = cls; open(n); return; }
       return classic.apply(this, arguments);
     };
     root.__ficheHooked = true;
@@ -587,14 +756,23 @@ function install() {
     }).observe(bar, { childList: true });
     root.__ficheObserver = true;
   }
+  try { syncPreparations(); } catch (e) {}
+  try { fillPreparations(); } catch (e) {}
   syncTab();
 }
 
 root.STI_FICHES = {
   install, render, show, filter: (k, v) => { filtre[k] = v; render(); },
   open, close, save, reset, openClassic, printMenu, printFiche, printAll, printRepartition,
+  cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
+  openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
+  clsCourante: () => ficCls,
   repTri: v => { repTri = v; const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
-  current: () => ctxN, edits: () => edits
+  repCls: c => { repCls = CLS_REP[c] ? c : '4SI2'; repTri = 0;
+                 const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
+  current: () => ctxN, edits: () => edits,
+  prepText: n => prepText(fiche(n)), prepTextCls: (c, n) => prepText(base(c)[String(n)], c),
+  syncPreparations, fillPreparations: () => fillPreparations()
 };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install);
 else install();
