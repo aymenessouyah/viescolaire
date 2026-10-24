@@ -227,6 +227,7 @@ function renderAll(silent){
   if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
   if (window.STI_AGENT) window.STI_AGENT.render({store:store,sessions:SESSIONS,view:currentTab});
   renderCompte();
+  renderVerChip();
   renderLoginInvite();
   if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
@@ -1749,10 +1750,44 @@ function cloudCfg(){
     table: cfg.table || w.table || "espace_pedagogique",
     device: cfg.device || w.device || (SCHOOL.prof + " — appareil principal"),
     auto: cfg.auto !== undefined ? cfg.auto : true,  /* sauvegarde distante par défaut dès qu'un projet est configuré */
-    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false),  /* accès protégé par mot de passe */
+    auth: authEffectif(cfg, w),                      /* accès protégé par mot de passe */
     admin: cfg.admin || w.admin || ""   /* compte administrateur (gestion des professeurs) */
   };
 }
+/* La configuration publiée (supabase/config.js) fait foi pour la sécurité :
+   un ancien réglage « auth: false » enregistré dans le navigateur ne peut pas
+   désactiver l'accès protégé ; il peut seulement l'activer. */
+function authEffectif(cfg, w){
+  if (w && w.auth === true) return true;
+  if (cfg && cfg.auth !== undefined) return !!cfg.auth;
+  return !!(w && w.auth);
+}
+/* Aligne la configuration mémorisée sur le fichier publié (téléphone, tablette,
+   poste du lycée). Sans cela, un appareil configuré à la main avant l'accès
+   protégé restait bloqué sur « Activez l'accès protégé… » sans jamais comparer
+   ses données au Cloud. Renvoie la liste des corrections appliquées. */
+let __cloudRepairDone = false;
+function cloudRepair(silent){
+  const w = window.STI_SUPABASE || {};
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem(CLOUD_KEY) || "{}") || {}; } catch(e){ cfg = {}; }
+  const avant = JSON.stringify(cfg), corr = [];
+  const poser = (k, v, lbl) => { if (v !== undefined && v !== null && v !== "" && cfg[k] !== v){ cfg[k] = v; corr.push(lbl || k); } };
+  if (w.url) poser("url", w.url);
+  if (w.anonKey) poser("key", w.anonKey, "clé");
+  if (w.table) poser("table", w.table);
+  if (w.auth === true) poser("auth", true, "accès protégé");
+  if (w.admin) poser("admin", w.admin);
+  if (cfg.auto === undefined){ cfg.auto = true; corr.push("synchronisation automatique"); }
+  if (JSON.stringify(cfg) !== avant){
+    try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg)); } catch(e){}
+    if (!silent && typeof toast === "function") toast("Configuration Cloud alignée sur la version publiée : " + corr.join(", "));
+  }
+  return corr;
+}
+window.cloudRepair = cloudRepair;
+window.APP_VER = APP_VER;
+cloudRepair(true);   /* téléphone / tablette : aligne le réglage local sur le fichier publié */
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
 async function cloudHeaders(){
   const c = cloudCfg();
@@ -1817,6 +1852,10 @@ document.addEventListener("click", e => {
   if (m && !m.classList.contains("hidden") && !m.contains(e.target)) fermerMenuCompte();
 });
 
+function renderVerChip(){
+  const e = document.getElementById("ver-chip");
+  if (e){ e.textContent = APP_VER; e.title = "Version réellement chargée dans ce navigateur : " + APP_VER; }
+}
 function renderLoginInvite(){
   const b = document.getElementById("login-invite");
   if (!b) return;
