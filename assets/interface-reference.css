@@ -628,3 +628,29 @@ body.vs-fusion .ref-account-toggle{display:none}
 @media(prefers-reduced-motion:reduce){body.vs-fusion .ref-account-toggle>svg{transition:none}}
 /* Installation prompts must not cover account or session dialog actions. */
 body.vs-fusion:has(.modal.on,dialog[open]) #install-banner{display:none!important}
+
+/* --- carte « Couverture moyenne » : une ligne + deux colonnes de classe --- */
+body.vs-themed .ref-ui .stat-card.cov-card{align-items:flex-start}
+body.vs-themed .ref-ui .cov-body{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:7px}
+body.vs-themed .ref-ui .cov-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+body.vs-themed .ref-ui .cov-top .stat-value{font-size:26px;line-height:1}
+body.vs-themed .ref-ui .cov-title{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#7C7867;font-weight:700}
+body.vs-themed .ref-ui .cov-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid var(--line);padding-top:7px}
+body.vs-themed .ref-ui .cov-col{min-width:0;color:var(--c,#14684A)}
+body.vs-themed .ref-ui .cov-cls{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;color:#4a4a4a;white-space:nowrap}
+body.vs-themed .ref-ui .cov-cls b{margin-left:auto;font-size:12.5px;color:var(--c,#14684A);letter-spacing:0}
+body.vs-themed .ref-ui .cov-dot{width:7px;height:7px;border-radius:50%;background:var(--c,#14684A);display:inline-block}
+body.vs-themed .ref-ui .cov-bar{height:6px;border-radius:4px;background:#EDE9DF;overflow:hidden;margin:4px 0 3px}
+body.vs-themed .ref-ui .cov-bar>i{display:block;height:100%;border-radius:4px;background:var(--c,#14684A)}
+body.vs-themed .ref-ui .cov-num{font-size:10px;color:#8B8774;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html[data-color-mode="dark"] body.vs-themed .ref-ui .cov-title,
+html[data-color-mode="dark"] body.vs-themed .ref-ui .cov-num{color:#bebcb1}
+html[data-color-mode="dark"] body.vs-themed .ref-ui .cov-cls{color:#cfd6cf}
+html[data-color-mode="dark"] body.vs-themed .ref-ui .cov-bar{background:#33423a}
+@media (max-width:560px){body.vs-themed .ref-ui .cov-cols{grid-template-columns:1fr}}
+
+/* la carte « Couverture moyenne » occupe deux colonnes pour ses deux sous-blocs */
+body.vs-themed .ref-ui .stats-grid:has(.cov-card){grid-template-columns:repeat(5,minmax(0,1fr))}
+body.vs-themed .ref-ui .stats-grid .cov-card{grid-column:span 2}
+@media (max-width:1000px){body.vs-themed .ref-ui .stats-grid:has(.cov-card){grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.6.5-avancement-dash` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.6-couverture-2col` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -29,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.6.5-avancement-dash` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.6-couverture-2col` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -463,6 +463,26 @@ bouton de groupe, à chaque changement de classe ou de séance.
 Vérifié : `70 % · 266/380`, 3SI1 `75 % · 134/178`, 4SI2 `65 % · 132/202` ; deux histogrammes de
 **32 et 41 barres** (une par sous-titre, aucune jointure de données manquante) ; clic sur une barre →
 famille active et sous-titre mis en évidence ; 0 erreur JS.
+
+### ③ duodecies Carte « Couverture moyenne » décomposée en deux blocs
+
+Dans le tableau de bord de l'application, la carte *Couverture moyenne* (2<sup>e</sup> KPI) est
+désormais composée de deux parties :
+
+1. **une ligne** : le pourcentage moyen (`1,1 %`) et son intitulé *Couverture moyenne* ;
+2. **sur la même ligne, deux colonnes** : la couverture de chaque livre — `3SI1 1,5 % · 4/269 notions`
+   et `4SI2 0,6 % · 2/333 notions`, chacune avec sa pastille, sa barre et son compteur, dans la
+   couleur de la classe (bleu 3SI1, vert 4SI2) ;
+3. en pied, le rappel « Moyenne des deux livres · notions uniques ».
+
+La carte occupe **deux colonnes de la grille** des KPI (`grid-template-columns:repeat(5,…)` +
+`grid-column:span 2`) pour que les deux sous-blocs respirent, et retombe sur deux colonnes en dessous
+de 1 000 px. Les valeurs proviennent toujours de `STI_TRACK.summary()`, donc la carte se met à jour dès
+qu'une séance est validée ou qu'une notion est cochée.
+
+Vérifié : `1,1 %` en tête, colonnes `3SI1 1,5 % · 4/269` et `4SI2 0,6 % · 2/333` sur une même ligne
+(2 colonnes de 174 px), hauteur alignée sur les trois autres cartes (154 px), `data-ref-kpi="1"` toujours
+renseigné (compatibilité avec les tests et le bandeau de la boîte de fiche), 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 
