@@ -10,6 +10,10 @@
 
 #v-suivi{scroll-margin-top:100px}
 
+/* Dans le grand formulaire iframe, la checklist se replie dans son propre panneau. */
+#ffm-annex-host .sti-annex-check-panel{margin-top:0}
+#ffm-annex-host .sti-annex-check-list{max-height:24vh}
+
 /* Checklist complète des annexes, intégrée aux fiches de séance. */
 .sti-annex-check-panel{margin-top:18px;border:1px solid var(--sti-line,var(--line));border-radius:12px;overflow:hidden;background:var(--card);color:var(--ink)}
 .sti-annex-check-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:16px;background:var(--sti-soft,#edf5ff)}

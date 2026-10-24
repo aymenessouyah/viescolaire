@@ -113,7 +113,8 @@
 #v-fiches .tbl td{vertical-align:top}
 #v-fiches .tbl .btn{margin:1px 1px}
 #v-fiches .fic-actions{white-space:nowrap}
-#v-fiches .fic-actions .btn{padding:4px 8px;font-size:11.5px;line-height:1.25;min-height:0;border-radius:8px;display:inline-block}
+#v-fiches .fic-actions .btn{padding:4px 8px;font-size:11.5px;line-height:1.25;min-height:0;border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;height:24px;vertical-align:middle}
 #v-fiches .tbl-wrap{overflow-x:auto}
 #v-fiches .card-h{flex-wrap:wrap;gap:8px}
 #v-fiches .card-h .row{flex-flow:row wrap;justify-content:flex-end;align-items:center}
@@ -141,3 +142,45 @@
   .fpage:last-child{page-break-after:auto}
   [contenteditable]{outline:0 !important;background:transparent !important}
 }
+
+/* ---------------------------------------------------------------------------
+   Boutons et commutateurs du module, à l'intérieur de .ref-ui (thème du site).
+   Le thème de l'interface de référence ne définit que .btn-primary / .btn-ghost :
+   .btn-blue et .btn-line y restaient transparents (texte clair sur fond blanc).
+   On redéfinit donc explicitement nos boutons, avec une spécificité suffisante.
+   --------------------------------------------------------------------------- */
+#v-fiches .fic-actions .btn,
+#v-fiches .sec-head .btn,
+#v-fiches .card-h .btn,
+#rep-4si2 .card-h .btn {
+  height: 26px; padding: 4px 10px; font-size: 11.5px; line-height: 1.2; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  border: 1px solid var(--line, #dbe3ea); background: #fff; color: #1F3A5F;
+  box-shadow: none; transform: none; white-space: nowrap; text-decoration: none; cursor: pointer;
+}
+#v-fiches .fic-actions .btn:hover,
+#v-fiches .sec-head .btn:hover,
+#v-fiches .card-h .btn:hover,
+#rep-4si2 .card-h .btn:hover { transform: none; border-color: #9fb6c9; background: #f4f8fb; }
+#v-fiches .fic-actions .btn-blue,
+#v-fiches .sec-head .btn-blue,
+#v-fiches .card-h .btn-blue,
+#rep-4si2 .card-h .btn-blue {
+  background: linear-gradient(160deg, #175C41 0%, #10402F 100%);
+  color: #F5F1E2; border-color: #10402F; font-weight: 600;
+}
+#v-fiches .fic-actions .btn-blue:hover,
+#v-fiches .sec-head .btn-blue:hover,
+#v-fiches .card-h .btn-blue:hover,
+#rep-4si2 .card-h .btn-blue:hover { background: linear-gradient(160deg, #1b6a4b 0%, #123f2d 100%); }
+#v-fiches .fic-actions .btn-soft,
+#v-fiches .sec-head .btn-soft,
+#rep-4si2 .card-h .btn-soft { background: #EEF4F0; border-color: #C9DCD0; color: #175C41; }
+
+/* commutateur de classe 4SI2 / 3SI1 */
+#v-fiches .seg-wrap { display: inline-flex; gap: 0; border: 1px solid var(--line, #dbe3ea);
+  border-radius: 9px; overflow: hidden; background: #fff; }
+#v-fiches .seg-wrap .seg-btn { height: 26px; padding: 0 12px; font-size: 11.5px; font-weight: 600;
+  border: 0; background: #fff; color: #4A5A69; cursor: pointer; }
+#v-fiches .seg-wrap .seg-btn + .seg-btn { border-left: 1px solid var(--line, #dbe3ea); }
+#v-fiches .seg-wrap .seg-btn.active { background: linear-gradient(160deg, #175C41, #10402F); color: #F5F1E2; }

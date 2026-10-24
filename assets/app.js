@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.5.5-fiche-status";
+const APP_VER = "v1.5.9-annexes-tracking";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
