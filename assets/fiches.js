@@ -282,6 +282,10 @@ function open(n) {
   ctxN = n;
   document.getElementById('fm-title').innerHTML = 'Fiche pédagogique — séance ' + n + ' · ' + esc(fmtShort(f.date));
   document.getElementById('fm-body').innerHTML = ficheHTML(f, true);
+  if (root.STI_ANNEX_TRACK) {
+    const record = root.store && root.store.seances ? root.store.seances[CLS + '|' + n] || {} : {};
+    root.STI_ANNEX_TRACK.mountModal(CLS, n, record, 'fm-body');
+  }
   document.getElementById('fm-hint').innerHTML = isEdited(n)
     ? '<span class="badge b-amber">fiche modifiée</span> vos corrections sont conservées dans votre espace.'
     : 'Tous les champs sont modifiables : cliquez dans le texte pour le corriger.';
@@ -350,7 +354,13 @@ function save() {
         'Prérequis : ' + f.prerequis.join(' ; '),
         'Déroulement : ' + f.etapes.map(e => e.etape + ' ' + e.duree + ' min').join(' · ')
       ].join('\n');
-      root.store.seances[k] = Object.assign({}, root.store.seances[k] || {}, { preparation: prep, devoirs: f.maison });
+      const annexSelection = root.STI_ANNEX_TRACK ? root.STI_ANNEX_TRACK.selection(CLS, ctxN) : null;
+      const sessionData = Object.assign({}, root.store.seances[k] || {}, { preparation: prep, devoirs: f.maison });
+      if (annexSelection !== null) {
+        sessionData.annexes = annexSelection;
+        sessionData.annexesVersion = root.STI_ANNEX_TRACK.version;
+      }
+      root.store.seances[k] = sessionData;
       root.save(true);
     }
   } catch (e) {}

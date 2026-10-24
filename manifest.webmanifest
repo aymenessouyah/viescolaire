@@ -1,7 +1,7 @@
 {
   "name": "Espace pédagogique STI — Prof. Aymen Essouyah",
   "short_name": "Espace pédagogique",
-  "description": "Emploi du temps, calendrier scolaire tunisien 2026-2027, répartition du 1er trimestre, annexes HTML5 / CSS3 / JavaScript / PHP / SQL et cahier de textes — Lycée Rafèha Ariana.",
+  "description": "Espace pédagogique STI multi-appareils : emploi du temps, calendrier tunisien, cahier de textes, ressources de cours et sauvegarde hors ligne.",
   "lang": "fr",
   "dir": "ltr",
   "start_url": "./index.html",

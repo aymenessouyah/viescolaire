@@ -10,6 +10,9 @@
 --    • les anciens instantanés restent en base mais deviennent invisibles
 --      (aucune donnée n'est perdue — l'application en crée un nouveau dès
 --      le premier enregistrement).
+--
+--  Après cette migration, exécuter aussi installation/synchronisation-atomique.sql
+--  pour activer les échanges multi-appareils utilisés par les versions actuelles.
 -- =========================================================================
 
 -- 1) Colonne du propriétaire (remplie automatiquement à l'insertion)
@@ -38,11 +41,25 @@ create policy "ecriture espace (propre prof)"
   to authenticated
   with check (prof_id = auth.uid());
 
--- 3) Créer les comptes des professeurs
+-- 3) Droits minimaux nécessaires aux échanges sécurisés --------------------
+revoke all on public.espace_pedagogique from public, anon;
+grant select, insert on public.espace_pedagogique to authenticated;
+do $$
+declare
+  v_id_sequence text := pg_catalog.pg_get_serial_sequence('public.espace_pedagogique', 'id');
+begin
+  if v_id_sequence is not null then
+    execute format('revoke all on sequence %s from public, anon', v_id_sequence);
+    execute format('grant usage, select on sequence %s to authenticated', v_id_sequence);
+  end if;
+end;
+$$;
+
+-- 4) Créer les comptes des professeurs
 --    Authentication → Users → Add user → Create new user :
 --      adresse électronique + mot de passe, cocher « Auto Confirm User ».
 --    Les inscriptions restent fermées (« Allow new users to sign up » : OFF)
 --    : personne ne peut créer de compte tout seul.
 
--- 4) (Facultatif) Nettoyage des instantanés d'essai antérieurs :
+-- 5) (Facultatif) Nettoyage des instantanés d'essai antérieurs :
 --    delete from public.espace_pedagogique;
