@@ -1,8 +1,23 @@
 -- Vie scolaire 1.4 : synchronisation atomique sur la table EXISTANTE.
 -- À appliquer dans SQL Editor APRÈS export JSON et sauvegarde de la base.
 -- N'efface aucune donnée, ne change aucune politique RLS, ne crée pas de compte.
+-- Accorde les seuls droits de table/séquence requis à authenticated ; RLS
+-- continue d'isoler les données par prof_id. Aucune lecture anonyme.
 -- Toutes les applications qui écrivent ce compte doivent être mises à jour.
 -- Les anciens clients qui insèrent directement ne participent pas au verrou.
+
+revoke all on public.espace_pedagogique from public, anon;
+grant select, insert on public.espace_pedagogique to authenticated;
+do $$
+declare
+  v_id_sequence text := pg_catalog.pg_get_serial_sequence('public.espace_pedagogique', 'id');
+begin
+  if v_id_sequence is not null then
+    execute format('revoke all on sequence %s from public, anon', v_id_sequence);
+    execute format('grant usage, select on sequence %s to authenticated', v_id_sequence);
+  end if;
+end;
+$$;
 
 create or replace function public.sti_sync_snapshot(
   p_annee text,

@@ -2,7 +2,7 @@
 
 **Lycée Rafèha Ariana (Tunisie) — matière STI — année scolaire 2026/2027 — classes 3SI1 et 4SI2**
 
-Dépôt : <https://github.com/aymenessouyah/viescolaire> · Site à activer : <https://aymenessouyah.github.io/viescolaire/>
+Dépôt : <https://github.com/aymenessouyah/viescolaire> · Application en ligne : <https://aymenessouyah.github.io/viescolaire/>
 
 Application web installable (PWA) qui rassemble l'emploi du temps, le calendrier scolaire tunisien,
 la répartition du 1<sup>er</sup> trimestre, les compétences issues de l'aide pédagogique, les annexes
@@ -20,6 +20,7 @@ fiches de séances, annexes) et une sauvegarde des données.
 | **Calendrier tunisien** | Année 2026-2027 : rentrée des élèves mardi 15 septembre 2026, fin d'année mercredi 30 juin 2027, vacances officielles, jours fériés, périodes de devoirs de contrôle et de synthèse, conseils de classe |
 | **Répartition 1<sup>er</sup> trimestre** | Progression en blocs conforme aux documents officiels (3SI1 : 23 séances ; 4SI2 : 22 séances), avec dates réelles, évaluations et corrections du DS1 |
 | **Programme & compétences** | Chaque compétence de l'**aide pédagogique STI** renvoie à ses savoirs associés, aux **éléments des annexes** à mobiliser, aux **séances datées** du 1<sup>er</sup> trimestre, à une activité de classe et aux acquis attendus. Liens directs vers l'aide pédagogique et les annexes. |
+| **Suivi des notions & annexes** | Cases de suivi dans les fiches de séance pour les **234 éléments** HTML5, CSS3, JavaScript, PHP et SQL ; bilan des éléments couverts, prévus ou restant à traiter, filtrable par classe. |
 | **Cahier de textes** | Relevé chronologique séance par séance (contenu, observations, état d'avancement) pour les deux classes |
 | **Annexes & mémo** | **Mémo consolidé** (6 familles C1→C6 : contenu des annexes réorganisé selon les compétences), **annexes intégrales** (HTML5, CSS3, JavaScript, PHP, SQL) et les 8 documents PDF, avec recherche instantanée |
 
@@ -37,8 +38,10 @@ sti-espace/
 ├── sw.js                       service worker (fonctionnement hors ligne, PDF en cache)
 ├── assets/
 │   ├── style.css               feuille de style (aucune ressource externe)
-│   └── app.js                  logique : emploi du temps, calendrier, répartition, programme,
-│                               cahier de textes, annexes, sauvegarde distante, installation
+│   ├── app.js                  logique : emploi du temps, calendrier, répartition, programme,
+│   │                           cahier de textes, sauvegarde distante, installation
+│   ├── suivi-sti.js            suivi commun des notions des Smart Books
+│   └── suivi-annexes.js        checklist des 234 éléments et bilan de couverture des annexes
 ├── data/                       données séparées : à modifier sans toucher au code
 │   ├── reference.js            établissement, classes, horaires par défaut, calendrier tunisien
 │   ├── repartition.js          répartition du 1er trimestre (3SI1 et 4SI2)
@@ -65,49 +68,19 @@ répartition ou une ligne du mémo, il suffit de modifier le fichier de données
 
 ---
 
-## 3. Mise en ligne sur GitHub Pages
+## 3. Mise en ligne et mises à jour
 
-Le dépôt **<https://github.com/aymenessouyah/viescolaire>** existe déjà (branche `main`). Il ne reste
-qu'à y déposer cette version multi-fichiers, puis à activer Pages.
+GitHub Pages est déjà activé depuis la branche `main`, à la racine du dépôt. L’adresse publique est :
+<https://aymenessouyah.github.io/viescolaire/>.
 
-### Méthode rapide (git installé)
+Les modifications d’une autre branche ne remplacent pas immédiatement le site public : elles deviennent
+visibles après leur validation et leur fusion dans `main`, puis le déploiement Pages. Pour éviter de perdre
+des données, ne remplacez pas tout le dépôt par glisser-déposer ; gardez l’arborescence et les fichiers déjà
+présents.
 
-```bash
-cd sti-espace
-./publier.sh                      # identifiant et dépôt déjà pré-remplis (vim, viescolaire)
-```
-
-Le script met le dépôt à jour, envoie les fichiers et rappelle l'adresse du site.
-
-### Méthode sans ligne de commande (glisser-déposer)
-
-1. Ouvrir <https://github.com/aymenessouyah/viescolaire>.
-2. *Add file* → *Upload files* → glisser **le contenu** du dossier `sti-espace`
-   (`index.html`, `sw.js`, `manifest.webmanifest`, `README.md`, `publier.sh`, et les dossiers
-   `assets`, `data`, `docs`, `icons`, `supabase` en **conservant l'arborescence**).
-   Les dossiers `documents`, `uploads` et `legacy` existent déjà dans le dépôt : ne pas les supprimer.
-3. *Commit changes* — `index.html` et `README.md` seront remplacés (c'est voulu), le reste s'ajoute.
-
-### Activer le site (indispensable, une seule fois)
-
-1. Dépôt → *Settings* → **Pages** (menu de gauche).
-2. *Source* : `Deploy from a branch` — *Branch* : `main` — dossier `/(root)` → **Save**.
-3. Après une à deux minutes, le site est en ligne :
-
-   ```
-   https://aymenessouyah.github.io/viescolaire/
-   ```
-
-> Sur un compte GitHub gratuit, Pages n'est disponible que si le dépôt est **public** : celui-ci l'est.
-
-### Mises à jour suivantes
-
-```bash
-git add . && git commit -m "Mise à jour du cahier de textes" && git push
-```
-
-Pensez à incrémenter `VERSION` dans `sw.js` (par exemple `sti-espace-v1.0.1`) pour que les appareils
-déjà installés reçoivent la nouvelle version ; l'application affiche alors un bandeau « Mettre à jour ».
+À chaque mise à jour de l’interface, incrémenter `VERSION` dans `sw.js`. Les appareils installés reçoivent
+alors le nouveau cache et affichent un bandeau **Mettre à jour** ; les données enregistrées dans le
+navigateur sont conservées.
 
 ## 4. Installer l'application sur mobile et depuis la barre d'adresse (PWA)
 
@@ -126,107 +99,115 @@ si le navigateur ne déclenche pas l'invite automatiquement.
 
 ---
 
-## 5. Sauvegarde distante (Supabase) — mode cloud protégé
+## 5. Utiliser la plateforme sur plusieurs appareils
 
-La sauvegarde distante est le **mode de travail principal** : les fiches de séance et les horaires sont
-enregistrés dans la base **Supabase** (PostgreSQL + API REST) et l'application les retrouve sur le
-téléphone, la tablette et le poste du lycée. Le navigateur ne sert plus que de cache de travail hors ligne.
-La base est **protégée par un compte unique** : seule votre adresse électronique peut lire et écrire.
-Un **export / import JSON** reste disponible à tout moment (bouton *Exporter* de l'en-tête) comme copie
-de secours, utilisable sans connexion.
+La même application est accessible depuis **un ordinateur, un téléphone ou une tablette** à l’adresse
+<https://aymenessouyah.github.io/viescolaire/>. Chaque appareil garde une copie locale pour le travail hors
+ligne ; après connexion au même compte, le service Cloud partage les données entre eux. L’application est
+installable comme une PWA (voir § 4), mais l’installation n’est pas obligatoire.
 
-### Comportement en mode cloud
+La synchronisation automatique est **bidirectionnelle** : elle fusionne les changements compatibles et
+signale les modifications concurrentes au lieu d’écraser silencieusement les données. Elle reprend quand
+l’application est ouverte, connectée à Internet et que l’utilisateur est connecté. Une application fermée
+ne synchronise pas en arrière-plan.
 
-| Situation | Ce que fait l'application |
-|---|---|
-| Enregistrement d'une fiche, d'un horaire, d'un état d'avancement | **envoi automatique** vers la base (rien à cliquer) |
-| Ouverture sur un **nouvel appareil** (téléphone, poste du lycée) | demande la connexion, puis **reprend la dernière sauvegarde du cloud** avant toute saisie locale |
-| Connexion | une fois par appareil ; la session reste ouverte et le jeton se renouvelle tout seul |
-| Coupure réseau | travail normal en local ; **reprise automatique** de l'envoi dès le retour de la connexion |
-| Plusieurs appareils | chacun envoie un instantané horodaté ; « Restaurer » propose le plus récent |
-| Aucun projet configuré | bandeau sur le tableau de bord pour activer la sauvegarde distante |
-| Envoi en échec (URL, clé, table ou mot de passe) | message détaillé + badge « Configuration à vérifier », données conservées localement |
+### 5.1 Activer la base Cloud
 
-### 5.1 Créer la base et le compte (une seule fois, ~8 minutes)
+Le dépôt contient déjà une configuration Supabase dans `supabase/config.js`. Si elle pointe vers votre
+projet existant, **ne créez pas un deuxième projet** : vérifiez d’abord que la table, les règles de sécurité
+et la fonction SQL de synchronisation y sont installées.
 
-1. **Créer le projet** : <https://supabase.com> → *Start your project* (connexion avec votre compte GitHub
-   possible) → **New project** : **nom au choix** (le nom n'a aucune incidence sur l'application —
-   par exemple `suivi-scolaire`), un mot de passe de base de données (à conserver), région **Europe (Frankfurt)**.
-2. **Créer la table** : dans le projet, **SQL Editor** → *New query* → copier tout le contenu de
-   `supabase/schema.sql` (fichier fourni dans ce dépôt), le coller, puis cliquer **Run**.
-   Aucune modification du texte n'est nécessaire : l'accès est automatiquement verrouillé sur
-   l'adresse **aymenessouyah@gmail.com**.
-3. **Créer votre compte** — deux façons :
-   * **directement dans l'application** (le plus simple) : fenêtre *Connexion à la sauvegarde distante*
-     → adresse + mot de passe → **Créer le compte** ; ou
-   * dans le tableau de bord : **Authentication** → **Users** → *Add user* → *Create new user* —
-     votre adresse + un mot de passe, en cochant **Auto Confirm User**.
-4. **Fermer les inscriptions (recommandé)** : **Authentication** → *Sign In / Providers* → désactiver
-   **Allow new users to sign up**. La base est déjà verrouillée sur votre adresse ; ce réglage empêche
-   en plus la création de comptes superflus.
-5. **Relever les deux valeurs** : **Project Settings** → **API** →
-   * **Project URL** — par exemple `https://abcdefghijkl.supabase.co`
-   * **anon / publishable key** (la clé *publique* uniquement).
+Pour une **nouvelle base** :
 
-### 5.2 Configurer l'application
+1. Créer un projet Supabase, puis ouvrir **SQL Editor → New query**.
+2. Copier et exécuter tout `supabase/schema.sql`. Ce script crée la table, les règles RLS, les droits
+   minimaux et la fonction atomique `sti_sync_snapshot` utilisée par l’application.
+3. Dans **Authentication → Users**, créer le compte de chaque professeur (*Add user → Create new user*,
+   mot de passe provisoire et **Auto Confirm User**). Fermer ensuite les inscriptions publiques si elles
+   ne sont pas nécessaires.
+4. Dans **Project Settings → API**, relever le *Project URL* et la clé publique (*anon / publishable*).
+   Renseigner ces valeurs dans `supabase/config.js`, puis publier la mise à jour. **Ne jamais utiliser ni
+   publier la clé `service_role`.**
 
-**Le plus simple — dans le fichier `supabase/config.js`** (configuration commune à tous les appareils) :
+Pour un **projet déjà créé**, ne relancez pas aveuglément `supabase/schema.sql` :
+
+- si la table n’a pas encore `prof_id` et les règles d’isolation par professeur, exécuter d’abord
+  `supabase/migration-multi-profs.sql` ;
+- exécuter ensuite `installation/synchronisation-atomique.sql`. Cette étape est nécessaire pour les
+  versions actuelles, même si la table et `supabase/migration-multi-profs.sql` sont déjà installées.
+
+Le script d’installation atomique n’efface aucun instantané. Il ajoute la fonction serveur qui contrôle
+qu’aucun autre appareil n’a publié entre la lecture et l’écriture. Les règles RLS doivent toujours isoler
+les lignes avec `prof_id = auth.uid()`.
+
+### 5.2 Configurer l’application
+
+Dans `supabase/config.js`, la configuration commune aux appareils doit contenir l’URL du projet, la clé
+publique et le nom de table :
 
 ```js
 window.STI_SUPABASE = {
-  url:   "https://abcdefghijkl.supabase.co",
-  anonKey: "eyJhbGciOi... ou sb_publishable_...",
+  url: "https://xxxxxxxx.supabase.co",
+  anonKey: "clé publique anon / sb_publishable…",
   table: "espace_pedagogique",
-  device: "Poste principal — Prof. Aymen",
-  auto:  true,     // envoi automatique à chaque enregistrement
-  auth:  true      // accès protégé par mot de passe (compte unique)
+  device: "",  // laisser vide : un nom local distinct est proposé sur chaque appareil
+  auto: true,
+  auth: true
 };
 ```
 
-Puis publier sur GitHub : tous les appareils se connectent à la même base sans rien saisir,
-hors la connexion (une fois par appareil).
+La clé publique est prévue pour être visible ; ce sont les règles RLS et la connexion qui protègent les
+données. Après publication, tous les appareils utilisent le même lien et le même projet. La configuration
+Cloud locale permet de donner à chaque appareil un nom personnalisé (par exemple **Téléphone personnel**
+ou **PC du lycée**) ; ce nom sert à reconnaître l’origine des instantanés.
 
-**Variante — dans l'application** (si vous ne souhaitez pas écrire les valeurs dans le dépôt) :
-bouton **Cloud** de l'en-tête → coller l'URL et la clé → **Enregistrer et tester**.
-La configuration reste alors dans le navigateur de cet appareil.
+### 5.3 Connecter un deuxième appareil
 
-### 5.3 Utilisation au quotidien
+1. Ouvrir le même lien sur l’autre appareil :
+   <https://aymenessouyah.github.io/viescolaire/>.
+2. Cliquer sur **Compte & sauvegarde → Se connecter** et utiliser le même compte professeur. La session
+   est conservée séparément dans chaque navigateur.
+3. Lors de la première association, si l’appareil ne contient pas encore de données, l’application reprend
+   l’espace du Cloud. Si des données locales existent, choisir **Fusionner mes données avec ce compte** ou
+   **Ouvrir les données de ce compte** ; une copie locale est conservée avant l’opération.
+4. Attendre l’état **À jour — données locales et Cloud concordantes**. Dans **Cloud → Configuration**,
+   donner éventuellement un nom distinct à cet appareil.
 
-| Bouton | Effet |
+| Situation | Comportement |
 |---|---|
-| **Se connecter** | adresse + mot de passe ; la session reste ouverte sur l'appareil |
-| **Se déconnecter** | ferme la session ; les données locales restent sur l'appareil |
-| **Envoyer maintenant** | ajoute un instantané complet (horaires + fiches de séance) dans la table |
-| **Restaurer** | propose la dernière sauvegarde distante et remplace les données de l'appareil après confirmation |
-| **Configuration** | URL du projet, clé publique, table, nom de l'appareil, envoi automatique, accès protégé |
-| *(automatique)* | envoi à chaque enregistrement, reprise après coupure réseau, restauration proposée sur un nouvel appareil |
+| Enregistrement d’une fiche, d’un horaire, d’une note ou d’une présence | Sauvegarde locale, puis synchronisation automatique si le réseau et la session sont disponibles |
+| Coupure Internet | Travail local possible ; l’envoi et la réception reprennent au retour du réseau lorsque l’application est ouverte |
+| Deux appareils changent des champs différents | Les changements sont fusionnés automatiquement |
+| Deux appareils changent le même champ | L’application conserve les deux versions et demande un choix explicite |
+| Changement de compte | Confirmation requise ; les données du compte précédent ne sont pas envoyées au nouveau compte |
+| Erreur Cloud ou SQL | Les données locales restent conservées ; corriger la configuration ou le script SQL avant de réessayer |
 
-### 5.4 Sécurité
+Le bouton **Synchroniser** lance un échange bidirectionnel sécurisé : il fusionne les changements compatibles
+et ne remplace pas les données locales sans contrôle. Les copies locales ne sont pas chiffrées par l’application :
+sur un appareil partagé, protéger la session système et exporter régulièrement une sauvegarde JSON depuis
+**Exporter** ou **Hors ligne & synchronisation**.
 
-* La base n'accepte que les **comptes connectés** (règles RLS `to authenticated`) et les inscriptions
-  sont fermées : seul un compte créé par l'administrateur peut lire ou écrire. Une personne qui connaîtrait
-  l'URL du projet et la clé publique ne verrait aucune donnée.
+### 5.4 Sécurité et plusieurs professeurs
 
-### 5.5 Plusieurs professeurs (comptes multiples)
+Chaque professeur se connecte avec son propre compte et ne voit que ses sauvegardes (`prof_id = auth.uid()`)
+; les calendriers, répartitions et ressources pédagogiques restent communs. La table n’est pas accessible
+aux utilisateurs anonymes. Ne mettez jamais un mot de passe de base de données ou une clé `service_role`
+dans `supabase/config.js`.
 
-Le site accueille plusieurs professeurs, chacun avec **son propre espace privé** :
+Pour ajouter un collègue, l’administrateur du projet crée son compte dans **Supabase → Authentication →
+Users → Add user** et lui transmet l’adresse du site, son identifiant et un mot de passe provisoire. À sa
+première connexion, le collègue renseigne son profil dans l’application.
 
-| Élément | Partage |
+### 5.5 Dépannage de la synchronisation multi-appareils
+
+| Message / symptôme | Vérification |
 |---|---|
-| Calendrier tunisien, répartitions officielles, annexes, aide pédagogique | **communs** (lecture pour tous) |
-| Classes libres, élèves, numéros de PC, présences, épreuves, notes, fiches de séance | **privés** (chaque professeur ne voit que les siens) |
-
-**Créer le compte d'un collègue (1 minute, par l'administrateur du projet) :**
-
-1. Supabase → **Authentication** → **Users** → *Add user* → *Create new user* ;
-2. adresse électronique du collègue + un mot de passe provisoire → cocher **Auto Confirm User** → *Create user* ;
-3. transmettre à votre collègue : l'adresse du site, son adresse et ce mot de passe ;
-4. à sa première connexion, il renseigne son nom et sa matière (fenêtre *Votre profil*), puis tout ce
-   qu'il enregistre est rangé dans **son** espace — isolé du vôtre par la règle `prof_id = auth.uid()`.
-
-> Si le projet a été créé avant cette mise à jour, exécutez une fois
-> `supabase/migration-multi-profs.sql` (SQL Editor → Run) pour activer l'isolation par professeur.
-> Les installations neuves utilisent directement `supabase/schema.sql`.
+| **Fonction SQL manquante** | Exécuter `installation/synchronisation-atomique.sql` dans SQL Editor ; sur une nouvelle base, `supabase/schema.sql` la crée déjà |
+| **Connexion ou droits Supabase insuffisants** | Vérifier le compte, les droits `authenticated` et les règles RLS (`prof_id = auth.uid()`) |
+| **Sauvegarde locale seulement** | Vérifier l’URL, la clé publique, `auth: true`, l’état de connexion et le script SQL |
+| Un appareil ne reçoit rien | Ouvrir l’application sur les deux appareils, se connecter au même compte, attendre **À jour** et vérifier qu’aucun conflit n’attend une décision |
+| L’application installée reste ancienne | Recharger l’application ; si nécessaire, utiliser **Forcer la mise à jour** après avoir attendu la synchronisation |
+| Un PDF ne s’ouvre pas hors ligne | Le document n’a pas encore été téléchargé ; l’ouvrir une fois en ligne ou utiliser le téléchargement hors ligne |
 
 ## 6. Mettre à jour le contenu
 
@@ -251,12 +232,11 @@ Après modification : `git add . && git commit -m "…" && git push`.
 
 | Symptôme | Cause / solution |
 |---|---|
-| L'application se met à jour mais pas les appareils installés | Incrémenter `VERSION` dans `sw.js` puis pousser ; ou vider le cache du navigateur |
-| Un PDF ne s'ouvre pas hors ligne | Il n'a pas encore été mis en cache : l'ouvrir une fois en ligne |
-| « Échec de l'envoi » vers Supabase | Vérifier l'URL du projet, la clé publique, le nom de la table et que `schema.sql` a bien été exécuté |
-| « Échec de la restauration » | Même vérification ; le message détaillé indique le code HTTP retourné |
-| Le bouton d'installation n'apparaît pas | L'application est probablement déjà installée, ou le navigateur impose le menu (voir § 4) |
-| Les données ont disparu du navigateur | Restaurer depuis Supabase (*Restaurer*) ou depuis un export JSON |
+| L’application installée reste ancienne | Publier une nouvelle `VERSION` dans `sw.js`, puis recharger ; l’application affiche un bandeau pour valider la mise à jour |
+| Un PDF ne s’ouvre pas hors ligne | Il n’a pas encore été mis en cache : l’ouvrir une fois en ligne ou télécharger les documents depuis **Hors ligne & synchronisation** |
+| Synchronisation interrompue | Garder l’application ouverte, vérifier le réseau et l’état de connexion ; les modifications locales restent en attente |
+| Le bouton d’installation n’apparaît pas | L’application est probablement déjà installée, ou le navigateur impose le menu (voir § 4) |
+| Les données locales ne sont plus visibles | Vérifier le compte connecté et l’état du Cloud ; utiliser **Exporter les versions locales** avant toute réinitialisation du navigateur |
 
 ---
 
@@ -272,13 +252,17 @@ L'interface appelle une fonction sécurisée `supabase/functions/assistant-ia`. 
 
 ## 9. Vérifications techniques (facultatif)
 
-Les tests automatisés valident l'assemblage réel du site (117 assertions : onglets, horaires, calendrier,
-répartition, compétences, annexes, recherche, sauvegarde distante simulée, PWA) :
+Les tests sans dépendance vérifient les règles essentielles de fusion entre appareils (y compris les
+cases d’annexes cochées séparément), la couverture des 234 éléments et le statut des séances :
 
 ```bash
-npm install jsdom
-node check_data.js     # structure des fichiers de données
-node check_site.js     # chargement complet du site dans un navigateur simulé
+node --test tests/*.test.js
+```
+
+Vérification rapide de la syntaxe JavaScript :
+
+```bash
+for f in assets/*.js data/*.js supabase/config.js sw.js; do node --check "$f"; done
 ```
 
 ---
