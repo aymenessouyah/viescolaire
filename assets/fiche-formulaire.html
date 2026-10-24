@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fiche pédagogique – formulaire</title>
+<style>
+:root{--bg:#fff;--card:#fbf3ec;--ink:#2b2d42;--mut:#6b7280;--line:#e5ded7;--field:#fff;--c1:#e76f51;--c2:#f4a261;--c3:#2a9d8f;--c4:#457b9d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1c26;--card:#262836;--ink:#f1eee9;--mut:#a3a8b5;--line:#3a3d50;--field:#1b1c26}}
+:root[data-theme="dark"]{--bg:#1b1c26;--card:#262836;--ink:#f1eee9;--mut:#a3a8b5;--line:#3a3d50;--field:#1b1c26}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 Calibri,"Segoe UI",system-ui,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end;border-bottom:3px solid var(--c1);padding-bottom:10px}
+h1{margin:0;font-size:28px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--c1);margin:22px 0 8px}
+label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin-bottom:3px}
+input[type=text]{width:100%;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin-bottom:5px}
+input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color:var(--c4)}
+.g{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(4,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.box{background:var(--card);border-radius:8px;padding:10px 12px;border-top:4px solid var(--c3)}
+.box.a{border-color:var(--c1)}.box.b{border-color:var(--c2)}.box.c{border-color:var(--c3)}.box.d{border-color:var(--c4)}
+.step{display:grid;grid-template-columns:150px 1fr 1fr;gap:12px;border-left:6px solid var(--c1);background:var(--card);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.step h3{margin:0 0 6px;font-size:15px}
+.num{font-size:28px;font-weight:700}
+.meta{margin-top:12px}
+.moy{margin-top:12px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+button{font:inherit;font-weight:700;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;background:var(--c1);color:#fff}
+button.sec{background:var(--mut)}
+@media (max-width:760px){.g4,.g3{grid-template-columns:1fr 1fr}.step{grid-template-columns:1fr}}
+@media (max-width:480px){.g4,.g3{grid-template-columns:1fr}}
+@media print{.bar{display:none}input[type=text]{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:2px 0;background:transparent}body{font-size:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<form id="f" onsubmit="return false">
+<header>
+  <div><h1>Fiche pédagogique</h1></div>
+  <div style="min-width:260px">
+    <label for="etab">Établissement</label><input type="text" id="etab" value="Lycée Rafèha">
+    <label for="ens">Enseignant</label><input type="text" id="ens" value="Aymen Essouyah">
+  </div>
+</header>
+
+<h2>Informations générales</h2>
+<div class="g g4">
+  <div class="box a"><label for="classe">Classe</label><input type="text" id="classe" value="4ème SI"></div>
+  <div class="box b"><label for="seance">Séance</label><input type="text" id="seance" value="8-9"></div>
+  <div class="box c"><label for="duree">Durée totale</label><input type="text" id="duree" value="120 min"></div>
+  <div class="box d"><label for="projet">Projet</label><input type="text" id="projet" value="Fleurs Rafèha"></div>
+</div>
+<div class="box c meta"><label for="modules">Modules</label><input type="text" id="modules" value="SQL, HTML5, CSS, JavaScript, PHP"></div>
+
+<h2>Objectifs</h2>
+<div class="g g3" id="obj"></div>
+
+<h2>Méthode, prérequis, critères</h2>
+<div class="g g3" id="mpc"></div>
+
+<h2>Déroulement de la séance</h2>
+<div id="steps"></div>
+
+<div class="box d moy">
+  <label>Moyens didactiques</label>
+  <div class="g g3" id="moy"></div>
+</div>
+
+<div class="bar">
+  <button type="button" onclick="window.print()">Imprimer la fiche</button>
+  <button type="button" class="sec" onclick="resetAll()">Rétablir les valeurs d’origine</button>
+</div>
+</form>
+</div>
+
+<script>
+var OBJ=[
+ ['HTML5',['Page index','Background','Liste','Details et summary']],
+ ['CSS & structure',['Position','Tableau','Formulaire','Transition et position CSS']],
+ ['SQL · JS · PHP',['SQL : LDD','Contrôle JS (squelette de la fonction + appel)','PHP : connexion, insertion et affichage','']]
+];
+var MPC=[
+ ['Méthode active (de découverte)',['Les connaissances se construisent et ne s’apprennent pas','Point de départ : l’action (le projet)','Réflexion sur les objectifs de la séance','']],
+ ['Prérequis',['display, flex, clear, position','Correction du DC1','','']],
+ ['Critères de réussite',['Distinguer contrainte d’intégrité et contrainte de domaine','Choisir le bon type d’input','Expliquer mysqli_fetch_row avec SELECT * et COUNT(*)','']]
+];
+var STEPS=[
+ {d:'15',e:'Rappel',c:'var(--c1)',p:['Poser des questions pour rappeler les bases : display, flex, clear','position (absolute, relative, fixed et sticky)'],s:['Répondre aux questions','']},
+ {d:'10',e:'Mise en situation',c:'var(--c2)',p:['Correction du DC1','Présenter le projet :','SQL (LDD)','HTML : page index (surtout iframe)','CSS : position + float','Tableau : caption, th, bordure, border-collapse, td, tr, colspan, rowspan','Background · contrôle JS','PHP : insertion + affichage'],s:['Projet « Fleurs Rafèha »','Découvrir le projet et ses consignes']},
+ {d:'90',e:'Constatations',c:'var(--c3)',p:['Assister à la correction pour chaque élève',''],s:['Réaliser le projet','Corriger ses erreurs avec l’aide de l’enseignant']},
+ {d:'5',e:'Évaluation',c:'var(--c4)',p:['Demander aux élèves :','Contrainte d’intégrité, contrainte de domaine','Style des listes','Formulaire : types des input','mysqli_fetch_row avec SELECT * et avec SELECT COUNT(*)'],s:['Répondre aux questions','Discuter entre eux pour valoriser leurs acquis']}
+];
+var MOY=['Les annexes HTML5 et CSS3','Les images du projet',''];
+var cls=['a','b','c'];
+function esc(v){return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
+function inputs(id,arr){return arr.map(function(v,i){return '<input type="text" aria-label="'+id+' '+(i+1)+'" value="'+esc(v)+'">'}).join('')}
+function build(){
+  document.getElementById('obj').innerHTML=OBJ.map(function(o,i){
+    return '<div class="box '+cls[i]+'"><label>'+esc(o[0])+'</label>'+inputs(o[0],o[1])+'</div>'}).join('');
+  document.getElementById('mpc').innerHTML=MPC.map(function(o,i){
+    return '<div class="box '+cls[i]+'"><label>'+esc(o[0])+'</label>'+inputs(o[0],o[1])+'</div>'}).join('');
+  document.getElementById('steps').innerHTML=STEPS.map(function(s,i){
+    return '<div class="step" style="border-left-color:'+s.c+'">'+
+      '<div><span class="num" style="color:'+s.c+'">'+(i+1)+'</span>'+
+      '<label>Étape</label><input type="text" aria-label="Étape '+(i+1)+'" value="'+esc(s.e)+'">'+
+      '<label>Durée (min)</label><input type="text" aria-label="Durée étape '+(i+1)+'" value="'+esc(s.d)+'"></div>'+
+      '<div><label>Activités professeur</label>'+inputs('Professeur '+(i+1),s.p)+'</div>'+
+      '<div><label>Activités élèves</label>'+inputs('Élèves '+(i+1),s.s)+'</div></div>'}).join('');
+  document.getElementById('moy').innerHTML=inputs('Moyen',MOY);
+}
+function resetAll(){
+  if(!confirm('Rétablir toutes les valeurs d’origine ?'))return;
+  document.getElementById('f').reset();build();
+}
+build();
+</script>
+</body>
+</html>

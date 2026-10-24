@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.5.4-fiches-3si1';
+const VERSION='sti-espace-v1.5.5-formulaire';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -31,6 +31,7 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/sync-merge.js",
   "./assets/fiches.js",
   "./assets/fiches.css",
+  "./assets/fiche-formulaire.html",
   "./data/fiches.js",
   "./data/fiches3SI1.js",
   "./data/repartition4SI2.js",

@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.5.4-fiches-3si1` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.5.5-formulaire` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -17,6 +17,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | `data/repartition3SI1.js` | **La répartition 3SI1** : 54 séances datées (mardi et jeudi), devoirs, domaines et pages du Smart Book 3e. | 22 Ko |
 | `data/fiches3SI1.js` | **Les 54 fiches 3SI1** au modèle v3 (objectifs, méthode, prérequis, critères, déroulement, travail à la maison). | 208 Ko |
 | `docs/fiches-3si-2026/` | 27 PDF (deux séances par fichier) + `Fiches_3SI1_2026-2027.pdf` (recueil 54 pages). | 1,8 Mo |
+| `assets/fiche-formulaire.html` | **La page du formulaire** (fournie par l'enseignant) : sert de contenu à la grande boîte « Modifier la fiche et les coches ». | 8 Ko |
 | `data/fiches.js` | **Les 50 fiches pédagogiques 4SI2** préremplies au modèle « Séance 8-9 v3 » : objectifs (3 colonnes), méthode active, prérequis, critères de réussite, 4 étapes du déroulement, travail à la maison. | 178 Ko |
 | `assets/fiches.js` | Module d'intégration : onglet « Fiches pédagogiques », boîte de fiche éditable, menu d'impression, bloc « nouvelle répartition », report des préparations. | 34 Ko |
 | `assets/fiches.css` | Mise en page du modèle v3 (page 11 × 8,5 in, couleurs, tableaux) + styles de la liste et du menu d'impression. | 7 Ko |
@@ -27,7 +28,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.5.4-fiches-3si1` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.5.5-formulaire` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -50,6 +51,12 @@ Un bloc est inséré **en tête** de l'onglet existant, avant la répartition du
 
 Ancrage technique : `STI_FICHES.renderRepBlock()` est appelée par le `renderAll` greffé et
 insère `<div id="rep-4si2">` en `afterbegin` de `#v-rep`.
+
+**Aucun sélecteur dans le bloc** : le contenu affiché suit la classe et le trimestre choisis dans
+l'application (boutons de l'en-tête de l'onglet et entrées « Répartition — 1er/2e/3e trimestre » de
+la barre latérale). Chaque trimestre apparaît donc **seul**, avec son titre, son nombre de séances et
+ses heures ; les fonctions `setRep()` et `setTri()` de l'application sont interceptées pour
+rafraîchir le bloc immédiatement. Exemple : 3SI1 → 21 / 17 / 16 séances ; 4SI2 → 22 / 15 / 13.
 
 ### ① bis La répartition **3SI1** — même bloc, sélecteur de classe
 
@@ -137,6 +144,35 @@ critères, les 4 étapes (nom, durée, activités professeur, activités élève
    par exemple « Modifier la fiche et les coches » ou « Séance du jour ») : c'est désormais la fiche v3
    qui s'affiche. Les séances **3SI1** ouvertes par `openModal('3SI1', n)` s'affichent elles aussi
    au modèle v3 depuis cette version.
+
+### ③ bis « Modifier la fiche et les coches » → **grande boîte formulaire**
+
+Sous « Actions » de l'onglet *Fiche pédagogique*, le bouton **Modifier la fiche et les coches**
+ouvre désormais une **grande boîte** (98 % de l'écran, 94 % de la hauteur) contenant la page du
+formulaire `assets/fiche-formulaire.html`, **remplie avec la fiche de la séance sélectionnée** :
+
+| Zone du formulaire | Contenu injecté depuis la fiche |
+|---|---|
+| Établissement / Enseignant | `Lycée Rafèha` · `Aymen Essouyah` |
+| Classe · Séance · Durée · Projet · Modules | 4ème SI ou 3ème SI · n° de séance · 120 min · projet et modules de la classe |
+| 3 colonnes d'objectifs (4 champs chacune) | titres et objectifs de la fiche |
+| Méthode active / Prérequis / Critères | méthode découpée en phrases, prérequis, critères de réussite |
+| 4 étapes du déroulement | nom, durée, activités professeur, activités élèves |
+| Moyens didactiques | moyens distincts des étapes |
+
+Boutons de la boîte : **Imprimer** (la page s'imprime seule, sans les boutons), **Rétablir la fiche**
+(recharge les valeurs de la fiche), **Enregistrer la fiche**, **Fermer**. À l'enregistrement :
+les champs reviennent dans la fiche (objectifs, prérequis, critères, étapes avec durées et moyens,
+modules), la **préparation du cahier de textes est régénérée**, la boîte papier du modèle v3 et la
+préparation du site affichent les nouvelles valeurs (aller-retour vérifié, 0 erreur JS).
+
+La boîte papier du modèle v3 gagne un bouton **« Modifier dans le formulaire »**, et le bandeau de
+l'onglet *Fiche pédagogique* un bouton **« Modifier (formulaire) »**.
+
+Détail technique : le service worker renvoyant `index.html` pour toute navigation, le formulaire
+n'est pas chargé par le `src` de l'iframe mais par `fetch()` puis injecté en `srcdoc` (même origine,
+donc lecture et écriture des champs possibles). Le fichier est ajouté à `CORE_ASSETS` pour rester
+disponible hors ligne.
 
 ### ④ Le menu d'impression — 4 entrées
 

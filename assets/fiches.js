@@ -219,34 +219,42 @@ const CLS_REP = {
   '3SI1': { cle: 'repartition3SI1', nom: '3e année SI (3SI1)', h: '108 h', fiches: true }
 };
 function plan() { return (root.STI_DATA && root.STI_DATA[CLS_REP[repCls].cle]) || []; }
+/* État de l'application : la classe et le trimestre sont choisis par les boutons
+   de l'en-tête de l'onglet et par les entrées « Répartition — 1er/2e/3e trimestre »
+   de la barre latérale. Le bloc ne propose donc plus aucun sélecteur : il affiche
+   le trimestre courant, seul. */
+/* app.js est encapsulé : son état (classe et trimestre) n'est visible qu'à travers
+   setRep() et setTri(). On mémorise donc ces choix au passage, avec les valeurs
+   de départ de l'application (3SI1 et 1er trimestre). */
+let appCls = '3SI1', appTri = 1;
+function suitApp() {
+  if (CLS_REP[appCls]) repCls = appCls;
+  if ([1, 2, 3].indexOf(appTri) >= 0) repTri = appTri;
+}
 function repHTML() {
+  suitApp();
+  const CL = repCls;              // classe courante, utilisée dans les onclick
   const p = plan();
   if (!p.length) return '';
   const cfg = CLS_REP[repCls];
   const rows = p.filter(x => !repTri || x.tri === repTri);
+  const nb = rows.length * 2;
+  const libelle = repTri ? (repTri + (repTri === 1 ? '<sup>er</sup>' : '<sup>e</sup>') + ' trimestre') : 'année 2026 / 2027';
   return `
   <div class="card" id="rep-4si2" style="margin-bottom:16px">
     <div class="card-h">
-      <h3>${ic('list')} Nouvelle répartition ${cfg.nom} — 2026 / 2027 <span class="badge b-teal">${p.length} séances · ${cfg.h}</span></h3>
+      <h3>${ic('list')} Répartition ${repCls} — ${libelle}
+        <span class="badge b-teal">${rows.length} séances · ${nb} h par groupe</span></h3>
       <div class="row no-print" style="gap:6px;flex-wrap:wrap">
-        <div class="seg-wrap" role="group" aria-label="Choisir la classe">
-          ${Object.keys(CLS_REP).map(c => `<button class="seg-btn ${c===repCls?'active':''}" onclick="STI_FICHES.repCls('${c}')">${c}</button>`).join('')}
-        </div>
-        <select onchange="STI_FICHES.repTri(Number(this.value))">
-          <option value="0">Toute l'année</option>
-          <option value="1"${repTri===1?' selected':''}>1<sup>er</sup> trimestre</option>
-          <option value="2"${repTri===2?' selected':''}>2<sup>e</sup> trimestre</option>
-          <option value="3"${repTri===3?' selected':''}>3<sup>e</sup> trimestre</option>
-        </select>
-        <button class="btn btn-xs btn-line" onclick="STI_FICHES.printRepartition(${repTri})">${ic('print')} Imprimer</button>
-        ${cfg.fiches ? `<button class="btn btn-xs btn-soft" onclick="go('v-fiches')">Voir les fiches</button>` : ''}
+        <button class="btn btn-xs btn-line" onclick="STI_FICHES.printRepartition(${repTri})">${ic('print')} Imprimer ce trimestre</button>
+        <button class="btn btn-xs btn-soft" onclick="STI_FICHES.cls('${repCls}'); STI_FICHES.show()">Voir les fiches</button>
       </div>
     </div>
     <div class="card-b">
       <div class="tbl-wrap"><table class="tbl">
         <thead><tr><th style="width:44px">N°</th><th style="width:100px">Date</th><th>Contenu de la séance</th>
           <th style="width:150px" class="hide-sm">Domaines</th><th style="width:96px">Type</th></tr></thead>
-        <tbody>${rows.map(x => `<tr${x.k==='cours'?'':' class="is-eval"'}${cfg.fiches?' style="cursor:pointer" onclick="STI_FICHES.openCls('+repCls+', '+x.num+')"':''}>
+        <tbody>${rows.map(x => `<tr${x.k==='cours'?'':' class="is-eval"'}${cfg.fiches?' style="cursor:pointer" onclick="STI_FICHES.openCls(&#39;'+CL+'&#39;,'+x.num+')"':''}>
           <td class="n">${x.num}</td>
           <td style="white-space:nowrap">${fmtShort(x.iso)}<div class="tiny muted">${JOURS[D(x.iso).getDay()]}</div></td>
           <td><div class="tt">${esc(x.t)}</div><div class="det">${esc(x.det)}</div></td>
@@ -261,7 +269,9 @@ function repHTML() {
 }
 function renderRepBlock() {
   const host = document.getElementById('v-rep');
-  if (!host || document.getElementById('rep-4si2') || !plan().length) return;
+  if (!host || !plan().length) return;
+  const cur = document.getElementById('rep-4si2');
+  if (cur) cur.remove();                 // le trimestre ou la classe a changé
   host.insertAdjacentHTML('afterbegin', repHTML());
 }
 
@@ -415,6 +425,204 @@ function ficheHTML(f, editable) {
   </div>`;
 }
 
+/* ------------------------------------- boîte « formulaire » (grande fenêtre)
+   Le bouton « Modifier la fiche et les coches » de l'onglet Fiche pédagogique
+   ouvre la page du formulaire (assets/fiche-formulaire.html) dans une grande
+   boîte, remplie avec la fiche de la séance choisie. Chaque champ reste
+   modifiable ; « Enregistrer la fiche » reporte les valeurs dans la fiche,
+   dans la préparation du cahier de textes et dans l'impression.              */
+let formN = null;
+let formHTMLPromise = null;
+
+/* Le service worker renvoie index.html pour toute navigation : on ne peut donc
+   pas charger le formulaire par le src d'une iframe. On récupère le fichier par
+   fetch() puis on l'injecte dans l'iframe par srcdoc. */
+function formHTML() {
+  if (!formHTMLPromise) {
+    formHTMLPromise = fetch('assets/fiche-formulaire.html', { cache: 'no-cache' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
+      .catch(function () { formHTMLPromise = null; throw new Error('formulaire indisponible'); });
+  }
+  return formHTMLPromise;
+}
+
+function padArr(a, n) { const o = (a || []).slice(0, n); while (o.length < n) o.push(''); return o; }
+function splitLines(t) {
+  return String(t == null ? '' : t).split(/\s*\|\s*|\s*\n\s*/).map(x => x.trim()).filter(Boolean);
+}
+function uniq(a) { const o = []; (a || []).forEach(x => { if (x && o.indexOf(x) < 0) o.push(x); }); return o; }
+function phrases(t, n) { return padArr(String(t || '').split(/(?<=\.)\s+/).map(x => x.trim()).filter(Boolean), n); }
+
+function ensureFormBox() {
+  if (document.getElementById('fiche-form-modal')) return;
+  const d = document.createElement('div');
+  d.id = 'fiche-form-modal';
+  d.style.cssText = 'position:fixed;inset:0;z-index:9998;display:none;align-items:center;justify-content:center;' +
+                    'background:rgba(12,20,28,.55);padding:12px;box-sizing:border-box';
+  d.innerHTML = `
+    <div style="width:min(1560px,98vw);height:94vh;background:#fff;border-radius:14px;overflow:hidden;
+                display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.45)">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;
+                  border-bottom:1px solid #e5ded7;background:#fdf4ec">
+        <div style="min-width:220px">
+          <strong id="ffm-title" style="color:#12324d;font-size:15px">Fiche pédagogique</strong>
+          <div id="ffm-sub" class="tiny muted"></div>
+        </div>
+        <div class="row no-print" style="gap:6px;flex-wrap:wrap">
+          <button class="btn btn-xs btn-line" onclick="STI_FICHES.formPrint()">${ic('print')} Imprimer</button>
+          <button class="btn btn-xs btn-line" onclick="STI_FICHES.formReset()">Rétablir la fiche</button>
+          <button class="btn btn-xs btn-blue" onclick="STI_FICHES.formSave()">Enregistrer la fiche</button>
+          <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
+        </div>
+      </div>
+      <iframe id="ffm-frame" title="Formulaire de fiche pédagogique"
+              style="flex:1 1 auto;width:100%;border:0;background:#fff"></iframe>
+    </div>`;
+  document.body.appendChild(d);
+  d.addEventListener('click', function (e) { if (e.target === d) formClose(); });
+  const fr = d.querySelector('#ffm-frame');
+  fr.addEventListener('load', function () { if (formN) fillForm(formN); });
+}
+
+function fillForm(n) {
+  const fr = document.getElementById('ffm-frame');
+  const w = fr && fr.contentWindow;
+  const f = fiche(n);
+  if (!w || !f || !w.document) return;
+  formN = n;
+  w.OBJ = (f.objectifs || []).map(function (o) { return [o.titre, padArr(o.items || [], 4)]; });
+  w.MPC = [
+    ['Méthode active (de découverte)', phrases(f.methode, 4)],
+    ['Prérequis', padArr(f.prerequis || [], 4)],
+    ['Critères de réussite', padArr(f.criteres || [], 4)]
+  ];
+  w.STEPS = (f.etapes || []).map(function (e, i) {
+    return { d: String(e.duree), e: e.etape, c: ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)'][i % 4],
+             p: padArr(splitLines(e.prof), 4), s: padArr(splitLines(e.eleves), 3) };
+  });
+  w.MOY = padArr(uniq((f.etapes || []).map(function (e) { return e.moyens; })), 3);
+  try { w.build(); } catch (e) {}
+  const set = function (id, v) { const el = w.document.getElementById(id); if (el) el.value = v; };
+  set('etab', 'Lycée Rafèha');
+  set('ens', 'Aymen Essouyah');
+  set('classe', CF().label);
+  set('seance', String(f.n));
+  set('duree', (f.duree || 120) + ' min');
+  set('projet', f.projet || (ficCls === '3SI1' ? 'Site du club' : 'Fleurs Rafèha'));
+  set('modules', f.modules || CF().modules);
+  w.resetAll = function () { fillForm(n); };          // « Rétablir » = valeurs de la fiche
+  const t = document.getElementById('ffm-title');
+  const sub = document.getElementById('ffm-sub');
+  if (t) t.textContent = 'Fiche pédagogique — séance ' + f.n + (isEdited(f.n) ? ' (modifiée)' : '');
+  if (sub) sub.innerHTML = esc(CF().label + ' · ' + fmtLong(f.date) + ' · ' + f.titre);
+}
+
+function openForm(n, classe) {
+  if (classe) ficCls = FICHES_CLS[classe] ? classe : ficCls;
+  if (!fiche(n)) { if (root.toast) root.toast('Fiche indisponible pour cette séance'); return; }
+  ensureFormBox();
+  formN = n;
+  const m = document.getElementById('fiche-form-modal');
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  const fr = document.getElementById('ffm-frame');
+  formHTML().then(function (h) {
+    if (fr.getAttribute('srcdoc') !== h) fr.srcdoc = h;   // le « load » remplit la fiche
+    else fillForm(n);
+  }).catch(function () {
+    if (root.toast) root.toast('Formulaire introuvable : vérifiez assets/fiche-formulaire.html');
+  });
+}
+
+function formClose() {
+  const m = document.getElementById('fiche-form-modal');
+  if (m) m.style.display = 'none';
+  document.body.style.overflow = '';
+  render();
+}
+function formPrint() {
+  const fr = document.getElementById('ffm-frame');
+  if (!fr || !fr.contentWindow) return;
+  try { fr.contentWindow.focus(); fr.contentWindow.print(); }
+  catch (e) { if (root.toast) root.toast('Impression bloquée par le navigateur'); }
+}
+function formReset() { if (formN) fillForm(formN); if (root.toast) root.toast('Valeurs de la fiche rétablies'); }
+
+function readForm() {
+  const fr = document.getElementById('ffm-frame');
+  const w = fr && fr.contentWindow;
+  const f = fiche(formN);
+  if (!w || !f || !w.document) return null;
+  const V = function (el) { return el && el.value != null ? String(el.value).trim() : ''; };
+  const doc = w.document;
+  const box = function (sel, labelFallback) {
+    return Array.prototype.map.call(doc.querySelectorAll(sel), function (b) {
+      const lab = b.querySelector('label');
+      return { titre: (lab ? lab.textContent : labelFallback || '').trim(),
+               items: Array.prototype.map.call(b.querySelectorAll('input'), V).filter(Boolean) };
+    });
+  };
+  const obj = box('#obj .box');
+  const mpc = box('#mpc .box');
+  const steps = Array.prototype.map.call(doc.querySelectorAll('#steps .step'), function (el) {
+    const ins = el.querySelectorAll('input');
+    const p = Array.prototype.map.call(el.children[1].querySelectorAll('input'), V).filter(Boolean);
+    const e = Array.prototype.map.call(el.children[2].querySelectorAll('input'), V).filter(Boolean);
+    return { etape: V(ins[0]) || 'Étape', duree: V(ins[1]) || '0', prof: p, eleves: e };
+  });
+  const moy = Array.prototype.map.call(doc.querySelectorAll('#moy input'), V).filter(Boolean);
+  const h = function (id) { const el = doc.getElementById(id); return el ? String(el.value).trim() : ''; };
+  return { obj: obj, mpc: mpc, steps: steps, moy: moy,
+           classe: h('classe'), seance: h('seance'), duree: h('duree'), projet: h('projet'), modules: h('modules') };
+}
+
+/* enregistre la fiche : champs du formulaire → fiche → préparation → impression */
+function commit(f) {
+  edits[ficCls + '|' + f.n] = {
+    titre: f.titre, modules: f.modules, methode: f.methode, maison: f.maison,
+    objectifs: f.objectifs, prerequis: f.prerequis, criteres: f.criteres,
+    etapes: f.etapes, duree: f.duree, projet: f.projet,
+    version: 2, modifie: new Date().toISOString()
+  };
+  persist();
+  try {
+    if (CF().synchro && root.store && root.store.seances && typeof root.save === 'function') {
+      const k = ficCls + '|' + f.n;
+      root.store.seances[k] = Object.assign({}, root.store.seances[k] || {},
+        { preparation: prepText(f, ficCls), devoirs: plat(f.maison) || (root.store.seances[k] || {}).devoirs,
+          title: f.titre });
+      root.save(true);
+    }
+  } catch (e) {}
+}
+
+function formSave() {
+  const d = readForm();
+  if (!d) return;
+  const f = fiche(formN);
+  const nObj = Math.max(3, d.obj.length);
+  f.objectifs = [];
+  for (let i = 0; i < nObj; i++) {
+    const o = d.obj[i] || { titre: '', items: [] };
+    f.objectifs.push({ titre: o.titre || (f.objectifs[i] ? f.objectifs[i].titre : 'Objectifs'), items: o.items });
+  }
+  if (d.mpc[1]) f.prerequis = d.mpc[1].items;
+  if (d.mpc[2]) f.criteres = d.mpc[2].items;
+  if (d.mpc[0] && d.mpc[0].items.length) f.methode = d.mpc[0].items.join(' ');
+  f.etapes = d.steps.map(function (s, i) {
+    const old = (f.etapes && f.etapes[i]) || {};
+    return { etape: s.etape, duree: Number(String(s.duree).replace(/[^0-9]/g, '')) || old.duree || 0,
+             prof: s.prof.join(' | '), eleves: s.eleves.join(' | '),
+             moyens: d.moy[i] || old.moyens || '' };
+  });
+  f.modules = d.modules || f.modules;
+  f.duree = Number(String(d.duree).replace(/[^0-9]/g, '')) || f.duree;
+  f.projet = d.projet;
+  commit(f);
+  formClose();
+  if (root.toast) root.toast('Fiche n°' + f.n + ' enregistrée (formulaire)');
+}
+
 /* ------------------------------------------------------------ boîte d'édition */
 function ensureBox() {
   if (document.getElementById('fiche-modal')) return;
@@ -435,6 +643,7 @@ function ensureBox() {
       <div class="box-f no-print">
         <span class="tiny muted" id="fm-hint">Tous les champs sont modifiables : cliquez dans le texte pour le corriger.</span>
         <span class="row" style="gap:6px">
+          <button class="btn btn-line" onclick="STI_FICHES.form( STI_FICHES.current() )">Modifier dans le formulaire</button>
           <button class="btn btn-line" onclick="STI_FICHES.openClassic()">Cahier de textes (déroulement réel)</button>
           <button class="btn btn-blue" onclick="STI_FICHES.save()">Enregistrer la fiche</button>
         </span>
@@ -688,6 +897,7 @@ function anchorFiche() {
       <div class="row" style="gap:6px;flex-wrap:wrap">
         <select id="fic-anchor-n" style="min-width:290px">${opts}</select>
         <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(Number(document.getElementById('fic-anchor-n').value))">Ouvrir la fiche</button>
+        <button class="btn btn-xs btn-soft" onclick="STI_FICHES.form(Number(document.getElementById('fic-anchor-n').value))">Modifier (formulaire)</button>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">Impression</button>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.show()">Les ${CF().nb} fiches</button>
       </div>
@@ -723,10 +933,31 @@ function install() {
   if (typeof root.openModal === 'function' && !root.__ficheHooked) {
     classic = root.openModal;
     root.openModal = function (cls, n) {
-      if (FICHES_CLS[cls] && n) { ficCls = cls; open(n); return; }
+      if (FICHES_CLS[cls] && n) { openForm(n, cls); return; }
       return classic.apply(this, arguments);
     };
     root.__ficheHooked = true;
+  }
+  /* le trimestre et la classe choisis dans l'application rafraîchissent le bloc */
+  if (!root.__ficheRepHooked) {
+    const st0 = root.setRep, st1 = root.setTri;
+    if (typeof st0 === 'function') {
+      root.setRep = function (c) {
+        if (CLS_REP[c]) appCls = c;
+        const r = st0.apply(this, arguments);
+        try { renderRepBlock(); } catch (e) {}
+        return r;
+      };
+    }
+    if (typeof st1 === 'function') {
+      root.setTri = function (t) {
+        if ([1, 2, 3].indexOf(Number(t)) >= 0) appTri = Number(t);
+        const r = st1.apply(this, arguments);
+        try { renderRepBlock(); } catch (e) {}
+        return r;
+      };
+    }
+    root.__ficheRepHooked = true;
   }
   /* greffes sur la navigation et sur le rendu global */
   if (!root.__ficheNavHooked) {
@@ -767,6 +998,7 @@ root.STI_FICHES = {
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,
+  form: n => openForm(n), formSave, formClose, formPrint, formReset,
   repTri: v => { repTri = v; const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
   repCls: c => { repCls = CLS_REP[c] ? c : '4SI2'; repTri = 0;
                  const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
