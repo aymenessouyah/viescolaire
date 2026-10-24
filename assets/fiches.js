@@ -34,6 +34,7 @@ function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function fmtLong(iso) { const d = D(iso); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear(); }
 function fmtShort(iso) { const d = D(iso); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); }
+function todayISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 
 function load() {
   try { edits = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { edits = {}; }
@@ -281,11 +282,11 @@ function open(n) {
   ensureBox();
   ctxN = n;
   document.getElementById('fm-title').innerHTML = 'Fiche pédagogique — séance ' + n + ' · ' + esc(fmtShort(f.date));
-  document.getElementById('fm-body').innerHTML = ficheHTML(f, true);
-  if (root.STI_ANNEX_TRACK) {
-    const record = root.store && root.store.seances ? root.store.seances[CLS + '|' + n] || {} : {};
-    root.STI_ANNEX_TRACK.mountModal(CLS, n, record, 'fm-body');
-  }
+  const record = root.store && root.store.seances ? root.store.seances[CLS + '|' + n] || {} : {};
+  document.getElementById('fm-body').innerHTML = `<div id="fm-session-status" class="no-print"><strong>État de la séance</strong><label class="badge b-green"><input type="checkbox" id="fm-done" ${record.done === true ? 'checked' : ''}> Séance assurée</label><label class="badge b-rose"><input type="checkbox" id="fm-rep" ${record.done === false ? 'checked' : ''}> Séance reportée</label><small>À confirmer lors de l’enregistrement de la fiche.</small></div>` + ficheHTML(f, true);
+  document.getElementById('fm-done').addEventListener('change', function () { if (this.checked) document.getElementById('fm-rep').checked = false; });
+  document.getElementById('fm-rep').addEventListener('change', function () { if (this.checked) document.getElementById('fm-done').checked = false; });
+  if (root.STI_ANNEX_TRACK) root.STI_ANNEX_TRACK.mountModal(CLS, n, record, 'fm-body');
   document.getElementById('fm-hint').innerHTML = isEdited(n)
     ? '<span class="badge b-amber">fiche modifiée</span> vos corrections sont conservées dans votre espace.'
     : 'Tous les champs sont modifiables : cliquez dans le texte pour le corriger.';
@@ -338,7 +339,14 @@ function collect() {
 
 function save() {
   if (!ctxN) return;
+  const doneControl = document.getElementById('fm-done');
+  const repControl = document.getElementById('fm-rep');
+  const hasStatusControls = !!(doneControl && repControl);
+  const doneBox = hasStatusControls && doneControl.checked;
+  const repBox = hasStatusControls && repControl.checked;
+  if (doneBox && repBox) { if (root.toast) root.toast('Choisissez assurée ou reportée, pas les deux.'); return; }
   const f = collect();
+  if (doneBox && f.date > todayISO()) { if (root.toast) root.toast('Une séance future ne peut pas être déclarée assurée.'); return; }
   edits[CLS + '|' + ctxN] = {
     titre: f.titre, modules: f.modules, methode: f.methode, maison: f.maison,
     objectifs: f.objectifs, prerequis: f.prerequis, criteres: f.criteres,
@@ -356,6 +364,7 @@ function save() {
       ].join('\n');
       const annexSelection = root.STI_ANNEX_TRACK ? root.STI_ANNEX_TRACK.selection(CLS, ctxN) : null;
       const sessionData = Object.assign({}, root.store.seances[k] || {}, { preparation: prep, devoirs: f.maison });
+      if (hasStatusControls) sessionData.done = doneBox ? true : (repBox ? false : undefined);
       if (annexSelection !== null) {
         sessionData.annexes = annexSelection;
         sessionData.annexesVersion = root.STI_ANNEX_TRACK.version;

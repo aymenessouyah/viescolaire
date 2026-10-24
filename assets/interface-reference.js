@@ -119,5 +119,5 @@ document.addEventListener('click',e=>{if(!e.composedPath().some(node=>node.class
 setInterval(()=>{if(ctx&&!document.hidden&&notificationDay!==today())notifications();},30000);
 window.addEventListener('focus',()=>notifications());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)notifications();});
-root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.5.4-annexes-tracking'};
+root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.5.5-fiche-status'};
 })(window);
