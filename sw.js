@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.8.2-sw-tolerant';
+const VERSION='sti-espace-v1.8.3-shell-reseau';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -189,7 +189,16 @@ self.addEventListener('fetch',event=>{
     onglet était remplacé par l'application. */
  const fichier=/\.[a-z0-9]{2,5}$/i.test(url.pathname) && !/\/(index\.html)?$/i.test(url.pathname);
  if(req.mode==='navigate'&&url.pathname.startsWith(scopePath)&&!fichier){
-  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);return await cache.match('./index.html')||fetch(req);})());return;
+  /* Réseau d'abord : une nouvelle index.html est prise en compte dès le premier
+     rechargement, sans attendre un changement de version du service worker.
+     Le cache ne sert que hors ligne. */
+  event.respondWith((async()=>{
+    const cache=await caches.open(CORE_CACHE);
+    try{const r=await fetch(req,{cache:'reload'});
+        if(r.ok)cache.put('./index.html',r.clone());
+        return r;}
+    catch(e){return (await cache.match('./index.html'))||new Response('Application indisponible hors ligne. Reconnectez-vous une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}
+  })());return;
  }
  /* La page du formulaire de fiche change souvent : réseau d'abord, cache seulement hors ligne.
     Sans cela, une copie ancienne restait servie après chaque mise à jour. */
@@ -198,7 +207,17 @@ self.addEventListener('fetch',event=>{
    catch(e){const c=await caches.open(CORE_CACHE);return (await c.match(req,{ignoreSearch:true}))||new Response('Formulaire indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;
  }
  if(corePaths.has(url.pathname)){
-  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);const hit=await cache.match(req,{ignoreSearch:true});return hit||fetch(req);})());return;
+  /* Cache immédiat + mise à jour silencieuse : au rechargement suivant, le fichier
+     servi est celui du dépôt. Supprime le blocage « ancien app.js servi pour toujours ». */
+  const maj=caches.open(CORE_CACHE).then(c=>fetch(req,{cache:'reload'}).then(r=>{if(r.ok)return c.put(req,r.clone());}).catch(()=>{}));
+  event.waitUntil(maj);
+  event.respondWith((async()=>{
+    const cache=await caches.open(CORE_CACHE);
+    const hit=await cache.match(req,{ignoreSearch:true});
+    if(hit)return hit;
+    await maj;
+    return (await cache.match(req,{ignoreSearch:true}))||new Response('Ressource indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
+  })());return;
  }
  if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')||url.pathname.includes('/icons/')){
   event.respondWith((async()=>{const cache=await caches.open(DOCS_CACHE),hit=await cache.match(req,{ignoreSearch:true});if(hit)return hit;try{const r=await fetch(req);if(r.ok)await cache.put(req,r.clone());return r;}catch(e){return new Response('Ce document n’a pas encore été téléchargé. Reconnectez-vous puis ouvrez-le une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());

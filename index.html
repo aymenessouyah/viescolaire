@@ -96,6 +96,7 @@
 <span class="chip">Matière : STI</span>
 <span class="chip">2026 / 2027</span>
 <span class="chip">3SI1 &amp; 4SI2</span>
+<span class="chip" id="ver-chip" title="Version réellement chargée dans ce navigateur">version</span>
 </div>
 </div>
 </div>
@@ -104,6 +105,52 @@
 </header>
 
 <!-- ===================== BANDEAU DE MISE À JOUR ===================== -->
+<!-- ===== CONTRÔLE DE COHÉRENCE : la page dit elle-même quelle version d'app.js tourne ===== -->
+<div id="maj-alerte" class="no-print" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#fdecea;border:1px solid #f3b7b1;color:#8c1d18;border-radius:12px;padding:12px 14px;font:13px/1.45 system-ui,'Segoe UI',Arial,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.18)">
+  <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+    <div style="min-width:220px;flex:1"><strong>Mise à jour incomplète.</strong> <span id="maj-alerte-txt"></span></div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button type="button" onclick="majViderCache()" style="cursor:pointer;border:0;border-radius:8px;padding:7px 12px;background:#8c1d18;color:#fff;font:inherit;font-weight:700">Vider le cache et recharger</button>
+      <button type="button" onclick="document.getElementById('maj-alerte').style.display='none'" style="cursor:pointer;border:1px solid #f3b7b1;border-radius:8px;padding:7px 12px;background:#fff;color:#8c1d18;font:inherit">Masquer</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var ATTENDU = "v1.8.1-cloud-repair";
+  window.MAJ_ATTENDUE = ATTENDU;
+  /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
+  window.majViderCache = function () {
+    var fin = function () { location.reload(); };
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          return Promise.all(rs.map(function (r) { return r.unregister(); }));
+        }).then(function () {
+          if (window.caches && caches.keys) {
+            return caches.keys().then(function (ks) {
+              return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+            });
+          }
+        }).then(fin, fin);
+      } else { fin(); }
+    } catch (e) { fin(); }
+  };
+  function verifier() {
+    var z = document.getElementById('maj-alerte'), t = document.getElementById('maj-alerte-txt');
+    if (!z || !t) return;
+    var vu = (typeof window.APP_VER === 'string' && window.APP_VER) ? window.APP_VER : '';
+    if (vu === ATTENDU) { z.style.display = 'none'; return; }
+    t.innerHTML = 'Le fichier <code>assets/app.js</code> chargé sur cet appareil est <b>' + (vu || 'absent') +
+      '</b>, alors que cette page attend <b>' + ATTENDU + '</b>. Le dépôt n’a pas encore reçu ce fichier : ' +
+      'le cahier de textes rénové, l’export PDF et la réparation de la synchronisation restent indisponibles.';
+    z.style.display = 'block';
+  }
+  if (document.readyState === 'complete') setTimeout(verifier, 800);
+  else window.addEventListener('load', function () { setTimeout(verifier, 800); });
+})();
+</script>
+
 <div id="update-bar" class="update-bar hidden no-print">
   <span>Une nouvelle version de l'application est prête. Vos données locales sont conservées.</span>
   <button class="btn btn-xs btn-primary" onclick="applyUpdate()">Mettre à jour</button>
@@ -365,6 +412,7 @@
 <script src="assets/suivi-sti.js"></script>
 <script src="assets/interface-reference.js"></script>
 <script src="assets/agent-sti.js"></script>
+<script src="assets/cahier-pdf.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/eleves.js"></script>
 <script src="assets/admin.js"></script>

@@ -1,0 +1,35 @@
+EMPREINTES — v1.8.3-shell-reseau (24/10/2026)
+=============================================
+
+FICHIER                                  TAILLE EXACTE   TAILLE WINDOWS   EMPREINTE MD5
+index.html                                32338 octets     31.6 Ko (Windows)   md5 aee9f723c0c8772458d5b74e0b0cf7f2
+sw.js                                     11038 octets     10.8 Ko (Windows)   md5 7483ab204e7e8340af09d23310856e01
+assets/app.js                            154949 octets    151.3 Ko (Windows)   md5 858fc7ea276617b803bc57fdf89d750c
+assets/cahier-pdf.js                       9087 octets      8.9 Ko (Windows)   md5 bb5c66a173c364e8f8bcc52d39f5a45b
+assets/offline-sync.js                    24303 octets     23.7 Ko (Windows)   md5 454530e323532342d9cd877e1a74646b
+assets/fiches.js                          65256 octets     63.7 Ko (Windows)   md5 804eecbe6b74874b07658f0010e30dd7
+assets/fiches.css                         10161 octets      9.9 Ko (Windows)   md5 d8f9bc23641319c7ffb36af8303cf35e
+assets/interface-reference.js             46283 octets     45.2 Ko (Windows)   md5 ed6d997c7de2d5b2216bc18bc9efb5fb
+assets/interface-reference.css            67738 octets     66.2 Ko (Windows)   md5 c7cb6aa32e2d4c801dd362166098fc17
+
+ETAT DU DEPOT VERIFIE A 19 H 55
+  assets/app.js ......... DEPOSE (154 949)  -> cahier de textes renove : OK
+  assets/cahier-pdf.js .. DEPOSE (9 087)    -> generateur present : OK
+  sw.js ................. DEPOSE mais ANCIENNE version (v1.8.2)
+  index.html ............ PAS ENCORE DEPOSE (29 318 = ancien)
+
+POURQUOI « GENERATEUR PDF NON DISPONIBLE »
+  La balise <script src="assets/cahier-pdf.js"></script> se trouve dans index.html.
+  L'ancienne index.html ne la contient pas : le fichier est bien sur le serveur,
+  mais la page ne le charge jamais.
+
+A DEPOSER MAINTENANT (43 Ko, deux fichiers a la racine)
+  index.html  (32 338 octets)
+  sw.js       (11 038 octets, v1.8.3)
+
+CE QUE CHANGE LE NOUVEAU sw.js
+  • index.html est desormais servie « reseau d'abord » : une nouvelle page est prise
+    en compte au premier rechargement, sans attendre un changement de version.
+  • les fichiers du noyau (app.js, css...) sont servis depuis le cache puis
+    rafraichis en arriere-plan : plus de blocage sur une ancienne version.
+  • l'installation ne bloque plus si un fichier optionnel manque.
