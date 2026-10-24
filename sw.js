@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.8.3-shell-reseau';
+const VERSION='sti-espace-v1.8.4-icone-3d';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -219,7 +219,18 @@ self.addEventListener('fetch',event=>{
     return (await cache.match(req,{ignoreSearch:true}))||new Response('Ressource indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
   })());return;
  }
- if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')||url.pathname.includes('/icons/')){
+ /* Icônes : réseau d'abord, sinon cache — sinon une nouvelle icône installée ne
+    serait jamais remplacée (les icônes étaient auparavant figées dans DOCS_CACHE). */
+ if(url.pathname.includes('/icons/')){
+  event.respondWith((async()=>{
+    const cache=await caches.open(DOCS_CACHE);
+    try{const r=await fetch(req,{cache:'reload'});
+        if(r.ok)cache.put(req,r.clone());
+        return r;}
+    catch(e){return (await cache.match(req,{ignoreSearch:true}))||new Response('Icône indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}
+  })());return;
+ }
+ if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')){
   event.respondWith((async()=>{const cache=await caches.open(DOCS_CACHE),hit=await cache.match(req,{ignoreSearch:true});if(hit)return hit;try{const r=await fetch(req);if(r.ok)await cache.put(req,r.clone());return r;}catch(e){return new Response('Ce document n’a pas encore été téléchargé. Reconnectez-vous puis ouvrez-le une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());
  }
 });
