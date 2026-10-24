@@ -174,6 +174,21 @@ n'est pas chargé par le `src` de l'iframe mais par `fetch()` puis injecté en `
 donc lecture et écriture des champs possibles). Le fichier est ajouté à `CORE_ASSETS` pour rester
 disponible hors ligne.
 
+### ③ ter Boutons du module dans le thème du site (correctif)
+
+Le thème de l'interface de référence (`body.vs-themed .ref-ui .btn`) impose une hauteur de 42 px et
+un fond transparent ; les classes `btn-blue` (bouton **Ouvrir**) et `btn-line` (Imprimer / PDF)
+n'y étaient donc pas dessinées : bouton collé au texte, taille incohérente, texte clair sur fond blanc.
+`assets/fiches.css` redéfinit maintenant explicitement, avec une spécificité suffisante :
+
+- les trois actions de la liste (**Ouvrir** en dégradé vert, **Imprimer** et **PDF** en blanc bordé),
+  toutes à 26 px de haut, alignées ;
+- les boutons d'en-tête (*Impression*, *Ouvrir la fiche n°1*) et ceux du bloc de répartition
+  (*Imprimer ce trimestre*, *Voir les fiches*) ;
+- le commutateur de classe **4SI2 / 3SI1** (segment actif en vert).
+
+Vérifié : hauteurs identiques (26 px), clic sur **Ouvrir** → fiche de la séance, 0 erreur JS.
+
 ### ④ Le menu d'impression — 4 entrées
 
 Bouton **Impression** dans la barre d'actions de l'en-tête (à côté de *Cloud*, *Imprimer*, *Exporter*)
