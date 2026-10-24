@@ -353,7 +353,9 @@ function render() {
               <td class="no-print fic-actions">
                 <button class="btn btn-xs btn-blue" onclick="STI_FICHES.open(${f.n})">Ouvrir</button>
                 <button class="btn btn-xs btn-line" onclick="STI_FICHES.printFiche(${f.n})">Imprimer</button>
-                <a class="btn btn-xs btn-line" href="${CF().docs}/S${(Math.floor((f.n-1)/2)*2)+1}-${(Math.floor((f.n-1)/2)*2)+2}.pdf" target="_blank" rel="noopener" title="PDF du modèle officiel (deux séances par fichier)">PDF</a>
+                <a class="btn btn-xs btn-line" href="${CF().docs}/S${f.n}.pdf"
+                   target="_blank" rel="noopener" title="PDF de la fiche au format du modèle — même document que le bouton Imprimer"
+                   onclick="return STI_FICHES.pdf(this.href, event)">PDF</a>
               </td>
             </tr>`).join('') || '<tr><td colspan="6" class="muted">Aucune fiche ne correspond aux filtres.</td></tr>'}
           </tbody>
@@ -760,6 +762,37 @@ function openClassic() {
   if (typeof classic === 'function' && ctxN) { close(); classic(CLS, ctxN); }
 }
 
+/* --------------------------------------------------- ouverture d'un PDF
+   Le service worker renvoyait index.html pour toute navigation (y compris vers un
+   PDF) : le bouton « PDF » ouvrait donc l'application. On corrige le service
+   worker, et on ouvre ici le fichier via un blob (les URL blob: ne passent jamais
+   par le service worker), avec repli sur le lien direct puis sur un téléchargement. */
+function openPdf(href, ev) {
+  if (ev && ev.preventDefault) ev.preventDefault();
+  const name = String(href).split('/').pop();
+  const direct = function () { window.open(href, '_blank', 'noopener'); };
+  if (!root.fetch || typeof URL === 'undefined' || !URL.createObjectURL) { direct(); return false; }
+  fetch(href, { cache: 'no-cache' }).then(function (r) {
+    if (!r.ok) throw new Error('http ' + r.status);
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (ct.indexOf('pdf') < 0) throw new Error('contenu inattendu: ' + ct);   // SW a renvoyé du HTML
+    return r.blob();
+  }).then(function (bl) {
+    const url = URL.createObjectURL(new Blob([bl], { type: 'application/pdf' }));
+    const w = window.open(url, '_blank');
+    if (!w) {                                   // fenêtre bloquée : téléchargement
+      const a = document.createElement('a');
+      a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+      if (root.toast) root.toast('PDF téléchargé : ' + name);
+    }
+    setTimeout(function () { URL.revokeObjectURL(url); }, 120000);
+  }).catch(function () {
+    if (root.toast) root.toast('PDF indisponible (' + name + ') — ouverture directe');
+    direct();
+  });
+  return false;
+}
+
 /* ---------------------------------------- impression de la fiche sélectionnée
    Le bouton « Imprimer la fiche » de l'onglet Fiche pédagogique imprimait la
    page de l'application (barre latérale comprise). Il imprime désormais le
@@ -1048,7 +1081,7 @@ root.STI_FICHES = {
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,
-  form: n => openForm(n), formSave, formClose, formPrint, formReset, printSelected,
+  form: n => openForm(n), formSave, formClose, formPrint, formReset, printSelected, pdf: openPdf,
   repTri: v => { repTri = v; const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
   repCls: c => { repCls = CLS_REP[c] ? c : '4SI2'; repTri = 0;
                  const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
