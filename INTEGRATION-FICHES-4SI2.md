@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.5.5-formulaire` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.5.7-pdf-fiche` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -28,7 +28,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.5.5-formulaire` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.5.7-pdf-fiche` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -200,6 +200,46 @@ n'y étaient donc pas dessinées : bouton collé au texte, taille incohérente, 
 - le commutateur de classe **4SI2 / 3SI1** (segment actif en vert).
 
 Vérifié : hauteurs identiques (26 px), clic sur **Ouvrir** → fiche de la séance, 0 erreur JS.
+
+### ③ quater Le bouton **PDF** de la liste — correctif du service worker
+
+Le bouton *PDF* de chaque ligne (et, plus généralement, **tous les liens `.pdf` du site** : annexes,
+mémo, documents) ouvraient l'application à la place du fichier. Cause : le service worker renvoyait
+`index.html` pour **toute navigation** dans son périmètre, PDF compris.
+
+Corrections apportées :
+
+1. **`sw.js`** — le repli sur `index.html` ne s'applique plus aux fichiers : tout chemin terminé par
+   une extension (`.pdf`, `.png`, `.zip`, `.docx`, `.xlsx`…) est servi normalement, et la branche
+   dédiée aux PDF lit d'abord `DOCS_CACHE` (mode hors ligne conservé) ;
+2. **`sw.js`** — `skipWaiting()` est désormais systématique à l'installation : la nouvelle version
+   prend la main immédiatement, sans attendre la fermeture de tous les onglets ;
+3. **`assets/fiches.js`** — le bouton passe par `STI_FICHES.pdf(href)` : le fichier est récupéré par
+   `fetch()`, vérifié (`content-type: application/pdf`), puis ouvert via une URL `blob:` (jamais
+   interceptée par le service worker), avec repli sur le lien direct puis sur le téléchargement si la
+   fenêtre est bloquée.
+
+**Un fichier PDF par séance, et non plus par paire.** Le bouton ouvrait `S11-12.pdf`, qui contient
+**deux** séances : le contenu ne correspondait donc pas à la fiche affichée ni au document du bouton
+*Imprimer*. Les 52 fichiers de deux pages ont été découpés en **104 fichiers d'une page** — le contenu
+est celui du modèle v3, à l'identique (aucune régénération : simple extraction de page, `garbage=4`,
+`deflate`), et le poids total est inchangé (5,2 Mo) :
+
+| Classe | Fichiers | Exemple |
+|---|---|---|
+| 4SI2 | `docs/fiches-4si-2026/S1.pdf` … `S50.pdf` (50) + recueil | séance 13 → `S13.pdf`, 1 page, « Séance 13 · Correction du DC1 et consolidation JavaScript » |
+| 3SI1 | `docs/fiches-3si-2026/S1.pdf` … `S54.pdf` (54) + recueil | séance 12 → `S12.pdf`, 1 page, « Séance 12 · Devoir de contrôle n°1 » |
+
+`DOC_ASSETS` du service worker est reconstruit sur ces 108 fichiers. Le bouton *PDF* ouvre donc
+**exactement le document du bouton *Imprimer*** (même gabarit, même séance, une page), mais sous forme
+de fichier PDF partageable.
+
+Vérifié dans le navigateur : `fetch` du PDF → `200`, `application/pdf`, entête `%PDF-`, présent dans
+`sti-espace-offline-documents-v1` (106/108) ; clics *PDF* sur 4SI2 S01, 4SI2 S13, 3SI1 S12, 3SI1 S54 →
+ouverture d'un `blob:` d'**une page** dont le titre de séance correspond, 0 erreur JS ; comparaison
+texte entre le document imprimé et `S13.pdf` : titres, objectifs, déroulement et travail à la maison
+identiques (seules différences : casse des titres mise en majuscules par la feuille d'impression, et
+une phrase répétée tronquée par le gabarit du PDF).
 
 ### ④ Le menu d'impression — 4 entrées
 
