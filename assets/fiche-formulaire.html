@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-form-build="v1.6.5">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -32,6 +32,40 @@ input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color
 .bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 /* ---- avancement : fonctions et propriétés des annexes ---- */
 .av-card{background:var(--card);border-radius:10px;padding:12px 14px;border-top:4px solid var(--c3)}
+/* --- tableau de bord : total, par classe, histogrammes par famille --- */
+.dash{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:14px}
+.dash-total{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left}
+.dash-big{font-size:40px;font-weight:800;line-height:1;color:var(--c3)}
+.dash-sub{font-size:12px;color:var(--mut);margin-top:4px}
+.dash-track{height:12px;border-radius:6px;background:#e9e2db;overflow:hidden;margin-top:10px}
+.dash-track>span{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--c1),var(--c3))}
+.dash-classes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cls-card{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;border-left:5px solid var(--c4)}
+.cls-card.on{border-left-color:var(--c3);box-shadow:0 0 0 2px rgba(42,157,143,.15) inset}
+.cls-card .cc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cls-card .cc-nom{font-weight:800;font-size:14px}
+.cls-card .cc-pct{font-weight:800;font-size:20px}
+.cls-card .cc-det{font-size:11.5px;color:var(--mut);margin-top:2px}
+.hist{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;margin-bottom:12px}
+.hist h4{margin:0 0 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);display:flex;gap:8px;align-items:baseline}
+.hist h4 b{color:var(--ink);font-size:13px;letter-spacing:0;text-transform:none}
+.hist h4 .src{font-weight:400;letter-spacing:0;text-transform:none;color:var(--mut);margin-left:auto;font-size:11px}
+.fams{display:block}
+.fam{border-bottom:1px dashed var(--line);padding:6px 0 8px}
+.fam:last-child{border-bottom:0}
+.fam-h{display:flex;gap:8px;align-items:baseline;font-size:11.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:5px}
+.fam-h small{font-weight:700;color:var(--mut);letter-spacing:0;text-transform:none;margin-left:auto}
+.fam-h .av-bar{flex:1 1 60px;height:8px;border-radius:5px;background:#e9e2db;overflow:hidden;align-self:center;min-width:60px}
+.fam-h .av-bar>i{display:block;height:100%;background:currentColor;border-radius:5px}
+.row{display:grid;grid-template-columns:210px 1fr 74px;gap:9px;align-items:center;padding:1px 0;cursor:pointer}
+.row:hover{background:#fbf6f1}
+.row .lb{font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .hb{height:11px;border-radius:5px;background:#eae4dd;overflow:hidden}
+.row .hb>i{display:block;height:100%;border-radius:5px;background:currentColor;opacity:.9}
+.row .vl{font-size:11.5px;font-weight:700;color:var(--mut);text-align:right;white-space:nowrap}
+.row .vl b{color:var(--ink)}
+@media (max-width:1100px){.dash{grid-template-columns:1fr}.dash-classes{grid-template-columns:1fr}}
 .av-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .av-big{font-size:30px;font-weight:800;line-height:1;color:var(--c3)}
 .av-lab{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
@@ -163,6 +197,17 @@ button.sec{background:var(--mut)}
 </div>
 
 <h2>Avancement général — fonctions et propriétés</h2>
+<div class="dash" id="dash">
+  <div class="dash-total">
+    <div class="av-lab">Avancement total</div>
+    <div class="dash-big" id="dash-pct">0 %</div>
+    <div class="dash-sub" id="dash-sub">0 / 0 notions · les deux classes</div>
+    <div class="dash-track"><span id="dash-fill"></span></div>
+  </div>
+  <div class="dash-classes" id="dash-classes"></div>
+</div>
+<div id="dash-hist"></div>
+
 <div class="av-card" id="av">
   <div class="av-head">
     <div>
@@ -372,9 +417,9 @@ var LIVRE = (function () {
         html += '<div class="liv-cat"><h4>' + esc2(g.cat) +
           ' <span class="n">' + n + '/' + g.tous.length + '</span>' +
           '<span class="mini"><button type="button" onclick="LIVRE.cat(true,\'' +
-          esc2(bloc.domaine) + '\',\'' + esc2(g.cat).replace(/'/g, '&#39;') + '\')">tout cocher</button>' +
+          esc2(bloc.domaine) + '\',\'' + esc2(g.cat).replace(/'/g, "\\'") + '\')">tout cocher</button>' +
           '<button type="button" onclick="LIVRE.cat(false,\'' + esc2(bloc.domaine) + '\',\'' +
-          esc2(g.cat).replace(/'/g, '&#39;') + '\')">tout décocher</button></span></h4>' +
+          esc2(g.cat).replace(/'/g, "\\'") + '\')">tout décocher</button></span></h4>' +
           '<div class="liv-items">' + g.items.map(ligne).join('') + '</div></div>';
       });
     });
@@ -433,6 +478,93 @@ var LIVRE = (function () {
   };
 })();
 window.LIVRE = LIVRE;
+
+/* ============ tableau de bord : total, par classe, histogrammes par famille ============
+   Lit les deux jeux (3SI1 → AnnexeTT3STI, 4SI2 → AnnexeTT4STI) dans localStorage :
+   « avancement total » = notions acquises des deux classes / total des deux annexes. */
+var DASH = (function () {
+  var KEY = 'sti_avancement_fonctions_v2';
+  function jeux() { return window.STI_ANNEXES_JEUX || {}; }
+  function lu(cls) {
+    try { return JSON.parse(localStorage.getItem(KEY + '|' + cls) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function stats(cls) {
+    var j = jeux()[cls]; if (!j) return null;
+    var dn = lu(cls), tot = 0, ck = 0, fam = [];
+    Object.keys(j.domaines).forEach(function (d) {
+      var dc = 0, dt = 0;
+      var cats = j.domaines[d].cats.map(function (c, ci) {
+        var cc = 0;
+        c.items.forEach(function (_, ii) { if (dn[d + '::' + ci + '::' + ii] != null) cc++; });
+        dc += cc; dt += c.items.length;
+        return { n: c.n, ck: cc, t: c.items.length, pct: c.items.length ? Math.round(cc * 100 / c.items.length) : 0 };
+      });
+      tot += dt; ck += dc;
+      fam.push({ d: d, ck: dc, t: dt, pct: dt ? Math.round(dc * 100 / dt) : 0, cats: cats, couleur: (j.domaines[d].couleur || '#666') });
+    });
+    return { cls: cls, ck: ck, tot: tot, pct: tot ? Math.round(ck * 100 / tot) : 0, fam: fam, source: j.source || '' };
+  }
+  var NUM = {};
+  function court(t) { return String(t).replace(/\s*\(.*?\)\s*/g, '').trim(); }
+  return {
+    stats: stats,
+    /* clic sur une barre : on affiche la famille dans le bloc Avancement et on met le groupe en évidence */
+    voir: function (cls, d, ci) {
+      try { AV.show(d); } catch (e) {}
+      var cats = document.querySelectorAll('#av-panel .av-cat');
+      var el = cats[ci];
+      if (!el) return;
+      el.scrollIntoView({ block: 'center' });
+      var h = el.querySelector('h4');
+      if (h) { h.style.transition = 'background .2s'; h.style.background = '#fdf0e4';
+               setTimeout(function () { h.style.background = ''; }, 1400); }
+    },
+    rendre: function (classeActive) {
+      var J = jeux(), ordre = Object.keys(J);
+      if (!ordre.length) return;
+      var res = {}, ck = 0, tot = 0;
+      ordre.forEach(function (c) { var x = stats(c); res[c] = x; if (x) { ck += x.ck; tot += x.tot; } });
+      var p = tot ? Math.round(ck * 100 / tot) : 0;
+      document.getElementById('dash-pct').textContent = p + ' %';
+      document.getElementById('dash-sub').textContent = ck + ' / ' + tot + ' notions · les deux classes (' +
+        ordre.map(function (c) { return c + ' ' + (res[c] ? res[c].tot : 0); }).join(' · ') + ')';
+      document.getElementById('dash-fill').style.width = p + '%';
+
+      /* avancement par classe */
+      document.getElementById('dash-classes').innerHTML = ordre.map(function (c) {
+        var x = res[c]; if (!x) return '';
+        return '<div class="cls-card' + (c === classeActive ? ' on' : '') + '">' +
+          '<div class="cc-top"><span class="cc-nom">' + c + (c === classeActive ? ' (fiche ouverte)' : '') +
+          '</span><span class="cc-pct">' + x.pct + ' %</span></div>' +
+          '<div class="cc-det">' + x.ck + ' / ' + x.tot + ' notions · annexe ' + x.source.replace(/^Annexe/, '') + '</div>' +
+          '<div class="dash-track"><span style="width:' + x.pct + '%"></span></div></div>';
+      }).join('');
+
+      /* histogrammes : une barre par sous-titre, regroupées par famille */
+      document.getElementById('dash-hist').innerHTML = ordre.map(function (c) {
+        var x = res[c]; if (!x) return '';
+        var fams = x.fam.map(function (f) {
+          var rows = f.cats.map(function (k, i) {
+            return '<div class="row" style="color:' + f.couleur + '" title="' + esc(k.n) + ' — ' + k.ck + '/' + k.t +
+              ' cases cochées — cliquer pour ouvrir le sous-titre dans le bloc Avancement" ' +
+              'onclick="DASH.voir(\'' + c + '\',\'' + esc(f.d) + '\',' + i + ')">' +
+              '<span class="lb">' + esc(court(k.n)) + '</span>' +
+              '<span class="hb"><i style="display:block;width:' + k.pct + '%"></i></span>' +
+              '<span class="vl"><b>' + k.pct + ' %</b> · ' + k.ck + '/' + k.t + '</span></div>';
+          }).join('');
+          return '<div class="fam"><div class="fam-h" style="color:' + f.couleur + '">' + esc(f.d) +
+            '<span class="av-bar"><i style="width:' + f.pct + '%"></i></span>' +
+            '<small>' + f.pct + ' % · ' + f.ck + '/' + f.t + '</small></div>' + rows + '</div>';
+        }).join('');
+        return '<div class="hist"><h4>Avancement par famille — ' + c + ' <b>' + x.pct + ' %</b>' +
+          '<span class="src">annexe ' + esc(x.source.replace(/^Annexe/, '')) +
+          ' · une barre par sous-titre</span></h4>' +
+          '<div class="fams">' + fams + '</div></div>';
+      }).join('');
+    }
+  };
+})();
+window.DASH = DASH;
 
 /* ======================= avancement : fonctions et propriétés =======================
    Une case par balise / propriété / fonction des annexes, rangée en 5 domaines.
@@ -510,6 +642,7 @@ var AV = (function () {
     var t = total(), n = compte(), p = pct(n, t);
     document.getElementById('av-pct').textContent = p + ' %';
     document.getElementById('av-count').textContent = n + ' / ' + t + ' notions couvertes · ' + domaine();
+    try { if (window.DASH) window.DASH.rendre(domaine()); } catch (e) {}
     var src = document.getElementById('av-src');
     if (src) src.textContent = source();
     var tt = document.getElementById('av-title');
@@ -563,6 +696,7 @@ var AV = (function () {
       var A = domaines();
       if (A && !A[dom]) dom = Object.keys(A)[0];
       ready = true; rendre();
+      try { if (window.DASH) window.DASH.rendre(domaine()); } catch (e) {}
     },
     jeu: jeu,
     source: source,
@@ -594,6 +728,7 @@ var AV = (function () {
       }
       var lab = el.parentNode;
       if (lab) lab.classList.toggle('ck', el.checked);
+      if (window.DASH) window.DASH.rendre(domaine());
       rendreChiffres();
     },
     /* tout cocher / tout décocher pour UN groupe (une sous-catégorie) */

@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.6.3-notions-2col` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.5-avancement-dash` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -29,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.6.3-notions-2col` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.5-avancement-dash` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -411,6 +411,58 @@ Vérifié : 3SI1 → 4 domaines, **31 groupes**, 269 notions affichées en 2 col
 *Structure du document* → `8/8` et `8 notions` ; 4SI2 → 5 domaines, 38 groupes, 333 notions, groupe
 *MySQLi* → `8/8` ; recherche « input » → 3 groupes / 3 notions ; bloc d'avancement toujours pourvu de
 ses 18 boutons de groupe (202 notions 4SI2, 178 en 3SI1) ; 0 erreur JS.
+
+### ③ decies Le formulaire était servi depuis le cache — corrigé
+
+**Symptôme :** après la mise à jour, la boîte « Fiche pédagogique » affichait encore l'ancienne page
+(pas de classement par sous-catégorie, pas de deux colonnes, pas de boutons de groupe), alors que le
+fichier livré était correct.
+
+**Cause reproduite en test :** `assets/fiche-formulaire.html` est dans `CORE_ASSETS` du service worker
+et la branche `corePaths` faisait `cache.match(req, {ignoreSearch:true})` **avant** le réseau. Le
+`fetch(..., {cache:'no-cache'})` de `formHTML()` ne contourne que le cache HTTP, **pas** le cache du
+service worker : toute copie ancienne restait donc servie. Preuve : en injectant une ancienne page dans
+`CORE_CACHE`, la boîte affichait « ANCIENNE VERSION DU FORMULAIRE », 0 groupe, aucune colonne.
+
+**Corrections :**
+
+1. **`sw.js`** — branche dédiée, **réseau d'abord** pour `assets/fiche-formulaire.html`
+   (`fetch(req,{cache:'reload'})`, remise en cache de la réponse fraîche), repli sur le cache seulement
+   hors ligne (503 explicite sinon) ;
+2. **`assets/fiches.js`** — `const FORM_BUILD = 'v1.6.4'`, requête `…?v=v1.6.4` (cache-busting HTTP) ;
+3. **`assets/fiche-formulaire.html`** — marqueur `<html data-form-build="v1.6.4">` ;
+4. **témoin de version visible** dans l'en-tête de la boîte : « formulaire v1.6.4 ✓ » en gris, ou en
+   rouge « copie ancienne : v1.6.x (attendu v1.6.4) — actualisez la page (Ctrl+F5) ».
+
+Vérifié : cache pollué avec une ancienne page → la boîte affiche bien la **nouvelle** (38 groupes,
+`683px 683px`) ; 3SI1 → 31 groupes, 269 notions, **62 boutons de groupe** ; 4SI2 → 38 groupes,
+333 notions, **76 boutons** ; hors ligne → le formulaire reste disponible depuis le cache, témoin
+« ✓ » ; 0 erreur JS.
+
+### ③ undecies Tableau de bord d'avancement : total, par classe, histogrammes par famille
+
+En tête du bloc *Avancement général* du formulaire, un tableau de bord résume l'avancement à trois
+niveaux (données lues dans `localStorage`, donc **les deux classes à la fois**) :
+
+1. **Avancement total** — notions acquises des deux classes / total des deux annexes
+   (`255 / 380 · 3SI1 178 · 4SI2 202`), avec un grand pourcentage et une barre ;
+2. **Avancement par classe** — une carte par classe : pourcentage, `n / total`, annexe de référence
+   (`TT3STI` / `TT4STI`), barre de progression ; la classe de la fiche ouverte est encadrée
+   (« 4SI2 (fiche ouverte) ») ;
+3. **Avancement par famille** — un **histogramme par classe** : une barre horizontale par
+   **sous-titre** de l'annexe (Structure du document, Structuration d'une page, Conteneurs, Listes,
+   Tableaux, Texte et média, Formulaires, Événements, Attributs globaux pour HTML5 ; Sélecteurs,
+   Pseudo-classes, Texte… pour CSS3 ; etc.), groupées par famille et colorées comme le domaine, avec
+   l'en-tête de famille (pourcentage global) et, pour chaque barre, `% · n/total`.
+   **Un clic sur une barre** ouvre la famille correspondante dans le bloc *Avancement* et met le
+   sous-titre en évidence.
+
+Le tableau de bord se recalcule à chaque coche (bloc *Avancement* et *Notions du livre*), à chaque
+bouton de groupe, à chaque changement de classe ou de séance.
+
+Vérifié : `70 % · 266/380`, 3SI1 `75 % · 134/178`, 4SI2 `65 % · 132/202` ; deux histogrammes de
+**32 et 41 barres** (une par sous-titre, aucune jointure de données manquante) ; clic sur une barre →
+famille active et sous-titre mis en évidence ; 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 

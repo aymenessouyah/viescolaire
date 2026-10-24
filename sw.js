@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.6.3-notions-2col';
+const VERSION='sti-espace-v1.6.5-avancement-dash';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -178,6 +178,12 @@ self.addEventListener('fetch',event=>{
  const fichier=/\.[a-z0-9]{2,5}$/i.test(url.pathname) && !/\/(index\.html)?$/i.test(url.pathname);
  if(req.mode==='navigate'&&url.pathname.startsWith(scopePath)&&!fichier){
   event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);return await cache.match('./index.html')||fetch(req);})());return;
+ }
+ /* La page du formulaire de fiche change souvent : réseau d'abord, cache seulement hors ligne.
+    Sans cela, une copie ancienne restait servie après chaque mise à jour. */
+ if(/\/assets\/fiche-formulaire\.html$/.test(url.pathname)){
+  event.respondWith((async()=>{try{const r=await fetch(req,{cache:'reload'});if(r.ok){const c=await caches.open(CORE_CACHE);c.put(req,r.clone());}return r;}
+   catch(e){const c=await caches.open(CORE_CACHE);return (await c.match(req,{ignoreSearch:true}))||new Response('Formulaire indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;
  }
  if(corePaths.has(url.pathname)){
   event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);const hit=await cache.match(req,{ignoreSearch:true});return hit||fetch(req);})());return;

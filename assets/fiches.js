@@ -440,9 +440,10 @@ let formHTMLPromise = null;
 /* Le service worker renvoie index.html pour toute navigation : on ne peut donc
    pas charger le formulaire par le src d'une iframe. On récupère le fichier par
    fetch() puis on l'injecte dans l'iframe par srcdoc. */
+const FORM_BUILD = 'v1.6.5';          /* version de assets/fiche-formulaire.html attendue */
 function formHTML() {
   if (!formHTMLPromise) {
-    formHTMLPromise = fetch('assets/fiche-formulaire.html', { cache: 'no-cache' })
+    formHTMLPromise = fetch('assets/fiche-formulaire.html?v=' + FORM_BUILD, { cache: 'no-cache' })
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
       .catch(function () { formHTMLPromise = null; throw new Error('formulaire indisponible'); });
   }
@@ -472,6 +473,7 @@ function ensureFormBox() {
           <div id="ffm-sub" class="tiny muted"></div>
           <div id="ffm-av" class="tiny" style="margin-top:3px;color:#6b6b6b"></div>
           <div id="ffm-cov" class="tiny" style="margin-top:2px;color:#6b6b6b"></div>
+          <div id="ffm-ver" class="tiny" style="margin-top:2px;color:#9a9187">formulaire …</div>
         </div>
         <div class="row no-print" style="gap:6px;flex-wrap:wrap">
           <button class="btn btn-xs btn-line" title="Imprime la fiche au format du document (PDF), pas le formulaire"
@@ -537,6 +539,21 @@ function fillForm(n) {
     i.title = i.value || '';
     if (!i.__tip) { i.__tip = 1; i.addEventListener('input', function () { i.title = i.value; }); }
   });
+  /* témoin de version : signale une copie ancienne restée en cache */
+  (function () {
+    const v = document.getElementById('ffm-ver');
+    if (!v) return;
+    const w2 = document.getElementById('ffm-frame');
+    let b = '';
+    try { b = (w2.contentDocument.documentElement.getAttribute('data-form-build') || '').trim(); } catch (e) {}
+    if (!b) {
+      v.innerHTML = '<b style="color:#b00020">formulaire hors ligne ou obsolète (version illisible)</b> — actualisez la page (Ctrl+F5).';
+    } else if (b !== FORM_BUILD) {
+      v.innerHTML = '<b style="color:#b00020">copie ancienne : ' + esc(b) + ' (attendu ' + FORM_BUILD + ')</b> — actualisez la page (Ctrl+F5).';
+    } else {
+      v.textContent = 'formulaire ' + b + ' ✓';
+    }
+  })();
   try {
     if (w.SUIVI && w.SUIVI.init) w.SUIVI.init(seanceEtat(n));
     if (w.LIVRE) {
