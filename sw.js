@@ -1,11 +1,12 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.6.6-couverture-2col';
+const VERSION='sti-espace-v1.8.2-sw-tolerant';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
   "./manifest.webmanifest",
   "./assets/style.css",
   "./assets/app.js",
+  "./assets/cahier-pdf.js",
   "./assets/suivi-sti.js",
   "./assets/suivi-sti.css",
   "./assets/theme-classe.css",
@@ -152,8 +153,19 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
 const corePaths=new Set(CORE_ASSETS.map(p=>new URL(p,self.registration.scope).pathname));
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CORE_CACHE);
- try{await cache.addAll(CORE_ASSETS.map(p=>new Request(p,{cache:'reload'})));}
- catch(e){await caches.delete(CORE_CACHE);throw e;} // Keep the old active worker if a mandatory file is unavailable.
+ /* Téléchargement fichier par fichier : un fichier pas encore déposé (par exemple
+    assets/cahier-pdf.js ajouté dans cette version) ne doit plus bloquer l'installation.
+    Avant, cache.addAll() échouait sur un seul 404 : le nouveau service worker était
+    rejeté, l'ancien restait actif et servait indéfiniment l'ancien assets/app.js.
+    Seuls les fichiers indispensables au démarrage restent obligatoires. */
+ const ESSENTIELS=/(^|\/)(index\.html|assets\/app\.js|assets\/style\.css)$/;
+ const manquants=[];
+ await Promise.all(CORE_ASSETS.map(async p=>{
+   try{const r=await fetch(new Request(p,{cache:'reload'}));
+       if(r.ok)await cache.put(p,r);else manquants.push(p);}catch(e){manquants.push(p);}
+ }));
+ const bloquants=manquants.filter(p=>ESSENTIELS.test(p));
+ if(bloquants.length){await caches.delete(CORE_CACHE);throw new Error('Fichiers essentiels indisponibles : '+bloquants.join(', '));}
  /* prise en main immédiate de la nouvelle version (correctifs PDF, fiches, 3SI1) */
  await self.skipWaiting();
 })()));
