@@ -471,6 +471,7 @@ function ensureFormBox() {
           <strong id="ffm-title" style="color:#12324d;font-size:15px">Fiche pédagogique</strong>
           <div id="ffm-sub" class="tiny muted"></div>
           <div id="ffm-av" class="tiny" style="margin-top:3px;color:#6b6b6b"></div>
+          <div id="ffm-cov" class="tiny" style="margin-top:2px;color:#6b6b6b"></div>
         </div>
         <div class="row no-print" style="gap:6px;flex-wrap:wrap">
           <button class="btn btn-xs btn-line" title="Imprime la fiche au format du document (PDF), pas le formulaire"
@@ -478,6 +479,8 @@ function ensureFormBox() {
           <button class="btn btn-xs btn-line" title="Revient à la fiche d'origine (annule vos modifications)"
                   onclick="STI_FICHES.formReset()">Rétablir la fiche d'origine</button>
           <button class="btn btn-xs btn-blue" onclick="STI_FICHES.formSave()">Enregistrer la fiche</button>
+          <button class="btn btn-xs btn-line" title="Ouvre la fenêtre de séance d'origine : déroulement réel, observations, notions du Smart Book"
+                  onclick="STI_FICHES.classicModal()">${ic('file')} Fiche de séance</button>
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
         </div>
       </div>
@@ -534,7 +537,25 @@ function fillForm(n) {
     i.title = i.value || '';
     if (!i.__tip) { i.__tip = 1; i.addEventListener('input', function () { i.title = i.value; }); }
   });
-  try { if (w.AV && w.AV.init) w.AV.init(); } catch (e) {}
+  try {
+    if (w.SUIVI && w.SUIVI.init) w.SUIVI.init(seanceEtat(n));
+    if (w.LIVRE) {
+      const st = (root.store && root.store.seances && root.store.seances[ficCls + '|' + n]) || {};
+      w.LIVRE.build(notionsLivre());
+      /* une fiche cumule les notions des séances précédentes (avancement) */
+      const prev = [];
+      Object.keys(root.store && root.store.seances || {}).forEach(function (k) {
+        const parts = k.split('|');
+        if (parts[0] !== ficCls || Number(parts[1]) >= n) return;
+        ((root.store.seances[k] || {}).notions || []).forEach(function (id) { if (prev.indexOf(id) < 0) prev.push(id); });
+      });
+      const union = prev.slice();
+      (st.notions || []).forEach(function (id) { if (union.indexOf(id) < 0) union.push(id); });
+      w.LIVRE.select(union);
+    }
+    if (w.AV && w.AV.init) w.AV.init();
+  } catch (e) {}
+  peindreCouverture();
   const t = document.getElementById('ffm-title');
   const sub = document.getElementById('ffm-sub');
   if (t) t.textContent = 'Fiche pédagogique — séance ' + f.n + (isEdited(f.n) ? ' (modifiée)' : '');
@@ -676,6 +697,7 @@ function formSave() {
   const f = applyForm(d);
   if (!f) return;
   commit(f);
+  syncNotions(f.n);
   formClose();
   if (root.toast) root.toast('Fiche n°' + f.n + ' enregistrée (formulaire)');
 }
@@ -799,6 +821,102 @@ function reset() {
 }
 function openClassic() {
   if (typeof classic === 'function' && ctxN) { close(); classic(CLS, ctxN); }
+}
+
+/* ------------------------------------------------ couverture moyenne des deux livres
+   Reprend le KPI de l'application : moyenne des pourcentages de couverture des deux
+   livres (notions uniques du Smart Book abordées lors des séances assurées).      */
+function coverage() {
+  const T = root.STI_TRACK;
+  if (!T || typeof T.summary !== 'function') return null;
+  try {
+    const a = T.summary('3SI1'), b = T.summary('4SI2');
+    return { a: a.percent, b: b.percent, ca: a.covered, cb: b.covered,
+             tot: (a.total || 0) + (b.total || 0), covered: (a.covered || 0) + (b.covered || 0),
+             mean: Math.round((a.percent + b.percent) / 2 * 10) / 10 };
+  } catch (e) { return null; }
+}
+
+/* état de la case « séance assurée » de la séance affichée */
+/* notions du Smart Book : mêmes données que le suivi de l'application */
+function notionsLivre() {
+  const L = root.STI_DATA && root.STI_DATA.livresSTI;
+  const c = L && L[ficCls];
+  return (c && c.items) || [];
+}
+
+/* enregistre la sélection du formulaire dans la séance (sans passer par le rendu) */
+function syncNotions(n) {
+  const fr = document.getElementById('ffm-frame');
+  const w = fr && fr.contentWindow;
+  if (!w || !w.LIVRE || !n || !root.store || !root.store.seances) return;
+  const k = ficCls + '|' + n;
+  const o = root.store.seances[k] || (root.store.seances[k] = {});
+  o.notions = w.LIVRE.selection();
+  o.notionsVersion = 'smart-books-2026-v1';
+  try { if (typeof root.save === 'function') root.save(true); } catch (e) {}
+}
+
+function seanceEtat(n) {
+  const o = (root.store && root.store.seances && root.store.seances[ficCls + '|' + n]) || {};
+  return { assuree: o.done === true, reportee: o.done === false };
+}
+
+/* Appelé par le formulaire quand on coche « Séance assurée » / « Séance reportée ».
+   Enregistre l'état, relance le rendu (donc le recalcul de la couverture moyenne)
+   et renvoie false si l'opération est refusée.                                   */
+function markSeance(n, estAssuree, val) {
+  if (!n || !root.store || !root.store.seances) return false;
+  const iso = new Date().toISOString().slice(0, 10);
+  const s = (root.SESSIONS && root.SESSIONS[ficCls] || []).find(function (x) { return x.n === n; });
+  if (estAssuree && val && s && s.iso > iso) {
+    if (root.toast) root.toast('Une séance future ne peut pas être déclarée assurée.');
+    return false;
+  }
+  const k = ficCls + '|' + n;
+  if (estAssuree && val) syncNotions(n);        /* les notions cochées entrent dans la couverture */
+  const avant = coverage();
+  const o = root.store.seances[k] || (root.store.seances[k] = {});
+  o.done = val ? (estAssuree ? true : false) : undefined;
+  if (estAssuree && val) {                      /* une séance assurée n'est pas « reportée » */
+    o.notions = o.notions || [];
+    o.notionsVersion = o.notionsVersion || 'smart-books-2026-v1';
+  }
+  try { if (typeof root.save === 'function') root.save(true); } catch (e) {}
+  const apres = coverage();
+  lastCoverage = { avant: avant, apres: apres, quand: new Date() };
+  if (root.toast) {
+    if (apres && avant) {
+      const d = Math.round((apres.mean - avant.mean) * 10) / 10;
+      root.toast((estAssuree && val ? 'Séance assurée. ' : 'Séance non assurée. ') +
+        'Couverture moyenne : ' + avant.mean + ' % → ' + apres.mean + ' %' + (d ? ' (' + (d > 0 ? '+' : '') + d + ')' : ''));
+    } else {
+      root.toast(estAssuree && val ? 'Séance assurée' : 'Séance non confirmée');
+    }
+  }
+  peindreCouverture();
+  return true;
+}
+
+let lastCoverage = null;
+function derniereCouverture() {
+  if (!lastCoverage || !lastCoverage.apres) {
+    const c = coverage();
+    return c ? 'Couverture moyenne actuelle : ' + c.mean + ' % (3SI1 ' + c.a + ' % · 4SI2 ' + c.b + ' %).' : '';
+  }
+  const a = lastCoverage.avant, b = lastCoverage.apres;
+  return 'Couverture moyenne recalculée : ' + (a ? a.mean + ' % → ' : '') + b.mean + ' % — ' +
+    'notions uniques couvertes : ' + b.covered + ' / ' + b.tot + ' (3SI1 ' + b.a + ' % · 4SI2 ' + b.b + ' %).';
+}
+
+/* bandeau de couverture dans l'en-tête de la boîte */
+function peindreCouverture() {
+  const el = document.getElementById('ffm-cov');
+  if (!el) return;
+  const c = coverage();
+  if (!c) { el.textContent = ''; return; }
+  el.innerHTML = '<span class="muted">Couverture moyenne</span> <b>' + c.mean + ' %</b>' +
+    ' <span class="muted">· 3SI1 ' + c.a + ' % · 4SI2 ' + c.b + ' % · ' + c.covered + '/' + c.tot + ' notions uniques</span>';
 }
 
 /* avancement du référentiel (calculé dans le formulaire, affiché ici) */
@@ -1133,6 +1251,7 @@ root.STI_FICHES = {
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,
   form: n => openForm(n), formSave, formClose, formPrint, formReset, printSelected, pdf: openPdf, avUpdate,
+  markSeance, coverage, derniereCouverture, classicModal: () => { if (classic) classic.apply(root, [ficCls, formN]); },
   repTri: v => { repTri = v; const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
   repCls: c => { repCls = CLS_REP[c] ? c : '4SI2'; repTri = 0;
                  const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },

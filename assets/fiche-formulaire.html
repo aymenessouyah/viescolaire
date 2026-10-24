@@ -58,6 +58,32 @@ input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color
 .av-item.ck .dd{color:var(--ink)}
 .av-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
 .av-tools button{padding:5px 10px;font-size:12px}
+.suivi{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.suivi label{display:inline-flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px;
+  font-weight:700;color:var(--ink);margin:0;cursor:pointer;background:var(--field);border:1px solid var(--line);
+  border-radius:999px;padding:7px 14px}
+.suivi input{margin:0;accent-color:var(--c3);width:16px;height:16px;cursor:pointer}
+.suivi .badge-ok{border-color:#b6e2c9;background:#eaf7ef}
+.suivi .badge-ko{border-color:#f0c9c0;background:#fdeeea}
+.suivi .etat{margin-left:auto;font-weight:800;color:var(--c3)}
+.av-cat h4 .mini{margin-left:auto;display:flex;gap:5px}
+.av-cat h4 .mini button{font:600 10.5px/1 'Segoe UI',system-ui;letter-spacing:.02em;text-transform:none;
+  padding:3px 7px;border-radius:5px;border:1px solid var(--line);background:var(--field);color:var(--mut);cursor:pointer}
+.av-cat h4 .mini button:hover{color:var(--ink);border-color:var(--c3)}
+.liv{background:var(--card);border-radius:10px;padding:10px 12px;border-top:4px solid var(--c4)}
+.liv-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.liv-top input[type=text]{max-width:260px;margin:0}
+.liv-top select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink)}
+.liv-count{margin-left:auto;font-weight:800;color:var(--c4);font-size:13px}
+.liv-list{max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:6px 10px}
+.liv-item{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.35;padding:2px 0;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.liv-item input{margin:2px 0 0;accent-color:var(--c4);cursor:pointer}
+.liv-item code{font:600 11.5px/1.35 ui-monospace,Consolas,monospace;background:#f3f0ec;border:1px solid var(--line);
+  border-radius:4px;padding:0 4px;color:var(--ink)}
+.liv-item .dd{color:var(--mut)}
+.liv-item .pg{color:var(--mut);font-size:11px;white-space:nowrap}
+.av-item .her{font:600 10px/1 'Segoe UI',system-ui;color:var(--mut);background:#efe9e2;border-radius:4px;padding:2px 4px;white-space:nowrap}
 .av-note{font-size:11.5px;color:var(--mut);margin:6px 0 0}
 button{font:inherit;font-weight:700;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;background:var(--c1);color:#fff}
 button.sec{background:var(--mut)}
@@ -86,6 +112,31 @@ button.sec{background:var(--mut)}
   <div class="box d"><label for="projet">Projet</label><input type="text" id="projet" value="Fleurs Rafèha"></div>
 </div>
 <div class="box c meta"><label for="modules">Modules</label><input type="text" id="modules" value="SQL, HTML5, CSS, JavaScript, PHP"></div>
+
+<h2>Suivi de la séance</h2>
+<div class="box c suivi" id="suivi-bloc">
+  <label class="badge-ok"><input type="checkbox" id="assuree" onchange="SUIVI.set('assuree', this.checked)">
+    Séance assurée — contenu commun traité avec les deux groupes</label>
+  <label class="badge-ko"><input type="checkbox" id="reportee" onchange="SUIVI.set('reportee', this.checked)">
+    Séance reportée</label>
+  <span class="etat" id="suivi-etat">Non confirmée</span>
+</div>
+<p class="av-note" id="suivi-note">Valider « assurée » enregistre la séance, met à jour le cahier de
+   textes et recalcule la couverture moyenne des deux livres.</p>
+
+<h2>Notions du livre traitées dans cette séance</h2>
+<div class="liv" id="liv">
+  <div class="liv-top">
+    <select id="liv-dom" onchange="LIVRE.filtre()"><option value="">Tous les domaines</option></select>
+    <input type="text" id="liv-q" placeholder="Rechercher une notion…" oninput="LIVRE.filtre()">
+    <button type="button" onclick="LIVRE.tout(true)">Tout cocher</button>
+    <button type="button" class="sec" onclick="LIVRE.tout(false)">Tout décocher</button>
+    <span class="liv-count" id="liv-count">0 notion</span>
+  </div>
+  <div class="liv-list" id="liv-list"></div>
+  <p class="av-note">Ces notions alimentent le suivi du Smart Book : ce sont elles qui font
+     progresser la « Couverture moyenne — moyenne des deux livres · notions uniques ».</p>
+</div>
 
 <h2>Objectifs</h2>
 <div class="g g3" id="obj"></div>
@@ -171,12 +222,119 @@ function resetAll(){
 }
 build();
 
+/* ==================== suivi de la séance (assurée / reportée) ====================
+   La case « Séance assurée » vivait dans la fenêtre de séance de l'application ; elle est
+   reprise ici et transmise à la page hôte, qui enregistre et recalcule la couverture. */
+var SUIVI = (function () {
+  function etat(txt, ok) {
+    var e = document.getElementById('suivi-etat');
+    if (e) { e.textContent = txt; e.style.color = ok ? 'var(--c3)' : 'var(--mut)'; }
+  }
+  function set(quoi, val) {
+    var a = document.getElementById('assuree'), r = document.getElementById('reportee');
+    if (quoi === 'assuree' && val && r) r.checked = false;
+    if (quoi === 'reportee' && val && a) a.checked = false;
+    var P = window.parent;
+    var res = null;
+    try {
+      if (P && P !== window && P.STI_FICHES && P.STI_FICHES.markSeance)
+        res = P.STI_FICHES.markSeance(Number(document.getElementById('seance').value) || 0,
+                                     quoi === 'assuree' ? true : false, !!val);
+    } catch (e) {}
+    if (res === false) {                       /* refusé : on remet la case dans son état */
+      if (a) a.checked = !!(SUIVI.data && SUIVI.data.assuree);
+      if (r) r.checked = !!(SUIVI.data && SUIVI.data.reportee);
+      return;
+    }
+    SUIVI.data = { assuree: a && a.checked, reportee: r && r.checked };
+    etat(a && a.checked ? 'Assurée ✓' : (r && r.checked ? 'Reportée' : 'Non confirmée'), a && a.checked);
+    if (val) {
+      var n = document.getElementById('suivi-note');
+      if (n && P && P.STI_FICHES && P.STI_FICHES.derniereCouverture)
+        n.textContent = P.STI_FICHES.derniereCouverture();
+    }
+  }
+  return {
+    data: { assuree: false, reportee: false },
+    set: set,
+    /* appelé par la page hôte après le préremplissage */
+    init: function (o) {
+      o = o || {};
+      var a = document.getElementById('assuree'), r = document.getElementById('reportee');
+      if (a) a.checked = !!o.assuree;
+      if (r) r.checked = !!o.reportee;
+      SUIVI.data = { assuree: !!o.assuree, reportee: !!o.reportee };
+      etat(a && a.checked ? 'Assurée ✓' : (r && r.checked ? 'Reportée' : 'Non confirmée'), a && a.checked);
+    }
+  };
+})();
+window.SUIVI = SUIVI;
+
+/* ===================== notions du Smart Book de la séance =========================
+   Même référentiel que le suivi de l'application (data/livres-sti.js) : la sélection
+   est enregistrée dans la séance, ce qui recalcule la couverture des deux livres. */
+var LIVRE = (function () {
+  var items = [], sel = {}, q = '', d = '';
+  function esc2(v) { return esc(v); }
+  function visibles() {
+    var t = q.toLowerCase();
+    return items.filter(function (r) {
+      return (!d || r.domain === d) && (!t || (r.label + ' ' + r.description + ' ' + (r.detail || '')).toLowerCase().indexOf(t) >= 0);
+    });
+  }
+  function peindre() {
+    var list = visibles();
+    document.getElementById('liv-list').innerHTML = list.length ? list.map(function (r) {
+      return '<label class="liv-item"><input type="checkbox"' + (sel[r.id] ? ' checked' : '') +
+        ' data-id="' + r.id + '" onchange="LIVRE.toggle(this)">' +
+        '<span><code>' + esc2(r.label) + '</code>' +
+        (r.description ? ' <span class="dd">— ' + esc2(r.description) + '</span>' : '') +
+        (r.pages && r.pages.length ? ' <span class="pg">p. ' + r.pages.join(', ') + '</span>' : '') +
+        '</span></label>';
+    }).join('') : '<p class="av-note">Aucune notion ne correspond.</p>';
+    var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
+    var c = document.getElementById('liv-count');
+    if (c) c.textContent = n + (n > 1 ? ' notions' : ' notion');
+  }
+  return {
+    build: function (arr) {
+      items = arr || []; sel = {};
+      var doms = [];
+      items.forEach(function (r) { if (doms.indexOf(r.domain) < 0) doms.push(r.domain); });
+      var s = document.getElementById('liv-dom');
+      if (s) s.innerHTML = '<option value="">Tous les domaines (' + items.length + ')</option>' +
+        doms.map(function (x) { return '<option value="' + esc2(x) + '">' + esc2(x) + '</option>'; }).join('');
+      peindre();
+    },
+    select: function (ids) {
+      sel = {}; (ids || []).forEach(function (i) { sel[i] = true; }); peindre();
+    },
+    selection: function () { return Object.keys(sel).filter(function (k) { return sel[k]; }); },
+    toggle: function (el) {          /* pas de re-rendu : on garde le focus et la case cliquée */
+      if (el.checked) sel[el.getAttribute('data-id')] = true; else delete sel[el.getAttribute('data-id')];
+      var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
+      var c = document.getElementById('liv-count');
+      if (c) c.textContent = n + (n > 1 ? ' notions' : ' notion');
+    },
+    tout: function (on) {
+      visibles().forEach(function (r) { if (on) sel[r.id] = true; else delete sel[r.id]; });
+      peindre();
+    },
+    filtre: function () {
+      d = (document.getElementById('liv-dom') || {}).value || '';
+      q = (document.getElementById('liv-q') || {}).value || '';
+      peindre();
+    }
+  };
+})();
+window.LIVRE = LIVRE;
+
 /* ======================= avancement : fonctions et propriétés =======================
    Une case par balise / propriété / fonction des annexes, rangée en 5 domaines.
    Le suivi est enregistré par classe (4SI2, 3SI1) et remonté à la page hôte. */
 var AV = (function () {
-  var KEY = 'sti_avancement_fonctions_v1';
-  var dom = 'HTML5', done = {}, ready = false;
+  var KEY = 'sti_avancement_fonctions_v2';
+  var dom = 'HTML5', done = {}, ready = false;   /* done : clé de notion → n° de séance d'acquisition */
 
   function domaine() {
     var v = (document.getElementById('classe') || {}).value || '';
@@ -185,7 +343,20 @@ var AV = (function () {
     return String(v).trim() || 'classe';
   }
   function cle() { return KEY + '|' + domaine(); }
-  function lire() { try { return JSON.parse(localStorage.getItem(cle()) || '{}') || {}; } catch (e) { return {}; } }
+  /* la séance ouverte dans le formulaire */
+  function seq() { return Number((document.getElementById('seance') || {}).value) || 0; }
+  /* une notion est cochée dès qu'elle a été acquise dans une séance ≤ celle affichée */
+  function acquise(k) { return done[k] != null && (seq() === 0 || done[k] <= seq()); }
+  function lire() {
+    var d = {};
+    try { d = JSON.parse(localStorage.getItem(cle()) || '{}') || {}; } catch (e) { d = {}; }
+    /* reprise de l'ancien format (liste plate, sans séance) */
+    try {
+      var old = JSON.parse(localStorage.getItem('sti_avancement_fonctions_v1|' + domaine()) || 'null');
+      if (old) Object.keys(old).forEach(function (k) { if (d[k] == null) d[k] = 0; });
+    } catch (e) {}
+    return d;
+  }
   function ecrire() { try { localStorage.setItem(cle(), JSON.stringify(done)); } catch (e) {} }
   function id(d, c, i) { return d + '::' + c + '::' + i; }
   function total(d) {
@@ -196,9 +367,15 @@ var AV = (function () {
   function compte(d) {
     var A = window.STI_ANNEXES, n = 0; if (!A) return 0;
     (d ? [d] : Object.keys(A)).forEach(function (k) {
-      A[k].cats.forEach(function (c, ci) { c.items.forEach(function (it, ii) { if (done[id(k, ci, ii)]) n++; }); });
+      A[k].cats.forEach(function (c, ci) { c.items.forEach(function (it, ii) { if (acquise(id(k, ci, ii))) n++; }); });
     });
     return n;
+  }
+  function nbCat(ci) {
+    var A = window.STI_ANNEXES; if (!A) return [0, 0];
+    var c = A[dom].cats[ci], nn = 0;
+    c.items.forEach(function (_, ii) { if (acquise(id(dom, ci, ii))) nn++; });
+    return [nn, c.items.length];
   }
   function pct(a, b) { return b ? Math.round(a * 100 / b) : 0; }
 
@@ -229,16 +406,21 @@ var AV = (function () {
     var d = A[dom];
     document.getElementById('av-panel').innerHTML = d.cats.map(function (c, ci) {
       var items = c.items.map(function (it, ii) {
-        var k = id(dom, ci, ii), on = !!done[k];
+        var k = id(dom, ci, ii), on = acquise(k), her = on && done[k] < seq();
         return '<label class="av-item' + (on ? ' ck' : '') + '">' +
                '<input type="checkbox"' + (on ? ' checked' : '') + ' data-k="' + k + '"' +
                ' onchange="AV.toggle(this)">' +
                '<span><code>' + esc(it.c) + '</code>' +
-               (it.d ? ' <span class="dd">— ' + esc(it.d) + '</span>' : '') + '</span></label>';
+               (it.d ? ' <span class="dd">— ' + esc(it.d) + '</span>' : '') +
+               (her ? ' <span class="her" title="Acquise en séance ' + done[k] + '">S' + done[k] + '</span>' : '') +
+               '</span></label>';
       }).join('');
+      var nb = nbCat(ci);
       return '<div class="av-cat"><h4>' + esc(c.n) +
-             ' <span class="n">' + c.items.filter(function (_, ii) { return done[id(dom, ci, ii)]; }).length +
-             '/' + c.items.length + '</span></h4><div class="av-items">' + items + '</div></div>';
+             ' <span class="n">' + nb[0] + '/' + nb[1] + '</span>' +
+             '<span class="mini"><button type="button" onclick="AV.cat(true,' + ci + ')">tout cocher</button>' +
+             '<button type="button" onclick="AV.cat(false,' + ci + ')">tout décocher</button></span>' +
+             '</h4><div class="av-items">' + items + '</div></div>';
     }).join('');
     remonter(n, t, p);
   }
@@ -258,35 +440,65 @@ var AV = (function () {
       if (A && !A[dom]) dom = Object.keys(A)[0];
       ready = true; rendre();
     },
+    seq: seq,
     show: function (k) { dom = k; rendre(); },
     toggle: function (el) {
-      var k = el.getAttribute('data-k');
-      if (el.checked) done[k] = 1; else delete done[k];
-      ecrire();
-      if (el.parentNode) el.parentNode.classList.toggle('ck', el.checked);
-      var A = window.STI_ANNEXES, ci = k.split('::')[1];
-      var h = document.querySelectorAll('#av-panel .av-cat h4')[Number(ci)];
-      if (h && A) {
-        var c = A[dom].cats[Number(ci)], nn = 0;
-        c.items.forEach(function (_, ii) { if (done[id(dom, Number(ci), ii)]) nn++; });
-        h.innerHTML = esc(c.n) + ' <span class="n">' + nn + '/' + c.items.length + '</span>';
+      var k = el.getAttribute('data-k'), n = seq();
+      if (el.checked) {
+        if (done[k] == null || done[k] > n) done[k] = n;
+      } else {
+        if (done[k] != null && done[k] < n) {
+          /* acquise lors d'une séance précédente : on ne la retire pas de l'historique */
+          el.checked = true;
+          var no = document.getElementById('suivi-note');
+          if (no) no.textContent = 'Cette notion a été validée en séance ' + done[k] +
+            ' : elle reste cochée pour les séances suivantes (avancement cumulé).';
+          return;
+        }
+        delete done[k];
       }
+      ecrire();
+      var ci = Number(k.split('::')[1]);
+      var h = document.querySelectorAll('#av-panel .av-cat h4')[ci];
+      if (h) {
+        var nb = nbCat(ci), mini = h.querySelector('.mini');
+        h.innerHTML = esc(window.STI_ANNEXES[dom].cats[ci].n) +
+          ' <span class="n">' + nb[0] + '/' + nb[1] + '</span>';
+        if (mini) h.appendChild(mini);
+      }
+      var lab = el.parentNode;
+      if (lab) lab.classList.toggle('ck', el.checked);
       rendreChiffres();
+    },
+    /* tout cocher / tout décocher pour UN groupe (une sous-catégorie) */
+    cat: function (on, ci) {
+      var A = window.STI_ANNEXES; if (!A) return;
+      var n = seq(), c = A[dom].cats[ci];
+      c.items.forEach(function (_, ii) {
+        var k = id(dom, ci, ii);
+        if (on) { if (done[k] == null || done[k] > n) done[k] = n; }
+        else if (done[k] != null && done[k] >= n) delete done[k];
+      });
+      ecrire(); rendre();
     },
     all: function (on) {
       var A = window.STI_ANNEXES; if (!A) return;
+      var n = seq();
       A[dom].cats.forEach(function (c, ci) {
         c.items.forEach(function (_, ii) {
           var k = id(dom, ci, ii);
-          if (on) done[k] = 1; else delete done[k];
+          if (on) { if (done[k] == null || done[k] > n) done[k] = n; }
+          else if (done[k] != null && done[k] >= n) delete done[k];
         });
       });
       ecrire(); rendre();
     },
     reset: function () {
-      if (!confirm('Décocher toutes les notions du référentiel ?')) return;
+      if (!confirm('Décocher toutes les notions du référentiel (toutes séances confondues) ?')) return;
       done = {}; ecrire(); rendre();
     },
+    /* changement de séance / de classe : on relit l'état et on réaffiche */
+    refresh: function () { done = lire(); rendre(); },
     /* pour la page hôte */
     etat: function () { return { classe: domaine(), fait: compte(), total: total(), pct: pct(compte(), total()), detail: done }; }
   };
@@ -307,6 +519,11 @@ var AV = (function () {
 })();
 window.AV = AV;
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', AV.init); else AV.init();
+/* si le numéro de séance change, l'avancement cumulé doit être recalculé */
+(function () {
+  var s = document.getElementById('seance');
+  if (s) s.addEventListener('change', function () { AV.refresh(); });
+})();
 </script>
 </body>
 </html>

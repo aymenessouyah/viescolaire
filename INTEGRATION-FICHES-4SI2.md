@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.6.0-avancement` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.1-suivi-seance` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -29,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.6.0-avancement` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.1-suivi-seance` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -306,6 +306,43 @@ Vérifié dans le navigateur : référentiel chargé (5 domaines, 209 notions), 
 pour PHP, coche de 3 notions → `1 % · 3/209`, « Tout cocher » HTML5 + 12 CSS3 + 7 JavaScript →
 `37 % · 77/209` et mini-barre de l'en-tête synchronisée, réouverture → **77 conservés**, passage en
 3SI1 → compteur **propre à la classe** (0/209), 0 erreur JS.
+
+### ③ septies Suivi de la séance, actions par groupe, couverture, cumul
+
+Quatre compléments au formulaire, après la bascule de `openModal` vers la boîte de fiche qui avait
+masqué la fenêtre de séance d'origine :
+
+1. **La case « Séance assurée » est rétablie**, dans une section *Suivi de la séance* placée après les
+   informations générales : deux cases (*Séance assurée — contenu commun traité avec les deux groupes*,
+   *Séance reportée*), mutuellement exclusives, avec l'état affiché à droite (Assurée ✓ / Reportée /
+   Non confirmée). Elle appelle `STI_FICHES.markSeance(n, assurée, valeur)`, qui enregistre
+   `store.seances[classe|n].done`, enregistre la sélection de notions puis relance le rendu : **le cahier
+   de textes et le tableau de bord se mettent à jour immédiatement**. Une séance future reste refusée
+   (« Une séance future ne peut pas être déclarée assurée »), la case revient à son état antérieur.
+   Un bouton **« Fiche de séance »** dans l'en-tête rouvre la fenêtre d'origine
+   (déroulement réel, observations, notions du Smart Book) : `STI_FICHES.classicModal()`.
+2. **Boutons « tout cocher » / « tout décocher » par groupe** dans le bloc d'avancement : chaque
+   sous-catégorie (ex. *Structure du document*, *Formulaires*, *MySQLi*…) porte ses deux boutons et son
+   compteur est recalculé aussitôt.
+3. **Recalcul de la « Couverture moyenne — moyenne des deux livres · notions uniques »** à chaque
+   validation : `markSeance()` relit `STI_TRACK.summary()` pour 3SI1 et 4SI2, avant/après, et affiche
+   le résultat dans un message (`Couverture moyenne : 12,3 % → 12,6 % (+0,3)`) et dans une seconde
+   ligne d'en-tête (`Couverture moyenne x % · 3SI1 a % · 4SI2 b % · n/602 notions uniques`) — même
+   calcul que le KPI du tableau de bord.
+4. **Cumul d'une fiche sur l'autre** : les notions du livre cochées en séance X-1 sont **cochées
+   d'office** en séance X (union des notions de toutes les séances précédentes de la classe) ; dans le
+   bloc d'avancement, chaque notion cochée mémorise **la séance d'acquisition** (`S1`, `S2`… affichée en
+   pastille) et une notion héritée ne peut pas être décochée sans le signaler
+   (« Cette notion a été validée en séance 1 : elle reste cochée pour les séances suivantes
+   (avancement cumulé) »). Les boutons de groupe ne retirent que les notions acquises dans la séance
+   courante. L'enregistrement d'une notion dans le référentiel d'annexes est donc horodaté par séance
+   (`localStorage sti_avancement_fonctions_v2|<classe>`, ancien format repris automatiquement).
+
+Vérifié : case assurée préremplie et état « Assurée ✓ » après validation, `store.seances['3SI1|1'].done
+= true`, 1 notion enregistrée, KPI du tableau de bord `0 % → 0,2 %` et ligne d'en-tête
+`0,2 % · 3SI1 0,4 % · 1/602` ; boutons de groupe 9 sous-catégories (`8/8` après « tout cocher »,
+`4 %`) ; héritage `S1` sur 8 notions et 2 notions du livre en séance 2 ; bouton *Fiche de séance* →
+fenêtre d'origine avec `#m-done` et `#sti-check-panel` ; 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 
