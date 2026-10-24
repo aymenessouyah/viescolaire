@@ -305,7 +305,7 @@ function render() {
       <div class="seg-wrap" role="group" aria-label="Choisir la classe">
         ${Object.keys(FICHES_CLS).map(c => `<button class="seg-btn ${c===ficCls?'active':''}" onclick="STI_FICHES.cls('${c}')">${c}</button>`).join('')}
       </div>
-      <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">${ic('print')} Impression</button>
+      <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">${ic('print')} Centre d'impression</button>
       <button class="btn btn-xs btn-blue" onclick="STI_FICHES.form(${list().length ? list()[0].n : 1})">${ic('book')} Ouvrir le formulaire de la fiche n°1</button>
     </div>
   </div>
@@ -1004,7 +1004,7 @@ function printSelected() {
 }
 
 /* ------------------------------------------------------------ impression */
-function printDoc(html, landscape) {
+function printDoc(html, landscape, extraStyle) {
   const old = document.getElementById('print-frame');
   if (old) old.remove();
   const fr = document.createElement('iframe');
@@ -1027,6 +1027,7 @@ function printDoc(html, landscape) {
     .rp h1{font-size:13pt;margin:0 0 2pt;color:#12324d}
     .rp .sub{font-size:8pt;color:#5c7186;margin-bottom:6pt}
     .rp tr{page-break-inside:avoid}
+    ${extraStyle || ''}
     </style></head><body>${html}</body></html>`;
   fr.srcdoc = doc;
   fr.onload = function () {
@@ -1061,19 +1062,156 @@ function printRepartition(tri) {
   printDoc(html, false);
 }
 
-function ensurePrintMenu() {
-  if (document.getElementById('prm-modal')) return;
-  const d = document.createElement('div');
-  d.className = 'modal';
-  d.id = 'prm-modal';
+function cahierPrintState(s) {
+  const record = root.store && root.store.seances ? root.store.seances[s.cls + '|' + s.n] || {} : {};
+  if (root.STI_CAHIER_PRINT_DATA) return root.STI_CAHIER_PRINT_DATA.state(s, record, todayISO());
+  const today = todayISO();
+  if (record.done === true && s.iso <= today) return 'done';
+  if (record.done === false) return 'reported';
+  if (s.iso < today) return 'pending';
+  if (s.iso === today) return 'today';
+  return 'future';
+}
+function selectCahierPrintSessions(classe, trimestre, statut) {
+  if (root.STI_CAHIER_PRINT_DATA) return root.STI_CAHIER_PRINT_DATA.select(
+    root.SESSIONS || {}, root.store && root.store.seances || {},
+    { classe: classe, trimestre: trimestre, statut: statut }, todayISO());
+  const classes = classe === 'both' ? ['3SI1', '4SI2'] : (['3SI1', '4SI2'].includes(classe) ? [classe] : []);
+  const tri = Number(trimestre) || 0;
+  const status = ['all', 'pending', 'done', 'reported', 'future'].includes(statut) ? statut : 'all';
+  const source = root.SESSIONS || {};
+  return classes.flatMap(c => source[c] || []).filter(s => {
+    const state = cahierPrintState(s);
+    return (!tri || Number(s.tri) === tri) && (status === 'all' || state === status);
+  }).sort((a, b) => a.iso.localeCompare(b.iso) || a.cls.localeCompare(b.cls) || a.n - b.n);
+}
+function cahierPrintStateLabel(state) {
+  return ({ done: 'Séance assurée', reported: 'Séance reportée', pending: 'À confirmer', today: 'Aujourd’hui — à confirmer', future: 'À venir' })[state] || 'À confirmer';
+}
+function updateCahierPrintSummary() {
+  const modal = document.getElementById('prm-modal');
+  if (!modal) return;
+  const classe = modal.querySelector('#prm-cahier-cls').value;
+  const trimestre = Number(modal.querySelector('#prm-cahier-tri').value) || 0;
+  const statut = modal.querySelector('#prm-cahier-status').value;
+  const sessions = selectCahierPrintSessions(classe, trimestre, statut);
+  const summary = modal.querySelector('#prm-cahier-summary');
+  const button = modal.querySelector('#prm-cahier-print');
+  if (summary) summary.innerHTML = `<strong>${sessions.length} séance${sessions.length > 1 ? 's' : ''}</strong><span>${classe === 'both' ? '3SI1 + 4SI2' : classe} · ${trimestre ? trimestre + (trimestre === 1 ? 'er' : 'e') + ' trimestre' : 'tous les trimestres'} · ${esc(({ all: 'tous les états', pending: 'à confirmer', done: 'assurées', reported: 'reportées', future: 'à venir' })[statut] || 'tous les états')}</span>`;
+  if (button) button.disabled = sessions.length === 0;
+}
+function printCahier() {
+  const modal = document.getElementById('prm-modal');
+  if (!modal) return;
+  const classe = modal.querySelector('#prm-cahier-cls').value;
+  const trimestre = Number(modal.querySelector('#prm-cahier-tri').value) || 0;
+  const statut = modal.querySelector('#prm-cahier-status').value;
+  const sessions = selectCahierPrintSessions(classe, trimestre, statut);
+  if (!sessions.length) { if (root.toast) root.toast('Aucune séance ne correspond à ces filtres.'); return; }
+  const classes = classe === 'both' ? ['3SI1', '4SI2'] : [classe];
+  const records = root.store && root.store.seances ? root.store.seances : {};
+  const statusLabels = { all: 'Tous les états', pending: 'À confirmer', done: 'Assurées', reported: 'Reportées', future: 'À venir' };
+  const triLabel = trimestre ? trimestre + (trimestre === 1 ? 'er' : 'e') + ' trimestre' : 'Tous les trimestres';
+  const sheets = classes.map(function (c) {
+    const items = sessions.filter(s => s.cls === c);
+    if (!items.length) return '';
+    const counts = { done: 0, reported: 0, pending: 0, today: 0, future: 0 };
+    items.forEach(s => { counts[cahierPrintState(s)]++; });
+    const firstDate = fmtShort(items[0].iso), lastDate = fmtShort(items[items.length - 1].iso);
+    const entries = items.map(function (s) {
+      const record = records[s.cls + '|' + s.n] || {};
+      const state = cahierPrintState(s);
+      const title = record.title || (s.blk && s.blk.t) || 'Séance à planifier';
+      const preparation = record.preparation || (s.blk && s.blk.det) || '';
+      const txt = function (value) {
+        const content = String(value == null ? '' : value).trim();
+        return content ? esc(content).replace(/\r\n?/g, '\n').replace(/\n/g, '<br>') : '<span class="cp-empty">Non renseigné.</span>';
+      };
+      return `<article class="cp-session cp-session-${c.toLowerCase()}">
+        <header class="cp-session-head"><div><span class="cp-kicker">SÉANCE N° ${s.n}</span><h3>${esc(title)}</h3><p>${esc(fmtLong(s.iso))}</p></div><span class="cp-state cp-state-${state}">${esc(cahierPrintStateLabel(state))}</span></header>
+        <div class="cp-fields">
+          <section><h4>Préparation pédagogique</h4><p>${txt(preparation)}</p></section>
+          <section><h4>Déroulement réellement effectué</h4><p>${txt(record.contenu)}</p></section>
+          <section><h4>Travail donné à la maison</h4><p>${txt(record.devoirs)}</p></section>
+          <section><h4>Observations / bilan</h4><p>${txt(record.obs)}</p></section>
+        </div>
+      </article>`;
+    }).join('');
+    return `<section class="cp-class-sheet">
+      <header class="cp-document-head cp-${c.toLowerCase()}"><div class="cp-school">ESPACE PÉDAGOGIQUE STI · LYCÉE RAFÈHA ARIANA</div><h1>Cahier de textes</h1><h2>Classe ${esc(c)}</h2><p>Année scolaire 2026–2027 · Aymen Essouyah</p></header>
+      <div class="cp-filter-line"><span><strong>Période :</strong> ${esc(triLabel)}</span><span><strong>État :</strong> ${esc(statusLabels[statut] || 'Tous les états')}</span><span><strong>Séances :</strong> ${esc(firstDate)} — ${esc(lastDate)}</span></div>
+      <div class="cp-summary"><div><strong>${items.length}</strong><span>séances imprimées</span></div><div><strong>${counts.done}</strong><span>assurées</span></div><div><strong>${counts.reported}</strong><span>reportées</span></div><div><strong>${counts.pending}</strong><span>à confirmer</span></div><div><strong>${counts.today + counts.future}</strong><span>aujourd'hui / à venir</span></div></div>
+      <div class="cp-entries">${entries}</div>
+      <footer class="cp-footer">Document généré le ${esc(fmtLong(todayISO()))} · Classe ${esc(c)} · ${items.length} séance${items.length > 1 ? 's' : ''}</footer>
+    </section>`;
+  }).filter(Boolean).join('');
+  const css = `
+    @page{size:A4 portrait;margin:12mm 11mm 14mm}
+    .cp-class-sheet{font-family:Arial,Helvetica,sans-serif;color:#1e2a27;font-size:9pt;line-height:1.45}
+    .cp-class-sheet+.cp-class-sheet{break-before:page;page-break-before:always}
+    .cp-document-head{padding:0 0 8mm;border-bottom:2px solid #23664b;margin-bottom:6mm}
+    .cp-document-head.cp-3si1{border-color:#1668b3}.cp-document-head.cp-4si2{border-color:#267555}
+    .cp-school{font-size:8pt;letter-spacing:1.2pt;color:#6b776e;font-weight:700}
+    .cp-document-head h1{font-size:25pt;line-height:1.15;margin:4mm 0 1mm;color:#173f35}
+    .cp-document-head h2{font-size:15pt;margin:0;color:#23664b}.cp-document-head p{margin:1.5mm 0 0;color:#6b776e}
+    .cp-filter-line{display:flex;justify-content:space-between;gap:5mm;flex-wrap:wrap;font-size:8pt;padding:3mm 0;border-bottom:1px solid #d9e1da}
+    .cp-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:2mm;margin:4mm 0 6mm}
+    .cp-summary>div{border:1px solid #d9e1da;border-radius:5px;padding:3mm;text-align:center;background:#f7f9f6}
+    .cp-summary strong{display:block;font-size:17pt;color:#23664b}.cp-summary span{display:block;font-size:7.5pt;color:#647067}
+    .cp-session{border:1px solid #d8e0da;border-left:3px solid #23664b;border-radius:5px;margin:0 0 4mm;padding:3.5mm;break-inside:avoid-page;page-break-inside:avoid}
+    .cp-session-3si1{border-left-color:#1668b3}.cp-session-4si2{border-left-color:#267555}
+    .cp-session-head{display:flex;justify-content:space-between;gap:5mm;align-items:flex-start;border-bottom:1px solid #e5eae5;padding-bottom:2.5mm;margin-bottom:2.5mm}
+    .cp-kicker{font-size:7pt;letter-spacing:.8pt;color:#788479;font-weight:700}.cp-session h3{font-size:12pt;margin:1mm 0;color:#1e3429}.cp-session-head p{margin:0;color:#68756b;font-size:8pt}
+    .cp-state{font-size:7pt;white-space:nowrap;padding:1mm 2mm;border:1px solid #b7c7ba;border-radius:20px;color:#526058}
+    .cp-state-done{background:#e8f4eb;color:#216342;border-color:#badac2}.cp-state-reported{background:#fff0ed;color:#a9433b;border-color:#edc9c2}.cp-state-pending{background:#fff6df;color:#8a6318;border-color:#ead69e}
+    .cp-fields{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}.cp-fields section{min-width:0}.cp-fields h4{font-size:7pt;text-transform:uppercase;letter-spacing:.5pt;color:#52665a;margin:0 0 1mm}.cp-fields p{font-size:8.5pt;margin:0;white-space:normal;overflow-wrap:anywhere}.cp-empty{color:#889189;font-style:italic}
+    .cp-footer{border-top:1px solid #d9e1da;margin-top:5mm;padding-top:2mm;font-size:7pt;color:#788479;text-align:right}
+    @media print{.cp-session{break-inside:avoid-page} .cp-class-sheet+.cp-class-sheet{break-before:page}}
+  `;
+  printDoc(sheets, false, css);
+}
+
+let printMenuReturnFocus = null;
+function closePrintMenu() {
+  const d = document.getElementById('prm-modal');
+  if (d) d.classList.remove('on');
+  if (printMenuReturnFocus && typeof printMenuReturnFocus.focus === 'function') printMenuReturnFocus.focus();
+}
+function ensurePrintMenu(preset) {
+  let d = document.getElementById('prm-modal');
+  if (!d) {
+    d = document.createElement('div');
+    d.className = 'modal';
+    d.id = 'prm-modal';
+    d.setAttribute('role', 'dialog');
+    d.setAttribute('aria-modal', 'true');
+    d.setAttribute('aria-label', "Centre d'impression");
+    d.tabIndex = -1;
+    document.body.appendChild(d);
+    d.addEventListener('click', e => { if (e.target.id === 'prm-modal') closePrintMenu(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && d.classList.contains('on')) closePrintMenu(); });
+  }
   const opts = list().map(f => `<option value="${f.n}">${f.n} — ${fmtShort(f.date)} — ${esc(f.titre)}</option>`).join('');
+  const cahier = preset && preset.cahier ? preset.cahier : {};
+  const cahierClass = ['both', '3SI1', '4SI2'].includes(cahier.classe) ? cahier.classe : 'both';
+  const cahierTri = [0, 1, 2, 3].includes(Number(cahier.trimestre)) ? Number(cahier.trimestre) : 0;
+  const cahierStatus = ['all', 'pending', 'done', 'reported', 'future'].includes(cahier.statut) ? cahier.statut : 'all';
   d.innerHTML = `
     <div class="box" style="max-width:620px">
-      <div class="box-h"><h3 style="font-size:15px">Impression</h3>
-        <button class="btn btn-xs btn-line" onclick="document.getElementById('prm-modal').classList.remove('on')">Fermer</button></div>
+      <div class="box-h"><h3 style="font-size:15px">Centre d'impression</h3>
+        <button class="btn btn-xs btn-line" onclick="STI_FICHES.closePrintMenu()">Fermer</button></div>
       <div class="box-b">
-        <div class="note tiny" style="margin-bottom:12px">Choisissez ce que vous voulez imprimer. Les fiches sortent sur une page paysage
-          (une page par séance) ; les répartitions sur une page portrait.</div>
+        <div class="note tiny" style="margin-bottom:12px">Choisissez une fiche, une répartition ou le cahier de textes. Pour le cahier, affinez l'impression par classe, trimestre et état des séances.</div>
+
+        <div class="prm-row prm-cahier-row">
+          <div class="prm-cahier-intro"><strong>Cahier de textes</strong><div class="tiny muted">Imprime le suivi des séances (préparation, contenu réalisé, travail et bilan), avec une sélection indépendante par classe.</div></div>
+          <div class="prm-cahier-filters">
+            <label>Classe<select id="prm-cahier-cls" aria-label="Classe du cahier de textes"><option value="both" ${cahierClass === 'both' ? 'selected' : ''}>Les deux classes</option><option value="3SI1" ${cahierClass === '3SI1' ? 'selected' : ''}>3SI1</option><option value="4SI2" ${cahierClass === '4SI2' ? 'selected' : ''}>4SI2</option></select></label>
+            <label>Trimestre<select id="prm-cahier-tri" aria-label="Trimestre du cahier de textes"><option value="0" ${cahierTri === 0 ? 'selected' : ''}>Tous</option><option value="1" ${cahierTri === 1 ? 'selected' : ''}>1er trimestre</option><option value="2" ${cahierTri === 2 ? 'selected' : ''}>2e trimestre</option><option value="3" ${cahierTri === 3 ? 'selected' : ''}>3e trimestre</option></select></label>
+            <label>État<select id="prm-cahier-status" aria-label="État des séances à imprimer"><option value="all" ${cahierStatus === 'all' ? 'selected' : ''}>Tous</option><option value="pending" ${cahierStatus === 'pending' ? 'selected' : ''}>À confirmer</option><option value="done" ${cahierStatus === 'done' ? 'selected' : ''}>Assurées</option><option value="reported" ${cahierStatus === 'reported' ? 'selected' : ''}>Reportées</option><option value="future" ${cahierStatus === 'future' ? 'selected' : ''}>À venir</option></select></label>
+          </div>
+          <div class="prm-cahier-actions"><div id="prm-cahier-summary" aria-live="polite"></div><button class="btn btn-xs btn-blue" id="prm-cahier-print" onclick="STI_FICHES.printCahier()">${ic('print')} Imprimer le cahier</button></div>
+        </div>
 
         <div class="prm-row">
           <div><strong>Une séance</strong><div class="tiny muted">La fiche pédagogique complète de la séance choisie.</div></div>
@@ -1109,13 +1247,21 @@ function ensurePrintMenu() {
           et le recueil des ${CF().nb} fiches) sont dans <code>${CF().docs}/</code> — bouton « PDF » dans la liste.</div>
       </div>
     </div>`;
-  document.body.appendChild(d);
-  d.addEventListener('click', e => { if (e.target.id === 'prm-modal') d.classList.remove('on'); });
+  ['#prm-cahier-cls', '#prm-cahier-tri', '#prm-cahier-status'].forEach(function (selector) {
+    const control = d.querySelector(selector);
+    if (control) control.addEventListener('change', updateCahierPrintSummary);
+  });
+  updateCahierPrintSummary();
 }
-function printMenu() {
-  ensurePrintMenu();
-  document.getElementById('prm-modal').classList.add('on');
+function printMenu(preset) {
+  printMenuReturnFocus = document.activeElement;
+  ensurePrintMenu(preset);
+  const d = document.getElementById('prm-modal');
+  d.classList.add('on');
+  const focusTarget = d.querySelector('#prm-cahier-cls') || d.querySelector('button');
+  if (focusTarget) focusTarget.focus();
 }
+
 
 /* ------------------------------------------------------------ intégration */
 const TAB_ID = 'v-fiches';
@@ -1157,7 +1303,7 @@ function anchorFiche() {
         <select id="fic-anchor-n" style="min-width:290px">${opts}</select>
         <button class="btn btn-xs btn-blue" onclick="STI_FICHES.form(Number(document.getElementById('fic-anchor-n').value))">Ouvrir le formulaire</button>
         <button class="btn btn-xs btn-soft" onclick="STI_FICHES.form(Number(document.getElementById('fic-anchor-n').value))">Modifier (formulaire)</button>
-        <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">Impression</button>
+        <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu()">Centre d'impression</button>
         <button class="btn btn-xs btn-line" onclick="STI_FICHES.show()">Les ${CF().nb} fiches</button>
       </div>
     </div></div>`);
@@ -1179,14 +1325,20 @@ function install() {
     const main = document.querySelector('main.wrap');
     if (main) { const s = document.createElement('section'); s.id = TAB_ID; s.className = 'view ref-ui'; main.appendChild(s); }
   }
-  /* bouton « Impression » dans l'en-tête */
+  /* Le bouton global ouvre le centre d'impression (fiches, répartitions et cahier). */
   const acts = document.querySelector('.head-actions');
-  if (acts && !document.getElementById('btn-print-menu')) {
-    const b = document.createElement('button');
-    b.className = 'btn btn-ghost'; b.id = 'btn-print-menu';
-    b.innerHTML = '<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect height="8" width="12" x="6" y="14"/></svg> Impression';
-    b.onclick = printMenu;
-    acts.insertBefore(b, acts.firstChild);
+  let printButton = document.getElementById('btn-print-menu');
+  if (!printButton && acts) {
+    printButton = document.createElement('button');
+    printButton.className = 'btn btn-ghost'; printButton.id = 'btn-print-menu';
+    printButton.innerHTML = '<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect height="8" width="12" x="6" y="14"/></svg> Centre d\'impression';
+    acts.insertBefore(printButton, acts.firstChild);
+  }
+  if (printButton) {
+    printButton.type = 'button';
+    printButton.title = 'Choisir le document et les filtres à imprimer';
+    printButton.setAttribute('aria-haspopup', 'dialog');
+    printButton.onclick = function () { printMenu(); };
   }
   /* la boîte « Fiche » de la répartition ouvre la fiche au modèle officiel (4SI2) */
   if (typeof root.openModal === 'function' && !root.__ficheHooked) {
@@ -1264,7 +1416,7 @@ function install() {
 
 root.STI_FICHES = {
   install, render, show, filter: (k, v) => { filtre[k] = v; render(); },
-  open, close, save, reset, openClassic, printMenu, printFiche, printAll, printRepartition,
+  open, close, save, reset, openClassic, printMenu, closePrintMenu, printFiche, printAll, printRepartition, printCahier, selectCahierPrintSessions,
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,

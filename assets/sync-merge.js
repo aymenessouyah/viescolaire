@@ -22,7 +22,7 @@ function merge(base,local,remote,choices={}){
    const ids=new Set([...r.map(x=>x.id),...l.map(x=>x.id),...bb.keys()]),out=[];
    for(const id of ids){const v=walk(bb.has(id)?bb.get(id):M,ll.has(id)?ll.get(id):M,rr.has(id)?rr.get(id):M,path.concat('@'+id));if(v!==M)out.push(v);}return out;
   }
-  if(['notions','tags'].includes(path[path.length-1])&&[l,r].every(a=>Array.isArray(a)&&a.every(x=>typeof x==='string'))&&(b===M||(Array.isArray(b)&&b.every(x=>typeof x==='string')))){
+  if(['notions','annexes','tags'].includes(path[path.length-1])&&[l,r].every(a=>Array.isArray(a)&&a.every(x=>typeof x==='string'))&&(b===M||(Array.isArray(b)&&b.every(x=>typeof x==='string')))){
    const bs=new Set(b===M?[]:b),ls=new Set(l),rs=new Set(r),all=new Set([...rs,...ls,...bs]);return [...all].filter(id=>{const bv=bs.has(id),lv=ls.has(id),rv=rs.has(id);return lv===rv?lv:lv===bv?rv:lv;});
   }
   if(choices[key]==='local')return clone(l);if(choices[key]==='remote')return clone(r);

@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.8.1-cloud-repair";
+const APP_VER = "v1.8.5-print-center";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1096,6 +1096,7 @@ function renderCahier(){
       <select id="cah-class" aria-label="Classe du cahier" style="width:auto"><option value="both" ${cahCls==="both"?"selected":""}>Les deux classes</option><option value="3SI1" ${cahCls==="3SI1"?"selected":""}>3SI1</option><option value="4SI2" ${cahCls==="4SI2"?"selected":""}>4SI2</option></select>
       <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre</option>`).join("")}</select>
       <select id="cah-status" aria-label="État des séances du cahier" style="width:auto"><option value="pending" ${cahStatus==="pending"?"selected":""}>À confirmer (dates passées)</option><option value="all" ${cahStatus==="all"?"selected":""}>Toutes les séances</option><option value="done" ${cahStatus==="done"?"selected":""}>Assurées</option><option value="reported" ${cahStatus==="reported"?"selected":""}>Reportées</option></select>
+      <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu({cahier:{classe:'${cahCls}',trimestre:${cahTri},statut:'${cahStatus}'}})" title="Ouvrir le centre et affiner l'impression par classe">${ic("print")} Centre d'impression</button>
       <button class="btn btn-xs btn-line" onclick="printCahier()" title="Document imprimable : en-tête, séances de la période, travail donné">${ic("print")} Imprimer le cahier</button>
       <button class="btn btn-xs btn-line" onclick="cahierCSV()" title="Export tableur des séances affichées">${ic("file")} Export CSV</button>
       <button class="btn btn-xs btn-primary" onclick="cahierPDF()" title="Fichier PDF partageable, même mise en page que l’impression">${ic("file")} Export PDF</button>

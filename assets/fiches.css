@@ -126,6 +126,17 @@
 .prm-row{display:flex;justify-content:space-between;gap:12px;align-items:center;
   padding:10px;border:1px solid #e2e9ef;border-radius:10px;margin-bottom:8px;flex-wrap:wrap}
 .prm-row>div:first-child{min-width:200px}
+.prm-cahier-row{display:grid;grid-template-columns:1fr;align-items:stretch;gap:11px;background:#fbfcfa}
+.prm-cahier-row>div:first-child{min-width:0}
+.prm-cahier-intro strong{display:block;color:#173f35;font-size:13px;margin-bottom:3px}
+.prm-cahier-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.prm-cahier-filters label{display:grid;gap:4px;min-width:0;color:#58675d;font-size:10px;font-weight:700}
+.prm-cahier-filters select{width:100%;min-width:0;padding:7px 8px;border:1px solid #d9e1da;border-radius:7px;background:#fff;color:#173f35;font:inherit;font-size:11px}
+.prm-cahier-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+#prm-cahier-summary{display:flex;gap:7px;align-items:baseline;flex-wrap:wrap;color:#647067;font-size:10px}
+#prm-cahier-summary strong{color:#173f35;font-size:12px}
+#prm-cahier-print:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:640px){.prm-cahier-filters{grid-template-columns:1fr}.prm-cahier-actions{align-items:stretch}.prm-cahier-actions .btn{width:100%;justify-content:center}}
 
 /* ---- impression ---- */
 @page{size:11in 8.5in;margin:0}
