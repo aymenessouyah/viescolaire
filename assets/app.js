@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.6.0-print-center";
+const APP_VER = "v1.8.5-print-center";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -195,7 +195,7 @@ const TABS = [
   { id:"v-devoirs", t:"Répartition des devoirs", ico:"pen" },
   { id:"v-agent", t:"Agent STI · IA", ico:"cpu" },
 
-  { id:"v-suivi", t:"Suivi des notions & annexes", ico:"target" },
+  { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
   { id:"v-cal",    t:"Calendrier tunisien", ico:"calendar" },
   { id:"v-rep",    t:"Répartition annuelle", ico:"list" },
@@ -225,9 +225,9 @@ function renderAll(silent){
   renderCahier();
   renderRef();
   if (window.STI_TRACK) window.STI_TRACK.render({store:store,sessions:SESSIONS});
-  if (window.STI_ANNEX_TRACK) window.STI_ANNEX_TRACK.render({store:store,sessions:SESSIONS});
   if (window.STI_AGENT) window.STI_AGENT.render({store:store,sessions:SESSIONS,view:currentTab});
   renderCompte();
+  renderVerChip();
   renderLoginInvite();
   if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
@@ -315,6 +315,8 @@ function renderDash(){
       </div>
     </div>
   </div>
+
+  ${dashRappelsCard()}
 
   <div class="grid g4" style="margin-bottom:16px">
     <div class="kpi">
@@ -1056,14 +1058,36 @@ function renderProg(){
 /* ---------------- 6. CAHIER DE TEXTES ---------------- */
 /* Cahier : les séances passées sans décision d'abord, sans modifier les fiches. */
 let cahCls = "both", cahTri = 0, cahStatus = "pending";
+/* classes réellement paramétrées, limitées à celles qui ont une répartition */
+function classesCahier(){
+  const ids = (Array.isArray(store.classes) && store.classes.length ? store.classes.map(c=>c.id) : Object.keys(SESSIONS));
+  return ids.filter(id => SESSIONS[id]);
+}
+/* clé de semaine ISO (lundi) d'une date aaaa-mm-jj */
+function lundiDe(iso){
+  const d = new Date(iso + "T12:00:00");
+  const j = (d.getDay() + 6) % 7;              // 0 = lundi
+  d.setDate(d.getDate() - j);
+  return d.toISOString().slice(0,10);
+}
 function renderCahier(){
-  const t = todayISO(), period = ["3SI1","4SI2"].filter(c=>cahCls==="both"||cahCls===c).flatMap(c=>sessionsOf(c,cahTri));
+  const t = todayISO();
+  const period = classesCahier().filter(c=>cahCls==="both"||cahCls===c).flatMap(c=>sessionsOf(c,cahTri));
   const pending = s => { const o=store.seances[s.cls+"|"+s.n]||{};return s.iso<t&&o.done!==true&&o.done!==false; };
   const list=period.filter(s=>cahStatus==="all"||cahStatus==="pending"&&pending(s)||cahStatus==="done"&&seanceState(s)==="faite"||cahStatus==="reported"&&store.seances[s.cls+"|"+s.n]?.done===false).sort((a,b)=>b.iso.localeCompare(a.iso)||a.cls.localeCompare(b.cls)||b.n-a.n);
   const done=period.filter(s=>seanceState(s)==="faite").length;
   const filled=period.filter(s=>Object.keys(store.seances[s.cls+"|"+s.n]||{}).length>0).length;
   const labels={pending:"Dernières séances à confirmer",all:"Toutes les séances",done:"Séances assurées",reported:"Séances reportées"};
-  const scope=(cahCls==="both"?"3SI1 + 4SI2":cahCls)+" • "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"Tous les trimestres");
+  const scope=(cahCls==="both"?"les deux classes":cahCls)+" • "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"Tous les trimestres");
+  /* complétude d'une fiche : préparation, contenu réalisé, travail donné */
+  const complet = s => { const o=store.seances[s.cls+"|"+s.n]||{};
+    return { prep: !!(o.preparation && o.preparation.trim()), contenu: !!(o.contenu && o.contenu.trim()),
+             devoirs: !!(o.devoirs && o.devoirs.trim()) }; };
+  const nbComplets = period.filter(s=>{ const c=complet(s); return c.prep && c.contenu; }).length;
+  /* regroupement par semaine (du lundi au dimanche) */
+  const semaines = [];
+  list.forEach(s=>{ const k=lundiDe(s.iso); let g=semaines[semaines.length-1];
+    if (!g || g.k !== k) { g={k:k, items:[]}; semaines.push(g); } g.items.push(s); });
   const box=document.getElementById("v-cahier");
   box.innerHTML=`
   <div class="sec-head"><div><h2>${ic("pen")} Cahier de textes numérique</h2>
@@ -1072,18 +1096,39 @@ function renderCahier(){
       <select id="cah-class" aria-label="Classe du cahier" style="width:auto"><option value="both" ${cahCls==="both"?"selected":""}>Les deux classes</option><option value="3SI1" ${cahCls==="3SI1"?"selected":""}>3SI1</option><option value="4SI2" ${cahCls==="4SI2"?"selected":""}>4SI2</option></select>
       <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre</option>`).join("")}</select>
       <select id="cah-status" aria-label="État des séances du cahier" style="width:auto"><option value="pending" ${cahStatus==="pending"?"selected":""}>À confirmer (dates passées)</option><option value="all" ${cahStatus==="all"?"selected":""}>Toutes les séances</option><option value="done" ${cahStatus==="done"?"selected":""}>Assurées</option><option value="reported" ${cahStatus==="reported"?"selected":""}>Reportées</option></select>
-      <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu({cahier:{classe:'${cahCls}',trimestre:${cahTri},statut:'${cahStatus}'}})">${ic("print")} Centre d'impression</button>
+      <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu({cahier:{classe:'${cahCls}',trimestre:${cahTri},statut:'${cahStatus}'}})" title="Ouvrir le centre et affiner l'impression par classe">${ic("print")} Centre d'impression</button>
+      <button class="btn btn-xs btn-line" onclick="printCahier()" title="Document imprimable : en-tête, séances de la période, travail donné">${ic("print")} Imprimer le cahier</button>
+      <button class="btn btn-xs btn-line" onclick="cahierCSV()" title="Export tableur des séances affichées">${ic("file")} Export CSV</button>
+      <button class="btn btn-xs btn-primary" onclick="cahierPDF()" title="Fichier PDF partageable, même mise en page que l’impression">${ic("file")} Export PDF</button>
+      ${(() => { if (!cahTri) return `<span class="tiny muted">Choisissez un trimestre pour le verrouiller</span>`;
+        if (cahCls === "both") return `<span class="tiny muted">Choisissez une classe pour verrouiller son trimestre</span>`;
+        const v = verrouInfo(cahCls, cahTri);
+        return v
+          ? `<span class="badge b-rose" title="${escapeHtml(verrouMsg(v))}">🔒 T${cahTri} — ${cahCls} signé ${escapeHtml(v.par)}</span>
+             <button class="btn btn-xs btn-line" onclick="cahDeverrouiller('${cahCls}',${cahTri})">${ic("lock")} Déverrouiller</button>`
+          : `<button class="btn btn-xs btn-line" onclick="cahVerrouiller('${cahCls}',${cahTri})" title="Figer et signer le trimestre : plus aucune modification">${ic("lock")} Verrouiller le trimestre</button>`; })()}
     </div>
   </div>
   <div class="grid g3" style="margin-bottom:16px">
     <div class="kpi"><div class="lbl">${ic("list")} Séances affichées</div><div class="val" id="cah-visible-count">${list.length}</div><div class="foo">${scope}</div></div>
     <div class="kpi k-teal"><div class="lbl">${ic("check")} Séances assurées</div><div class="val">${done}</div><div class="foo">sur l’ensemble du périmètre sélectionné</div></div>
     <div class="kpi k-amber"><div class="lbl">${ic("pen")} Fiches renseignées</div><div class="val">${filled}</div><div class="foo">dans les classes et trimestres sélectionnés</div></div>
+    <div class="kpi k-navy"><div class="lbl">${ic("check")} Fiches complètes</div><div class="val">${nbComplets}</div><div class="foo">préparation <b>et</b> contenu réalisé renseignés</div></div>
   </div>
   <div class="card"><div class="card-h"><h3>${ic("clock")} ${labels[cahStatus]}</h3><span class="badge b-grey">${list.length} entrées</span></div><div class="card-b">
     <p class="tiny muted" style="margin-bottom:14px">${cahStatus==="pending"?"Ni « assurée », ni « reportée » ; dates antérieures à aujourd’hui. Aucune séance n’est confirmée automatiquement.":"Tri de la plus récente à la plus ancienne. Le statut enregistré est conservé."}</p>
-    <div class="tl" id="cah-timeline">${list.map(s=>{
-      const o=store.seances[s.cls+"|"+s.n]||{},st=seanceState(s),flag=s.blk&&s.blk.k!=="cours";
+    <div id="cah-semaines">${semaines.map(g=>{
+      const ass = g.items.filter(s=>seanceState(s)==="faite").length;
+      const att = g.items.filter(s=>pending(s)).length;
+      return `<div class="cah-sem">
+        <div class="cah-sem-h"><span class="d">Semaine du ${fmtLong(g.k)}</span>
+          <span class="badge b-grey">${g.items.length} séance${g.items.length>1?"s":""}</span>
+          ${ass?`<span class="badge b-green">${ass} assurée${ass>1?"s":""}</span>`:""}
+          ${att?`<span class="badge b-amber">${att} à confirmer</span>`:""}</div>
+        <div class="tl">${g.items.map(s=>{
+      const o=store.seances[s.cls+"|"+s.n]||{},st=seanceState(s),flag=s.blk&&s.blk.k!=="cours",c=complet(s);
+      const verrouSeance = seanceVerrouillee(s);
+      const rep = o.report ? `<div class="tiny" style="margin-top:4px;color:var(--rose,#b3261e)">↪ Reportée — motif : ${escapeHtml(o.report.motif)}${o.report.vers?" · remplacée le "+fmtShort(o.report.vers):""}</div>` : "";
       return `<div class="tl-item ${flag?"t-eval":""}" data-cah-key="${s.cls}|${s.n}" data-cah-date="${s.iso}"><div class="spread"><div>
         <div class="d">${fmtLong(s.iso)} • <span class="badge ${clsChip(s.cls)}">${s.cls}</span> ${st==="faite"?'<span class="badge b-green">assurée</span>':st==="reportee"?'<span class="badge b-rose">reportée</span>':s.iso<t?'<span class="badge b-amber">à confirmer</span>':s.iso===t?'<span class="badge b-grey">aujourd’hui</span>':'<span class="badge b-grey">à venir</span>'}</div>
         <div class="t">Séance n°${s.n} — ${escapeHtml(titleOf(s,store))}</div>
@@ -1091,15 +1136,436 @@ function renderCahier(){
         ${!o.contenu&&s.blk?.det?'<div class="tiny muted" style="margin-top:4px">Préparation prévue : '+escapeHtml(s.blk.det)+'</div>':""}
         <div class="tiny muted" style="margin-top:3px">${slotsTxt(s.cls,s.iso)}</div>
         ${o.devoirs?'<div class="tiny" style="margin-top:4px;color:var(--amber)">📚 Travail donné : '+escapeHtml(o.devoirs)+'</div>':""}
-        ${o.obs?'<div class="tiny muted">📝 '+escapeHtml(o.obs)+'</div>':""}
-      </div><button class="btn btn-xs btn-soft no-print" onclick="openModal('${s.cls}',${s.n})">${ic("edit")} ${cahStatus==="pending"?"Vérifier la fiche":"Modifier"}</button></div></div>`;
+        ${o.obs?'<div class="tiny muted">📝 '+escapeHtml(o.obs)+'</div>':""}${rep}
+      </div><div class="no-print" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <div class="cah-dots" title="Préparation · contenu réalisé · travail donné">
+          <i class="${c.prep?"on":""}" title="Préparation ${c.prep?"renseignée":"manquante"}"></i>
+          <i class="${c.contenu?"on":""}" title="Contenu réalisé ${c.contenu?"renseigné":"manquant"}"></i>
+          <i class="${c.devoirs?"on":""}" title="Travail donné ${c.devoirs?"renseigné":"manquant"}"></i>
+        </div>
+        <button class="btn btn-xs btn-soft" onclick="openModal('${s.cls}',${s.n})">${ic("edit")} ${cahStatus==="pending"?"Vérifier la fiche":"Modifier"}</button>
+        ${verrouSeance?'<span class="badge b-rose" title="'+escapeHtml(verrouMsg(verrouSeance))+'">verrouillé</span>':`
+        <div class="row" style="gap:6px">
+          <button class="btn btn-xs btn-line" onclick="cahReport('${s.cls}',${s.n})" title="Reporter la séance avec un motif ; le contenu suit">${ic("out")} Reporter</button>
+          <button class="btn btn-xs btn-line" onclick="cahDuplicate('${s.cls}',${s.n})" title="Copier le contenu sur la séance suivante de la même classe">${ic("file")} Dupliquer</button>
+        </div>`}</div></div></div>`;
     }).join("")||`<p class="muted tiny" id="cah-empty">${cahStatus==="pending"?"Aucune séance passée à confirmer dans ce périmètre. Les séances assurées et reportées restent accessibles avec le filtre d’état.":"Aucune séance pour ces filtres."}</p>`}</div>
+        </div></div>`;}).join("")}
   </div></div>`;
   box.querySelector('#cah-class').onchange=e=>{if(["both","3SI1","4SI2"].includes(e.target.value)){cahCls=e.target.value;renderCahier();}};
   box.querySelector('#cah-term').onchange=e=>{const v=Number(e.target.value);if([0,1,2,3].includes(v)){cahTri=v;renderCahier();}};
   box.querySelector('#cah-status').onchange=e=>{if(Object.hasOwn(labels,e.target.value)){cahStatus=e.target.value;renderCahier();}};
 }
 
+
+/* Rappels du cahier de textes affichés sur le tableau de bord (interface v2). */
+function dashRappelsCard(){
+    const R = cahierRappels(), nA = R.attente.length, nI = R.incompletes.length;
+    const ligneA = x => `<div class="spread" style="gap:10px;padding:7px 0;border-bottom:1px dashed var(--line-2)">
+        <div style="min-width:0"><div class="tiny"><b>${fmtShort(x.iso)}</b> • <span class="badge ${clsChip(x.cls)}">${x.cls}</span> séance n°${x.n}</div>
+          <div class="tiny muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(titleOf(x,store))}</div></div>
+        <button class="btn btn-xs btn-soft" onclick="openModal('${x.cls}',${x.n})">Confirmer</button></div>`;
+    const ligneI = x => { const o = store.seances[x.cls+"|"+x.n]||{};
+      const manque = [!(o.preparation||"").trim()?"préparation":"", !(o.contenu||"").trim()?"contenu réalisé":""].filter(Boolean).join(" · ");
+      return `<div class="spread" style="gap:10px;padding:7px 0;border-bottom:1px dashed var(--line-2)">
+        <div style="min-width:0"><div class="tiny"><b>${fmtShort(x.iso)}</b> • <span class="badge ${clsChip(x.cls)}">${x.cls}</span> n°${x.n}
+          <span class="badge b-amber" style="text-transform:none">${manque} manquant</span></div>
+          <div class="tiny muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(titleOf(x,store))}</div></div>
+        <button class="btn btn-xs btn-soft" onclick="openModal('${x.cls}',${x.n})">Compléter</button></div>`; };
+    if (!nA && !nI) return `<div class="card" id="dash-rappels" style="margin-bottom:16px"><div class="card-b spread">
+        <div class="row" style="gap:10px"><span class="badge b-green">à jour</span><strong>Cahier de textes : aucune séance en attente, aucune fiche incomplète.</strong></div>
+        <button class="btn btn-xs btn-line" onclick="cahOuvrir('all')">Ouvrir le cahier</button></div></div>`;
+    return `<div class="card" id="dash-rappels" style="margin-bottom:16px">
+      <div class="card-h"><h3>${ic("alert")} Rappels du cahier de textes</h3>
+        <span class="row" style="gap:8px">${nA?`<span class="badge b-amber">${nA} séance${nA>1?"s":""} à confirmer</span>`:""}${nI?`<span class="badge b-rose">${nI} fiche${nI>1?"s":""} incomplète${nI>1?"s":""}</span>`:""}</span></div>
+      <div class="card-b"><div class="grid g2" style="align-items:start">
+        <div>
+          <div class="tiny" style="font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--amber)">Séances passées non confirmées</div>
+          ${nA ? R.attente.slice(0,4).map(ligneA).join("") + `<div class="tiny muted" style="margin-top:8px">La plus ancienne : ${fmtLong(R.attente[0].iso)} (${R.attente[0].cls}).</div>`
+                : '<p class="tiny muted" style="margin-top:6px">Toutes les séances passées sont confirmées ou reportées.</p>'}
+          <button class="btn btn-xs btn-line" style="margin-top:10px" onclick="cahOuvrir('pending')">${ic("pen")} Ouvrir le cahier — à confirmer${nA?" ("+nA+")":""}</button>
+        </div>
+        <div>
+          <div class="tiny" style="font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--rose,#b3261e)">Fiches incomplètes</div>
+          ${nI ? R.incompletes.slice(0,4).map(ligneI).join("") + (nI>4?`<div class="tiny muted" style="margin-top:8px">+ ${nI-4} autre${nI-4>1?"s":""} fiche${nI-4>1?"s":""} à compléter.</div>`:"")
+                : '<p class="tiny muted" style="margin-top:6px">Toutes les séances assurées ont leur préparation et leur contenu.</p>'}
+          <button class="btn btn-xs btn-line" style="margin-top:10px" onclick="cahOuvrir('done')">${ic("list")} Séances assurées</button>
+        </div>
+      </div>
+      ${R.verrous.length?`<div class="sep"></div><div class="row" style="gap:8px;flex-wrap:wrap">${R.verrous.map(v=>
+        `<span class="badge b-rose" title="${escapeHtml(verrouMsg(v.v))}">🔒 ${v.cls} — T${v.tri} signé le ${fmtShort(v.v.le)}</span>`).join("")}</div>`:""}
+      </div></div>`;
+}
+
+/* ---------------- 6 bis. CAHIER DE TEXTES : IMPRESSION ET EXPORT ---------------- */
+/* Séances de la période affichée dans le cahier (mêmes filtres que l'écran). */
+function cahierSelection(){
+  const t = todayISO();
+  const period = classesCahier().filter(c=>cahCls==="both"||cahCls===c).flatMap(c=>sessionsOf(c,cahTri));
+  const pending = s => { const o=store.seances[s.cls+"|"+s.n]||{}; return s.iso<t&&o.done!==true&&o.done!==false; };
+  return period.filter(s=>cahStatus==="all"||cahStatus==="pending"&&pending(s)||cahStatus==="done"&&seanceState(s)==="faite"||cahStatus==="reported"&&(store.seances[s.cls+"|"+s.n]||{}).done===false)
+               .sort((a,b)=>b.iso.localeCompare(a.iso)||a.cls.localeCompare(b.cls)||b.n-a.n);
+}
+/* Document imprimable : en-tête, informations, tableau semaine par semaine. */
+function printCahier(){
+  const list = cahierSelection();
+  if (!list.length){ toast("Aucune séance à imprimer dans ce périmètre."); return; }
+  const esc = x => escapeHtml(x==null?"":String(x));
+  const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
+  const etat = { pending:"À confirmer", all:"Toutes les séances", done:"Séances assurées", reported:"Séances reportées" };
+  const semaines = [];
+  list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n).forEach(s=>{
+    const k = lundiDe(s.iso); let g = semaines[semaines.length-1];
+    if (!g || g.k !== k){ g = {k:k, items:[]}; semaines.push(g); } g.items.push(s);
+  });
+  const rows = semaines.map(g=>{
+    const corps = g.items.map(s=>{
+      const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
+      return `<tr>
+        <td class="d">${esc(fmtShort(s.iso))}</td>
+        <td class="c">${esc(s.cls)}</td>
+        <td class="n">${s.n}</td>
+        <td><b>${esc(titleOf(s,store))}</b>${o.contenu?`<div class="cc">${esc(o.contenu)}</div>`:(s.blk&&s.blk.det?`<div class="cc mut">Prévu : ${esc(s.blk.det)}</div>`:"")}${o.obs?`<div class="cc mut">Obs. : ${esc(o.obs)}</div>`:""}</td>
+        <td class="dv">${o.devoirs?esc(o.devoirs):"—"}</td>
+        <td class="et ${st==="faite"?"ok":(st==="reportee"?"no":"at")}">${st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")}</td>
+      </tr>`;
+    }).join("");
+    return `<tr class="sem"><td colspan="6">Semaine du ${esc(fmtLong(g.k))} — ${g.items.length} séance${g.items.length>1?"s":""}</td></tr>${corps}`;
+  }).join("");
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+  <style>
+    @page{size:A4 portrait;margin:13mm 11mm}
+    *{box-sizing:border-box}
+    body{font:11.5px/1.4 Arial,Helvetica,sans-serif;color:#222;margin:0}
+    h1{font-size:19px;margin:0 0 2px;color:#175C41}
+    .sub{font-size:11px;color:#666;margin-bottom:3px}
+    .bar{height:3px;background:#E4661F;margin:6px 0 10px}
+    .infos{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:#444;margin-bottom:8px}
+    .infos b{color:#175C41}
+    table{width:100%;border-collapse:collapse}
+    th{background:#175C41;color:#fff;font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:5px 6px}
+    td{border-bottom:1px solid #e2ddd6;padding:4px 6px;vertical-align:top}
+    tr.sem td{background:#FDF4EC;color:#a8541a;font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;border:0;padding:5px 6px}
+    td.d{white-space:nowrap;width:52px;font-weight:700}
+    td.c{width:44px;font-weight:700;color:#14684A}
+    td.n{width:22px;text-align:right;color:#666}
+    td.et{width:74px;white-space:nowrap;font-weight:700;font-size:10.5px}
+    td.et.ok{color:#0f7a4f}td.et.no{color:#b3261e}td.et.at{color:#b07a00}
+    td.dv{width:150px;color:#555}
+    .cc{color:#444;margin-top:2px}
+    .cc.mut{color:#777;font-size:10.5px}
+    .foot{margin-top:10px;font-size:10px;color:#777;display:flex;justify-content:space-between}
+    .sig{margin-top:16px;display:flex;gap:40px;font-size:10.5px;color:#555}
+    .sig div{flex:1;border-top:1px solid #bbb;padding-top:4px}
+  </style></head><body>
+  <h1>Cahier de textes — ${esc(SCHOOL && SCHOOL.nom ? SCHOOL.nom : "Lycée Rafèha")}</h1>
+  <div class="sub">STI 2026-2027 · ${esc(periode)} · ${esc(etat[cahStatus]||"")}</div>
+  <div class="bar"></div>
+  <div class="infos">
+    <span><b>Classe(s)</b> ${esc(cahCls==="both"?"3SI1 et 4SI2":cahCls)}</span>
+    <span><b>Séances</b> ${list.length}</span>
+    <span><b>Assurées (sélection)</b> ${list.filter(s=>seanceState(s)==="faite").length}</span>
+    <span><b>Édité le</b> ${esc(fmtLong(todayISO()))}</span>
+    ${cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri) ? `<span><b>Trimestre verrouillé</b> ${esc(verrouInfo(cahCls,cahTri).par)} le ${esc(fmtLong(verrouInfo(cahCls,cahTri).le))}</span>` : ""}
+  </div>
+  <table><thead><tr><th>Date</th><th>Cl.</th><th>N°</th><th>Contenu traité</th><th>Travail donné</th><th>État</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <div class="sig"><div>Visa du chef d’établissement</div><div>Signature de l’enseignant</div></div>
+  <div class="foot"><span>${esc((store.profil&&store.profil.nom)||"Aymen Essouyah")}</span><span>Généré par l’espace pédagogique</span></div>
+  </body></html>`;
+  let fr = document.getElementById("cah-print");
+  if (fr) fr.remove();
+  fr = document.createElement("iframe");
+  fr.id = "cah-print";
+  fr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  document.body.appendChild(fr);
+  const d = fr.contentDocument;
+  d.open(); d.write(html); d.close();
+  setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ toast("Impression bloquée par le navigateur"); } }, 250);
+}
+/* Export CSV des séances du cahier */
+function cahierCSV(){
+  const list = cahierSelection();
+  if (!list.length){ toast("Aucune séance à exporter."); return; }
+  const esc = v => '"' + String(v==null?"":v).replace(/"/g,'""') + '"';
+  const l = [["Date","Jour","Classe","Séance","Titre","Contenu réalisé","Travail donné","Observations","État","Trimestre"]];
+  list.forEach(s=>{
+    const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
+    l.push([s.iso, fmtLong(s.iso), s.cls, s.n, titleOf(s,store), o.contenu||"", o.devoirs||"", o.obs||"",
+            st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer"), s.tri||""]);
+  });
+  const csv = "\ufeff" + l.map(r=>r.map(esc).join(";")).join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = "cahier-de-textes-" + cahCls + (cahTri?("-T"+cahTri):"") + "-" + todayISO() + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("Cahier exporté en CSV");
+}
+/* Export PDF du cahier : même mise en page que l'impression (générateur autonome). */
+function cahierPDF(){
+  if (!window.STI_PDF || !window.STI_PDF.cahier){ toast("Générateur PDF indisponible : rechargez la page.", "err"); return; }
+  const list = cahierSelection();
+  if (!list.length){ toast("Aucune séance à exporter dans ce périmètre."); return; }
+  const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
+  const rows = [], tri = list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n);
+  let semaineCourante = null;
+  tri.forEach(s=>{
+    const k = lundiDe(s.iso);
+    if (semaineCourante !== k){
+      semaineCourante = k;
+      const n = tri.filter(x=>lundiDe(x.iso)===k).length;
+      rows.push({type:"sem", label:"Semaine du "+fmtLong(k)+" — "+n+" séance"+(n>1?"s":"")});
+    }
+    const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
+    let contenu = titleOf(s,store);
+    if (o.contenu && o.contenu.trim()) contenu += " — " + o.contenu.trim();
+    if (o.obs && o.obs.trim()) contenu += " (obs. : " + o.obs.trim() + ")";
+    rows.push({type:"row",
+      cells:[fmtShort(s.iso), s.cls, String(s.n), contenu, (o.devoirs||"—").trim(),
+             st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")],
+      etat: st==="faite"?"ok":(st==="reportee"?"no":"at")});
+  });
+  const done = list.filter(s=>seanceState(s)==="faite").length;
+  const renseignees = list.filter(s=>{ const o=store.seances[s.cls+"|"+s.n]||{}; return o.preparation||o.contenu||o.devoirs; }).length;
+  const d = new Date();
+  const edite = d.toLocaleDateString("fr-FR", {day:"2-digit",month:"long",year:"numeric"});
+  let blob;
+  try {
+    blob = window.STI_PDF.cahier({
+      titre: "Cahier de textes — Lycée Rafèha",
+      sous: "Sciences techniques de l’informatique 2026-2027 · " + periode,
+      infos: [{k:"Séances", v:String(list.length)}, {k:"Assurées", v:String(done)},
+              {k:"Renseignées", v:String(renseignees)}, {k:"Édité le", v:edite}]
+             .concat(cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri)
+               ? [{k:"Visé par", v:verrouInfo(cahCls,cahTri).par + " le " + fmtShort(verrouInfo(cahCls,cahTri).le)}] : []),
+      colonnes: ["Date","Cl.","N°","Contenu traité","Travail donné","État"],
+      largeurs: [54,32,22,245,110,52],
+      rows: rows,
+      pied: "Cahier de textes numérique · généré depuis l’espace STI"
+    });
+  } catch (e){ console.error(e); toast("Échec de génération du PDF.", "err"); return; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "cahier-de-textes-" + cahCls + (cahTri?("-T"+cahTri):"") + "-" + todayISO() + ".pdf";
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  toast("Cahier exporté en PDF — " + list.length + " séance" + (list.length>1?"s":""));
+}
+
+/* ---------------- 6 ter. CAHIER : REPORT, DUPLICATION, VERROUILLAGE, RAPPELS ---------------- */
+/* --- verrouillage / signature d'un trimestre --- */
+function cleTrimestre(cls, tri){ return cls + "|" + tri; }
+function verrouInfo(cls, tri){ return (store.verrous || {})[cleTrimestre(cls, tri)] || null; }
+function seanceVerrouillee(s){
+  if (!s) return null;
+  return verrouInfo(s.cls, s.tri);
+}
+function verrouMsg(v){ return v ? ("Trimestre verrouillé le " + fmtShort(v.le) + " par " + v.par) : ""; }
+
+/* --- petite boîte de dialogue générique (n'écrase pas la fiche) --- */
+function cahDialog(o){
+  let d = document.getElementById("cah-modal");
+  if (d) d.remove();
+  d = document.createElement("div");
+  d.id = "cah-modal"; d.className = "modal on";
+  d.innerHTML = `<div class="box">
+    <div class="box-h"><h3 style="font-size:16px">${o.titre}</h3>
+      <button class="btn btn-xs btn-line" data-x>Fermer</button></div>
+    <div class="box-b">${o.corps}</div>
+    <div class="box-f"><button class="btn btn-line" data-x>Annuler</button>
+      <button class="btn ${o.ton || "btn-blue"}" data-ok>${o.ok || "Confirmer"}</button></div>
+  </div>`;
+  document.body.appendChild(d);
+  const fermer = () => d.remove();
+  d.querySelectorAll("[data-x]").forEach(b => b.addEventListener("click", fermer));
+  d.addEventListener("click", e => { if (e.target === d) fermer(); });
+  d.querySelector("[data-ok]").addEventListener("click", () => {
+    const val = o.onOk ? o.onOk(d) : true;
+    if (val !== false) fermer();
+  });
+  const first = d.querySelector("input, select, textarea");
+  if (first) setTimeout(() => first.focus(), 60);
+  return d;
+}
+
+/* --- séance suivante de la même classe --- */
+function seanceSuivante(cls, iso){
+  return SESSIONS[cls].filter(x => x.iso > iso).sort((a, b) => a.iso.localeCompare(b.iso))[0] || null;
+}
+
+/* --- 1) report d'une séance, avec motif, contenu reporté automatiquement --- */
+function cahReport(cls, n){
+  const s = SESSIONS[cls] && SESSIONS[cls].find(x => x.n === n);
+  if (!s){ toast("Séance introuvable."); return; }
+  const v = seanceVerrouillee(s);
+  if (v){ toast("Action impossible : " + verrouMsg(v) + "."); return; }
+  const o = store.seances[cls + "|" + n] || {};
+  const suivantes = SESSIONS[cls].filter(x => x.iso > s.iso).sort((a, b) => a.iso.localeCompare(b.iso)).slice(0, 4);
+  if (!suivantes.length){ toast("Aucune séance suivante dans cette classe : report impossible."); return; }
+  const contenu = (o.preparation || "").trim() || (o.contenu || "").trim() || (s.blk && s.blk.det) || titleOf(s, store);
+  const corps = `
+    <p class="tiny muted" style="margin-bottom:12px">Séance n°${n} du ${fmtLong(s.iso)} — ${escapeHtml(CLASSES[cls].short)}.
+      Le contenu prévu sera <b>reporté automatiquement</b> sur la séance de remplacement choisie.</p>
+    <div style="margin-bottom:12px"><label class="f">Motif du report (obligatoire)</label>
+      <input type="text" id="rep-motif" placeholder="Ex. : séance non assurée — réunion pédagogique, grève, sortie scolaire…"
+        value="${escapeHtml((o.report && o.report.motif) || "")}"></div>
+    <div style="margin-bottom:12px"><label class="f">Séance de remplacement</label>
+      <select id="rep-vers" style="width:100%">${suivantes.map(x =>
+        `<option value="${x.iso}" ${o.report && o.report.vers === x.iso ? "selected" : ""}>${fmtLong(x.iso)} — séance n°${x.n} — ${escapeHtml(titleOf(x, store))}</option>`).join("")}</select></div>
+    <div style="margin-bottom:12px"><label class="f">Contenu à reporter</label>
+      <div class="note tiny" style="margin:0">${escapeHtml(contenu).slice(0, 320)}</div></div>
+    <label class="badge b-blue" style="cursor:pointer;text-transform:none"><input type="checkbox" id="rep-copie" checked>
+      Recopier ce contenu sur la séance de remplacement (sans écraser ce qui y est déjà écrit)</label>`;
+  cahDialog({
+    titre: "Reporter la séance n°" + n, corps: corps, ok: "Reporter la séance", ton: "btn-primary",
+    onOk: d => {
+      const motif = d.querySelector("#rep-motif").value.trim();
+      if (!motif){ toast("Indiquez le motif du report."); return false; }
+      const vers = d.querySelector("#rep-vers").value;
+      const copie = d.querySelector("#rep-copie").checked;
+      const k = cls + "|" + n;
+      store.seances[k] = Object.assign({}, store.seances[k] || {}, {
+        done: false, report: { motif: motif, vers: vers, le: todayISO() }
+      });
+      let recopie = false;
+      if (copie){
+        const cible = SESSIONS[cls].find(x => x.iso === vers);
+        if (cible){
+          const kc = cls + "|" + cible.n, oc = store.seances[kc] || {};
+          const maj = {}, src = store.seances[k];
+          if (!(oc.preparation || "").trim() && (src.preparation || "").trim()){ maj.preparation = src.preparation.trim(); }
+          else if (!(oc.preparation || "").trim() && (s.blk && s.blk.det)){ maj.preparation = "Report de la séance n°" + n + " du " + fmtShort(s.iso) + " : " + s.blk.det; }
+          if (!(oc.contenu || "").trim() && (src.contenu || "").trim()) maj.contenu = src.contenu.trim();
+          if (!(oc.devoirs || "").trim() && (src.devoirs || "").trim()) maj.devoirs = src.devoirs.trim();
+          maj.origine = "Report de la séance n°" + n + " du " + fmtShort(s.iso) + " (" + motif + ")";
+          store.seances[kc] = Object.assign({}, oc, maj);
+          recopie = !!(maj.preparation || maj.contenu || maj.devoirs);
+        }
+      }
+      save(true);
+      toast("Séance n°" + n + " reportée" + (recopie ? " — contenu reporté sur le " + fmtShort(vers) : ""));
+      renderCahier();
+    }
+  });
+}
+
+/* --- 2) duplication du contenu vers la séance suivante (même classe) --- */
+function cahDuplicate(cls, n){
+  const s = SESSIONS[cls] && SESSIONS[cls].find(x => x.n === n);
+  if (!s) return;
+  const v = seanceVerrouillee(s);
+  if (v){ toast("Action impossible : " + verrouMsg(v) + "."); return; }
+  const suiv = seanceSuivante(cls, s.iso);
+  if (!suiv){ toast("Pas de séance suivante dans cette classe."); return; }
+  const v2 = seanceVerrouillee(suiv);
+  if (v2){ toast("Action impossible : la séance de destination est dans un trimestre verrouillé."); return; }
+  const o = store.seances[cls + "|" + n] || {}, od = store.seances[cls + "|" + suiv.n] || {};
+  const champ = (lbl, val) => (val || "").trim()
+    ? `<div style="margin-bottom:8px"><div class="tiny muted" style="font-weight:800;text-transform:uppercase;letter-spacing:.05em">${lbl}</div>
+       <div class="note tiny" style="margin:4px 0 0">${escapeHtml(String(val).trim()).slice(0, 400)}</div></div>`
+    : `<div class="tiny muted" style="margin-bottom:8px">${lbl} : <i>vide</i></div>`;
+  cahDialog({
+    titre: "Dupliquer vers la séance suivante",
+    corps: `<p class="tiny muted" style="margin-bottom:12px">Source : séance n°${n} du ${fmtLong(s.iso)} — destination :
+        <b>séance n°${suiv.n} du ${fmtLong(suiv.iso)}</b> (${escapeHtml(CLASSES[cls].short)}).</p>
+      ${champ("Préparation", o.preparation)}${champ("Contenu réalisé", o.contenu)}${champ("Travail donné", o.devoirs)}
+      <label class="badge b-grey" style="cursor:pointer;text-transform:none;margin-top:6px"><input type="checkbox" id="dup-ecrase">
+        Écraser les champs déjà remplis de la séance de destination</label>
+      <div class="note tiny" style="margin-top:10px">La séance de destination recevra une copie ; la séance source reste inchangée.</div>`,
+    ok: "Dupliquer le contenu",
+    onOk: d => {
+      const ecrase = d.querySelector("#dup-ecrase").checked;
+      const src = store.seances[cls + "|" + n] || {}, maj = {};
+      ["preparation", "contenu", "devoirs"].forEach(f => {
+        const val = (src[f] || "").trim();
+        if (val && (ecrase || !(od[f] || "").trim())) maj[f] = val;
+      });
+      if (!Object.keys(maj).length){ toast("Rien à dupliquer : le contenu source est vide ou la destination est déjà remplie."); return false; }
+      maj.origine = "Contenu dupliqué depuis la séance n°" + n + " du " + fmtShort(s.iso);
+      store.seances[cls + "|" + suiv.n] = Object.assign({}, od, maj);
+      save(true);
+      toast("Contenu dupliqué sur la séance n°" + suiv.n + " du " + fmtShort(suiv.iso));
+      renderCahier();
+    }
+  });
+}
+
+/* --- 3) verrouillage / signature d'un trimestre --- */
+function cahVerrouiller(cls, tri){
+  if (!cls || cls === "both" || !tri){ toast("Choisissez une classe et un trimestre précis pour verrouiller."); return; }
+  const deja = verrouInfo(cls, tri);
+  if (deja){ toast("Ce trimestre est déjà verrouillé."); return; }
+  const nb = sessionsOf(cls, tri).length;
+  const faites = sessionsOf(cls, tri).filter(s => seanceState(s) === "faite").length;
+  cahDialog({
+    titre: "Verrouiller le " + tri + (tri === 1 ? "er" : "e") + " trimestre — " + cls,
+    corps: `<p class="tiny muted" style="margin-bottom:12px">Le trimestre sera <b>figé</b> : plus aucune saisie (contenu, travail donné,
+        observations, reports, duplications) ne sera acceptée sur ses ${nb} séances. Vous pourrez le déverrouiller explicitement.</p>
+      <div class="kpi k-teal" style="margin-bottom:12px"><div class="lbl">Séances assurées au moment du verrouillage</div>
+        <div class="val">${faites} <small>/ ${nb}</small></div></div>
+      <div style="margin-bottom:12px"><label class="f">Signature — nom du professeur</label>
+        <input type="text" id="ver-par" value="${escapeHtml(SCHOOL.prof)}"></div>
+      <div><label class="f">Mention (facultative)</label>
+        <input type="text" id="ver-note" placeholder="Ex. : cahier visé par le chef d’établissement"></div>`,
+    ok: "Signer et verrouiller", ton: "btn-primary",
+    onOk: d => {
+      const par = d.querySelector("#ver-par").value.trim();
+      if (!par){ toast("La signature (nom) est obligatoire."); return false; }
+      store.verrous = store.verrous || {};
+      store.verrous[cleTrimestre(cls, tri)] = { par: par, le: todayISO(), note: d.querySelector("#ver-note").value.trim(), nb: nb };
+      save(true); toast("Trimestre verrouillé et signé — " + cls + " • T" + tri);
+      renderCahier(); renderDash();
+    }
+  });
+}
+function cahDeverrouiller(cls, tri){
+  const v = verrouInfo(cls, tri);
+  if (!v){ toast("Ce trimestre n’est pas verrouillé."); return; }
+  cahDialog({
+    titre: "Déverrouiller le trimestre",
+    corps: `<p class="small" style="margin-bottom:10px">Trimestre ${tri} de ${cls} verrouillé le <b>${fmtLong(v.le)}</b>
+        par <b>${escapeHtml(v.par)}</b>${v.note ? " — " + escapeHtml(v.note) : ""}.</p>
+      <p class="tiny muted">Le déverrouillage rétablit la saisie et retire la signature. L’opération est enregistrée dans l’historique du cahier.</p>`,
+    ok: "Déverrouiller", ton: "btn-line",
+    onOk: () => {
+      store.historique = store.historique || [];
+      store.historique.unshift({ type: "deverrouillage", cls: cls, tri: tri, par: v.par, le: v.le, at: new Date().toISOString() });
+      delete store.verrous[cleTrimestre(cls, tri)];
+      save(true); toast("Trimestre déverrouillé — " + cls + " • T" + tri);
+      renderCahier(); renderDash();
+    }
+  });
+}
+
+/* --- 4) rappels du tableau de bord --- */
+function cahierRappels(){
+  const t = todayISO(), attente = [], incompletes = [], verrous = [];
+  classesCahier().forEach(c => SESSIONS[c].forEach(s => {
+    const o = store.seances[s.cls + "|" + s.n] || {}, st = seanceState(s);
+    if (s.iso < t && o.done !== true && o.done !== false) attente.push(s);
+    if (st === "faite" && (!(o.contenu || "").trim() || !(o.preparation || "").trim())) incompletes.push(s);
+  }));
+  attente.sort((a, b) => a.iso.localeCompare(b.iso) || a.cls.localeCompare(b.cls));
+  incompletes.sort((a, b) => b.iso.localeCompare(a.iso) || a.cls.localeCompare(b.cls));
+  [1, 2, 3].forEach(tri => ["3SI1", "4SI2"].forEach(c => { const v = verrouInfo(c, tri); if (v) verrous.push({ cls: c, tri: tri, v: v }); }));
+  return { attente: attente, incompletes: incompletes, verrous: verrous };
+}
+/* ouvrir le cahier sur un filtre donné */
+function cahOuvrir(status, cls){
+  cahStatus = status || "pending";
+  cahCls = cls || "both";
+  cahTri = 0;
+  if (typeof go === "function") go("v-cahier");
+  renderCahier();
+}
+
+window.cahReport = cahReport; window.cahDuplicate = cahDuplicate;
+window.cahVerrouiller = cahVerrouiller; window.cahDeverrouiller = cahDeverrouiller;
+window.cahOuvrir = cahOuvrir; window.cahierRappels = cahierRappels;
+window.seanceVerrouillee = seanceVerrouillee; window.verrouMsg = verrouMsg;
+window.verrouPour = function (cls, n){
+  const s = SESSIONS[cls] && SESSIONS[cls].find(x => x.n === n);
+  return s ? seanceVerrouillee(s) : null;
+};
 
 /* ---------------- 7. ANNEXES, MÉMO CONSOLIDÉ ET SYNCHRONISATION ---------------- */
 function escCode(x){ return String(x).replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
@@ -1275,20 +1741,6 @@ async function afterLogin(){
 
 /* ---------- synchronisation distante (Supabase) ---------- */
 const CLOUD_KEY = "sti_cloud_cfg";
-function defaultDeviceName(){
-  const key = "sti_device_name_v1";
-  try { const saved = localStorage.getItem(key); if (saved) return saved; } catch(e){}
-  const ua = navigator.userAgent || "";
-  const tablet = /iPad|Tablet/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1) || (/Android/i.test(ua) && !/Mobile/i.test(ua));
-  const mobile = !tablet && (navigator.userAgentData?.mobile === true || /Mobi|iPhone|iPod|Android/i.test(ua));
-  const type = tablet ? "Tablette" : mobile ? "Téléphone" : "Ordinateur";
-  let id;
-  try { id = (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)).replace(/-/g, "").slice(0, 4).toUpperCase(); }
-  catch(e){ id = Math.random().toString(36).slice(2, 6).toUpperCase(); }
-  const name = type + " · " + (id || "local");
-  try { localStorage.setItem(key, name); } catch(e){}
-  return name;
-}
 function cloudCfg(){
   let cfg = {};
   try { cfg = JSON.parse(localStorage.getItem(CLOUD_KEY) || "{}"); } catch(e){ cfg = {}; }
@@ -1297,12 +1749,46 @@ function cloudCfg(){
     url: cfg.url || w.url || "",
     key: cfg.key || w.anonKey || "",
     table: cfg.table || w.table || "espace_pedagogique",
-    device: cfg.device || w.device || defaultDeviceName(),
-    auto: cfg.auto !== undefined ? cfg.auto : (w.auto !== undefined ? w.auto : true),
-    auth: cfg.auth !== undefined ? cfg.auth : (w.auth !== undefined ? w.auth : false),
-    admin: cfg.admin || w.admin || ""
+    device: cfg.device || w.device || (SCHOOL.prof + " — appareil principal"),
+    auto: cfg.auto !== undefined ? cfg.auto : true,  /* sauvegarde distante par défaut dès qu'un projet est configuré */
+    auth: authEffectif(cfg, w),                      /* accès protégé par mot de passe */
+    admin: cfg.admin || w.admin || ""   /* compte administrateur (gestion des professeurs) */
   };
 }
+/* La configuration publiée (supabase/config.js) fait foi pour la sécurité :
+   un ancien réglage « auth: false » enregistré dans le navigateur ne peut pas
+   désactiver l'accès protégé ; il peut seulement l'activer. */
+function authEffectif(cfg, w){
+  if (w && w.auth === true) return true;
+  if (cfg && cfg.auth !== undefined) return !!cfg.auth;
+  return !!(w && w.auth);
+}
+/* Aligne la configuration mémorisée sur le fichier publié (téléphone, tablette,
+   poste du lycée). Sans cela, un appareil configuré à la main avant l'accès
+   protégé restait bloqué sur « Activez l'accès protégé… » sans jamais comparer
+   ses données au Cloud. Renvoie la liste des corrections appliquées. */
+let __cloudRepairDone = false;
+function cloudRepair(silent){
+  const w = window.STI_SUPABASE || {};
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem(CLOUD_KEY) || "{}") || {}; } catch(e){ cfg = {}; }
+  const avant = JSON.stringify(cfg), corr = [];
+  const poser = (k, v, lbl) => { if (v !== undefined && v !== null && v !== "" && cfg[k] !== v){ cfg[k] = v; corr.push(lbl || k); } };
+  if (w.url) poser("url", w.url);
+  if (w.anonKey) poser("key", w.anonKey, "clé");
+  if (w.table) poser("table", w.table);
+  if (w.auth === true) poser("auth", true, "accès protégé");
+  if (w.admin) poser("admin", w.admin);
+  if (cfg.auto === undefined){ cfg.auto = true; corr.push("synchronisation automatique"); }
+  if (JSON.stringify(cfg) !== avant){
+    try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg)); } catch(e){}
+    if (!silent && typeof toast === "function") toast("Configuration Cloud alignée sur la version publiée : " + corr.join(", "));
+  }
+  return corr;
+}
+window.cloudRepair = cloudRepair;
+window.APP_VER = APP_VER;
+cloudRepair(true);   /* téléphone / tablette : aligne le réglage local sur le fichier publié */
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
 async function cloudHeaders(){
   const c = cloudCfg();
@@ -1367,6 +1853,10 @@ document.addEventListener("click", e => {
   if (m && !m.classList.contains("hidden") && !m.contains(e.target)) fermerMenuCompte();
 });
 
+function renderVerChip(){
+  const e = document.getElementById("ver-chip");
+  if (e){ e.textContent = APP_VER; e.title = "Version réellement chargée dans ce navigateur : " + APP_VER; }
+}
 function renderLoginInvite(){
   const b = document.getElementById("login-invite");
   if (!b) return;
@@ -1418,7 +1908,7 @@ function openCloudSettings(){
   b.querySelector("#cfg-url").value = c.url;
   b.querySelector("#cfg-key").value = c.key;
   b.querySelector("#cfg-table").value = (c.table && !c.table.includes("@")) ? c.table : "espace_pedagogique";
-  b.querySelector("#cfg-device").value = (c.device && !c.device.includes("@")) ? c.device : defaultDeviceName();
+  b.querySelector("#cfg-device").value = (c.device && !c.device.includes("@")) ? c.device : "Poste principal — Prof. Aymen";
   b.querySelector("#cfg-auto").checked = !!c.auto;
   const ca = b.querySelector("#cfg-auth"); if (ca) ca.checked = !!c.auth;
   b.classList.add("on");
@@ -1520,13 +2010,15 @@ function renderRef(){
 
   <div class="card" style="margin-bottom:16px">
     <div class="card-h"><h3>${ic("book")} Annexes intégrales — versions élaborées par A. Essouyah</h3>
-      <span class="badge b-grey">HTML5 &bull; CSS3 &bull; JS &bull; PHP &bull; SQL</span></div>
+      <span class="badge b-grey">3<sup>e</sup> SI : HTML5 &bull; CSS3 &bull; JS &bull; SQL &nbsp;|&nbsp; 4<sup>e</sup> SI : + PHP</span></div>
     <div class="card-b">
       <div id="ann-zone">
         ${ANNEXES.map(a => `
           <details class="acc" style="margin-bottom:10px">
             <summary>${ic(a.ico)} ${a.t} — ${a.res}
               <span class="badge b-blue" style="margin-left:8px">${a.pages}</span>
+              <span class="badge ${a.classes && a.classes.length===1 ? 'b-navy' : 'b-green'}" style="margin-left:6px">${
+                a.classes && a.classes.length===1 ? '4<sup>e</sup> SI uniquement' : '3<sup>e</sup> et 4<sup>e</sup> SI'}</span>
               <span class="arrow">${ic("chev")}</span></summary>
             <div class="acc-b">
               ${a.sections.map(sc => `
@@ -1615,8 +2107,11 @@ function openModal(cls, n){
       <label class="badge b-rose" style="cursor:pointer"><input type="checkbox" id="m-rep" ${o.done===false?"checked":""}> Séance reportée</label>
     </div>
     <div class="note tiny" style="margin-top:12px">Rappel du contenu prévu par la répartition officielle : ${s.blk ? s.blk.t + " — " + s.blk.det : "séance à planifier (le document de répartition fourni ne couvre que le 1<sup>er</sup> trimestre)."}</div>`;
+  { const vv = seanceVerrouillee(s);
+    if (vv) document.getElementById("m-body").insertAdjacentHTML("afterbegin",
+      '<div class="note tiny" style="background:#fdecea;border-color:#f3b7b1;color:#8c1d18;margin-bottom:12px"><b>Trimestre verrouillé</b> — '
+      + escapeHtml(verrouMsg(vv)) + '. La fiche est en lecture seule : déverrouillez le trimestre depuis le cahier de textes pour la modifier.</div>'); }
   if (window.STI_TRACK) window.STI_TRACK.mountModal(cls,n,o);
-  if (window.STI_ANNEX_TRACK) window.STI_ANNEX_TRACK.mountModal(cls,n,o,"m-body");
   document.getElementById("m-done").addEventListener("change",function(){ if(this.checked) document.getElementById("m-rep").checked=false; });
   document.getElementById("m-rep").addEventListener("change",function(){ if(this.checked) document.getElementById("m-done").checked=false; });
   if (cls === "4SI2" && s.iso >= "2026-10-05" && s.iso <= "2026-12-28" && o.title && s.blk && o.title !== s.blk.t) {
@@ -1628,19 +2123,18 @@ function closeModal(){ document.getElementById("modal").classList.remove("on"); 
 function saveModal(){
   if (!mCtx) return;
   const k = mCtx.cls+"|"+mCtx.n;
+  { const sv = SESSIONS[mCtx.cls].find(x => x.n === mCtx.n), vv = sv && seanceVerrouillee(sv);
+    if (vv){ toast("Trimestre verrouillé ("+vv.par+", "+fmtShort(vv.le)+") : la fiche n’est plus modifiable."); return; } }
   const doneBox = document.getElementById("m-done").checked;
   const repBox = document.getElementById("m-rep").checked;
   const s = SESSIONS[mCtx.cls].find(x => x.n === mCtx.n);
   if (doneBox && s && s.iso > todayISO()) { toast("Une séance future ne peut pas être déclarée assurée."); return; }
   if (doneBox && repBox) { toast("Choisissez assurée ou reportée, pas les deux."); return; }
   const previous = store.seances[k] || {};
-  const annexSelection = window.STI_ANNEX_TRACK ? window.STI_ANNEX_TRACK.selection(mCtx.cls,mCtx.n) : null;
   store.seances[k] = {
     ...previous,
     notions: window.STI_TRACK ? window.STI_TRACK.selection(mCtx.cls) : (previous.notions || []),
     notionsVersion: window.STI_TRACK ? window.STI_TRACK.version : previous.notionsVersion,
-    annexes: annexSelection !== null ? annexSelection : (previous.annexes || []),
-    annexesVersion: annexSelection !== null && window.STI_ANNEX_TRACK ? window.STI_ANNEX_TRACK.version : previous.annexesVersion,
     title: document.getElementById("m-titre").value.trim(),
     preparation: document.getElementById("m-preparation").value.trim(),
     contenu: document.getElementById("m-contenu").value.trim(),
@@ -1675,9 +2169,9 @@ function cloudCard(){
     </div>
     <div class="card-b">
       <p class="tiny muted" style="margin-bottom:10px">
-        Vos données sont conservées sur cet appareil pour le travail hors ligne et synchronisées dans les deux sens avec
-        votre base <strong>Supabase</strong> quand l’application est ouverte et connectée. Retrouvez le même espace sur
-        votre téléphone, votre tablette et le poste du lycée.
+        Vos fiches de séance, horaires et cahier de textes sont enregistrés dans ce navigateur puis envoyés à votre base
+        <strong>Supabase</strong> (PostgreSQL + API REST). Vous pouvez ainsi retrouver les mêmes données sur le téléphone,
+        la tablette et le poste du lycée.
       </p>
       <div class="space-y" style="display:grid;gap:8px">
         <div class="spread"><span class="tiny muted">Projet</span><span class="tiny">${c.url ? c.url.replace(/^https?:\/\//,"").split(".")[0] + " • table " + c.table : "non configuré"}</span></div>
@@ -1688,7 +2182,8 @@ function cloudCard(){
         <div class="spread"><span class="tiny muted">Connexion</span><span class="tiny">${cloudWho()}</span></div>
       </div>
       <div class="row no-print" style="margin-top:12px;gap:8px">
-        <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Synchroniser maintenant</button>
+        <button class="btn btn-xs btn-blue" onclick="cloudPush(false)">${ic("cloud")} Envoyer maintenant</button>
+        <button class="btn btn-xs btn-soft" onclick="cloudPull()">${ic("down")} Recevoir et fusionner</button>
         ${authNeeded() ? (authSession()
             ? '<button class="btn btn-xs btn-line" onclick="doLogout()">' + ic("out") + ' Se déconnecter</button>'
             : '<button class="btn btn-xs btn-blue" onclick="openAuth()">' + ic("lock") + ' Se connecter</button>') : ""}
@@ -1697,9 +2192,9 @@ function cloudCard(){
         <button class="btn btn-xs btn-line" onclick="exportJSON()">${ic("file")} Export JSON</button>
       </div>
       <div class="note tiny" style="margin-top:10px">${ic("pin")}
-        ${authNeeded() && !authSession() ? 'Accès protégé par mot de passe : connectez-vous pour synchroniser vos données. ' : ""}
+        ${authNeeded() && !authSession() ? 'Accès protégé par mot de passe : connectez-vous pour envoyer et restaurer les données du cloud. ' : ""}
         ${cloudReady()
-          ? 'Base distante configurée. En cas d\'échec, vérifiez la table <code>' + c.table + '</code>, la clé publique, la fonction SQL et les règles RLS décrites dans le <code>README.md</code>.'
+          ? 'Base distante configurée. En cas d\'échec, vérifiez la table <code>' + c.table + '</code>, la clé publique et les règles RLS décrites dans le <code>README.md</code>.'
           : 'Aucune base distante configurée : les données restent dans ce navigateur (et dans l\'export JSON). Cliquez sur <strong>Configuration</strong> et renseignez l\'URL du projet Supabase et la clé publique — la table SQL est fournie dans <code>supabase/schema.sql</code>.'}
       </div>
     </div>
@@ -1858,7 +2353,7 @@ window.go = go;
 window.toast = toast;
 window.nextSessions = nextSessions;
 window.kpiDone = kpiDone;
-window.renderDash = renderDash;
+window.renderDash = renderDash; window.dashRappelsCard = dashRappelsCard;
 window.triLabel = triLabel;
 window.dcOf = dcOf;
 window.renderEDT = renderEDT;
@@ -1923,6 +2418,7 @@ window.applyUpdate = applyUpdate;
 /* état exposé (débogage et tests) */
 window.cloudPush = cloudPush;
 window.cloudPull = cloudPull;
+window.printCahier = printCahier; window.cahierCSV = cahierCSV; window.cahierPDF = cahierPDF;
 window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.renderCompte = renderCompte; window.renderLoginInvite = renderLoginInvite;
 window.toggleCompte = toggleCompte; window.menuAction = menuAction; window.fermerMenuCompte = fermerMenuCompte;
 window.APP_VER = APP_VER; window.forceMaj = forceMaj; window.clsCoul = clsCoul; window.KEY = KEY;

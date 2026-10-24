@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Espace pédagogique STI — Prof. Aymen Essouyah | Lycée Rafèha Ariana — 2026/2027</title>
-<meta name="description" content="Espace pédagogique du professeur Aymen Essouyah (STI) — 3SI1 et 4SI2 : emploi du temps, calendrier scolaire tunisien, cahier de textes et synchronisation multi-appareils avec sauvegarde hors ligne.">
+<meta name="description" content="Espace pédagogique du professeur Aymen Essouyah (matière STI) — 3SI1 et 4SI2 — Lycée Rafèha Ariana : emploi du temps, calendrier scolaire tunisien 2026-2027, répartition du 1er trimestre, annexes HTML5/CSS3/JavaScript/PHP/SQL, cahier de textes et sauvegarde distante.">
 <meta name="author" content="Aymen Essouyah">
 <meta name="theme-color" content="#0b2545">
 <meta name="color-scheme" content="light">
@@ -55,7 +55,7 @@
 <div class="tiny muted" id="mc-ver" style="padding:6px 10px 4px;border-top:1px solid var(--line-2);margin-top:4px"></div>
 </div>
 </div>
-<button class="btn btn-ghost" id="btn-cloud" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"></path><path d="M17 18H7a4 4 0 0 1 0-8"></path><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"></path></svg> Cloud</button><button class="btn btn-ghost" id="btn-sync-now" onclick="cloudPush(false)" title="Synchroniser cet appareil avec le Cloud dans les deux sens" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"></path></svg><span>Synchroniser</span></button>
+<button class="btn btn-ghost" id="btn-cloud" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"></path><path d="M17 18H7a4 4 0 0 1 0-8"></path><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"></path></svg> Cloud</button><button class="btn btn-ghost" id="btn-cloud-send" onclick="cloudPush(false)" title="Envoyer une sauvegarde de cet appareil au Cloud" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 17V3M7 8l5-5 5 5M5 17v4h14v-4"></path></svg><span>Envoyer au Cloud</span></button><button class="btn btn-ghost" id="btn-cloud-restore" onclick="cloudPull(false)" title="Recevoir et fusionner les modifications ; les conflits restent à valider" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 3v14M7 12l5 5 5-5M5 17v4h14v-4"></path></svg><span>Recevoir du Cloud</span></button>
 <button class="btn btn-ghost" id="btn-print-menu" type="button" title="Choisir le document et les filtres à imprimer"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect height="8" width="12" x="6" y="14"></rect></svg> Centre d'impression</button>
 <button class="btn btn-ghost" onclick="exportJSON()"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5M12 15V3"></path></svg> Exporter</button>
 <button class="btn btn-ghost" id="btn-install" onclick="installApp()" style="display:none"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg> Installer l'application</button>
@@ -96,6 +96,7 @@
 <span class="chip">Matière : STI</span>
 <span class="chip">2026 / 2027</span>
 <span class="chip">3SI1 &amp; 4SI2</span>
+<span class="chip" id="ver-chip" title="Version réellement chargée dans ce navigateur">version</span>
 </div>
 </div>
 </div>
@@ -104,6 +105,52 @@
 </header>
 
 <!-- ===================== BANDEAU DE MISE À JOUR ===================== -->
+<!-- ===== CONTRÔLE DE COHÉRENCE : la page dit elle-même quelle version d'app.js tourne ===== -->
+<div id="maj-alerte" class="no-print" style="display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:99;background:#fdecea;border:1px solid #f3b7b1;color:#8c1d18;border-radius:12px;padding:12px 14px;font:13px/1.45 system-ui,'Segoe UI',Arial,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.18)">
+  <div style="display:flex;gap:12px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap">
+    <div style="min-width:220px;flex:1"><strong>Mise à jour incomplète.</strong> <span id="maj-alerte-txt"></span></div>
+    <div style="display:flex;gap:8px;flex-shrink:0">
+      <button type="button" onclick="majViderCache()" style="cursor:pointer;border:0;border-radius:8px;padding:7px 12px;background:#8c1d18;color:#fff;font:inherit;font-weight:700">Vider le cache et recharger</button>
+      <button type="button" onclick="document.getElementById('maj-alerte').style.display='none'" style="cursor:pointer;border:1px solid #f3b7b1;border-radius:8px;padding:7px 12px;background:#fff;color:#8c1d18;font:inherit">Masquer</button>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  var ATTENDU = "v1.8.1-cloud-repair";
+  window.MAJ_ATTENDUE = ATTENDU;
+  /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
+  window.majViderCache = function () {
+    var fin = function () { location.reload(); };
+    try {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          return Promise.all(rs.map(function (r) { return r.unregister(); }));
+        }).then(function () {
+          if (window.caches && caches.keys) {
+            return caches.keys().then(function (ks) {
+              return Promise.all(ks.map(function (k) { return caches.delete(k); }));
+            });
+          }
+        }).then(fin, fin);
+      } else { fin(); }
+    } catch (e) { fin(); }
+  };
+  function verifier() {
+    var z = document.getElementById('maj-alerte'), t = document.getElementById('maj-alerte-txt');
+    if (!z || !t) return;
+    var vu = (typeof window.APP_VER === 'string' && window.APP_VER) ? window.APP_VER : '';
+    if (vu === ATTENDU) { z.style.display = 'none'; return; }
+    t.innerHTML = 'Le fichier <code>assets/app.js</code> chargé sur cet appareil est <b>' + (vu || 'absent') +
+      '</b>, alors que cette page attend <b>' + ATTENDU + '</b>. Le dépôt n’a pas encore reçu ce fichier : ' +
+      'le cahier de textes rénové, l’export PDF et la réparation de la synchronisation restent indisponibles.';
+    z.style.display = 'block';
+  }
+  if (document.readyState === 'complete') setTimeout(verifier, 800);
+  else window.addEventListener('load', function () { setTimeout(verifier, 800); });
+})();
+</script>
+
 <div id="update-bar" class="update-bar hidden no-print">
   <span>Une nouvelle version de l'application est prête. Vos données locales sont conservées.</span>
   <button class="btn btn-xs btn-primary" onclick="applyUpdate()">Mettre à jour</button>
@@ -314,7 +361,7 @@
     </div>
     <div class="box-b">
       <p class="small" style="color:var(--ink-2);margin-bottom:12px">
-        Renseignez l'URL de votre projet <strong>Supabase</strong> et sa clé publique (anon). Conservez votre base existante. Pour une base existante, la synchronisation bidirectionnelle nécessite <code>installation/synchronisation-atomique.sql</code> ; une nouvelle base peut être initialisée avec <code>supabase/schema.sql</code>. Le nom de l'appareil est propre à ce navigateur.
+        Renseignez l'URL de votre projet <strong>Supabase</strong> et sa clé publique (anon). Conservez votre base existante. La synchronisation bidirectionnelle nécessite le script <code>installation/synchronisation-atomique.sql</code> et un accès protégé par compte. Consultez <code>MISE_A_JOUR_STI.md</code>.
       </p>
       <div style="margin-bottom:10px"><label class="f">URL du projet Supabase</label>
         <input type="text" id="cfg-url" placeholder="https://xxxxxxxx.supabase.co"></div>
@@ -322,7 +369,7 @@
         <input type="text" id="cfg-key" placeholder="eyJhbGciOi... ou sb_publishable_..."></div>
       <div class="grid g2" style="gap:10px;margin-bottom:10px">
         <div><label class="f">Table <span class="tiny muted">(nom SQL — ne pas modifier)</span></label><input type="text" id="cfg-table" value="espace_pedagogique"></div>
-        <div><label class="f">Nom de cet appareil</label><input type="text" id="cfg-device" placeholder="Ex. : Téléphone personnel / PC du lycée"></div>
+        <div><label class="f">Nom de cet appareil</label><input type="text" id="cfg-device" placeholder="Téléphone — Prof. Aymen"></div>
       </div>
       <label class="badge b-blue" style="cursor:pointer;display:inline-flex;gap:6px">
         <input type="checkbox" id="cfg-auto"> Synchroniser automatiquement dans les deux sens
@@ -363,9 +410,9 @@
 
 <!-- ===================== APPLICATION ===================== -->
 <script src="assets/suivi-sti.js"></script>
-<script src="assets/suivi-annexes.js"></script>
 <script src="assets/interface-reference.js"></script>
 <script src="assets/agent-sti.js"></script>
+<script src="assets/cahier-pdf.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/eleves.js"></script>
 <script src="assets/admin.js"></script>

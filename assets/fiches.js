@@ -45,7 +45,6 @@ function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
 function fmtLong(iso) { const d = D(iso); return JOURS[d.getDay()] + ' ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' ' + d.getFullYear(); }
 function fmtShort(iso) { const d = D(iso); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); }
-function todayISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 
 function load() {
   try { edits = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { edits = {}; }
@@ -441,9 +440,10 @@ let formHTMLPromise = null;
 /* Le service worker renvoie index.html pour toute navigation : on ne peut donc
    pas charger le formulaire par le src d'une iframe. On récupère le fichier par
    fetch() puis on l'injecte dans l'iframe par srcdoc. */
+const FORM_BUILD = 'v1.6.5';          /* version de assets/fiche-formulaire.html attendue */
 function formHTML() {
   if (!formHTMLPromise) {
-    formHTMLPromise = fetch('assets/fiche-formulaire.html', { cache: 'no-cache' })
+    formHTMLPromise = fetch('assets/fiche-formulaire.html?v=' + FORM_BUILD, { cache: 'no-cache' })
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.text(); })
       .catch(function () { formHTMLPromise = null; throw new Error('formulaire indisponible'); });
   }
@@ -471,6 +471,9 @@ function ensureFormBox() {
         <div style="min-width:220px">
           <strong id="ffm-title" style="color:#12324d;font-size:15px">Fiche pédagogique</strong>
           <div id="ffm-sub" class="tiny muted"></div>
+          <div id="ffm-av" class="tiny" style="margin-top:3px;color:#6b6b6b"></div>
+          <div id="ffm-cov" class="tiny" style="margin-top:2px;color:#6b6b6b"></div>
+          <div id="ffm-ver" class="tiny" style="margin-top:2px;color:#9a9187">formulaire …</div>
         </div>
         <div class="row no-print" style="gap:6px;flex-wrap:wrap">
           <button class="btn btn-xs btn-line" title="Imprime la fiche au format du document (PDF), pas le formulaire"
@@ -478,27 +481,16 @@ function ensureFormBox() {
           <button class="btn btn-xs btn-line" title="Revient à la fiche d'origine (annule vos modifications)"
                   onclick="STI_FICHES.formReset()">Rétablir la fiche d'origine</button>
           <button class="btn btn-xs btn-blue" onclick="STI_FICHES.formSave()">Enregistrer la fiche</button>
+          <button class="btn btn-xs btn-line" title="Ouvre la fenêtre de séance d'origine : déroulement réel, observations, notions du Smart Book"
+                  onclick="STI_FICHES.classicModal()">${ic('file')} Fiche de séance</button>
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
         </div>
       </div>
-      <div id="ffm-status" class="no-print" style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;border-bottom:1px solid #e5ded7;background:#fff;color:#26394a;font-size:12px">
-        <strong style="margin-right:auto">État de la séance</strong>
-        <label class="badge b-green" style="cursor:pointer"><input type="checkbox" id="ffm-done"> Séance assurée</label>
-        <label class="badge b-rose" style="cursor:pointer"><input type="checkbox" id="ffm-rep"> Séance reportée</label>
-        <small style="flex-basis:100%;color:#6d8299;font-size:10px">L’état sera enregistré avec cette fiche.</small>
-      </div>
       <iframe id="ffm-frame" title="Formulaire de fiche pédagogique"
-              style="flex:1 1 0;min-height:0;width:100%;border:0;background:#fff"></iframe>
-      <details id="ffm-annex-details" class="no-print" style="flex:0 0 auto;max-height:38vh;overflow:hidden;background:#fff;border-top:1px solid #e5ded7">
-        <summary style="padding:9px 14px;cursor:pointer;color:#174b7d;font-size:12px;font-weight:700">Suivi des annexes — 234 éléments</summary>
-        <div id="ffm-annex-host" style="max-height:33vh;overflow:auto;padding:0 8px 8px"></div>
-      </details>
+              style="flex:1 1 auto;width:100%;border:0;background:#fff"></iframe>
     </div>`;
   document.body.appendChild(d);
   d.addEventListener('click', function (e) { if (e.target === d) formClose(); });
-  const done = d.querySelector('#ffm-done'), reported = d.querySelector('#ffm-rep');
-  done.addEventListener('change', function () { if (this.checked) reported.checked = false; });
-  reported.addEventListener('change', function () { if (this.checked) done.checked = false; });
   const fr = d.querySelector('#ffm-frame');
   fr.addEventListener('load', function () { if (formN) fillForm(formN); });
 }
@@ -547,6 +539,41 @@ function fillForm(n) {
     i.title = i.value || '';
     if (!i.__tip) { i.__tip = 1; i.addEventListener('input', function () { i.title = i.value; }); }
   });
+  /* témoin de version : signale une copie ancienne restée en cache */
+  (function () {
+    const v = document.getElementById('ffm-ver');
+    if (!v) return;
+    const w2 = document.getElementById('ffm-frame');
+    let b = '';
+    try { b = (w2.contentDocument.documentElement.getAttribute('data-form-build') || '').trim(); } catch (e) {}
+    if (!b) {
+      v.innerHTML = '<b style="color:#b00020">formulaire hors ligne ou obsolète (version illisible)</b> — actualisez la page (Ctrl+F5).';
+    } else if (b !== FORM_BUILD) {
+      v.innerHTML = '<b style="color:#b00020">copie ancienne : ' + esc(b) + ' (attendu ' + FORM_BUILD + ')</b> — actualisez la page (Ctrl+F5).';
+    } else {
+      v.textContent = 'formulaire ' + b + ' ✓';
+    }
+  })();
+  try {
+    if (w.SUIVI && w.SUIVI.init) w.SUIVI.init(seanceEtat(n));
+    if (w.LIVRE) {
+      const st = (root.store && root.store.seances && root.store.seances[ficCls + '|' + n]) || {};
+      if (w.AV && w.AV.jeu) w.LIVRE.build(notionsLivre(), w.AV.jeu().domaines || w.AV.jeu());
+      else w.LIVRE.build(notionsLivre());
+      /* une fiche cumule les notions des séances précédentes (avancement) */
+      const prev = [];
+      Object.keys(root.store && root.store.seances || {}).forEach(function (k) {
+        const parts = k.split('|');
+        if (parts[0] !== ficCls || Number(parts[1]) >= n) return;
+        ((root.store.seances[k] || {}).notions || []).forEach(function (id) { if (prev.indexOf(id) < 0) prev.push(id); });
+      });
+      const union = prev.slice();
+      (st.notions || []).forEach(function (id) { if (union.indexOf(id) < 0) union.push(id); });
+      w.LIVRE.select(union);
+    }
+    if (w.AV && w.AV.init) w.AV.init();
+  } catch (e) {}
+  peindreCouverture();
   const t = document.getElementById('ffm-title');
   const sub = document.getElementById('ffm-sub');
   if (t) t.textContent = 'Fiche pédagogique — séance ' + f.n + (isEdited(f.n) ? ' (modifiée)' : '');
@@ -558,10 +585,6 @@ function openForm(n, classe) {
   if (!fiche(n)) { if (root.toast) root.toast('Fiche indisponible pour cette séance'); return; }
   ensureFormBox();
   formN = n;
-  const record = root.store && root.store.seances ? root.store.seances[ficCls + '|' + n] || {} : {};
-  document.getElementById('ffm-done').checked = record.done === true;
-  document.getElementById('ffm-rep').checked = record.done === false;
-  if (root.STI_ANNEX_TRACK) root.STI_ANNEX_TRACK.mountModal(ficCls, n, record, 'ffm-annex-host');
   const m = document.getElementById('fiche-form-modal');
   m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
@@ -642,7 +665,7 @@ function readForm() {
 }
 
 /* enregistre la fiche : champs du formulaire → fiche → préparation → impression */
-function commit(f, status) {
+function commit(f) {
   edits[ficCls + '|' + f.n] = {
     titre: f.titre, modules: f.modules, methode: f.methode, maison: f.maison,
     objectifs: f.objectifs, prerequis: f.prerequis, criteres: f.criteres,
@@ -653,16 +676,9 @@ function commit(f, status) {
   try {
     if (CF().synchro && root.store && root.store.seances && typeof root.save === 'function') {
       const k = ficCls + '|' + f.n;
-      const sessionData = Object.assign({}, root.store.seances[k] || {},
+      root.store.seances[k] = Object.assign({}, root.store.seances[k] || {},
         { preparation: prepText(f, ficCls), devoirs: plat(f.maison) || (root.store.seances[k] || {}).devoirs,
           title: f.titre });
-      if (status && status.present) sessionData.done = status.done ? true : (status.reported ? false : undefined);
-      const annexSelection = root.STI_ANNEX_TRACK ? root.STI_ANNEX_TRACK.selection(ficCls, f.n) : null;
-      if (annexSelection !== null) {
-        sessionData.annexes = annexSelection;
-        sessionData.annexesVersion = root.STI_ANNEX_TRACK.version;
-      }
-      root.store.seances[k] = sessionData;
       root.save(true);
     }
   } catch (e) {}
@@ -694,18 +710,12 @@ function applyForm(d) {
 }
 
 function formSave() {
-  const doneControl = document.getElementById('ffm-done');
-  const repControl = document.getElementById('ffm-rep');
-  const hasStatusControls = !!(doneControl && repControl);
-  const doneBox = hasStatusControls && doneControl.checked;
-  const repBox = hasStatusControls && repControl.checked;
-  if (doneBox && repBox) { if (root.toast) root.toast('Choisissez assurée ou reportée, pas les deux.'); return; }
   const d = readForm();
   if (!d) return;
   const f = applyForm(d);
   if (!f) return;
-  if (doneBox && f.date > todayISO()) { if (root.toast) root.toast('Une séance future ne peut pas être déclarée assurée.'); return; }
-  commit(f, { present: hasStatusControls, done: doneBox, reported: repBox });
+  commit(f);
+  syncNotions(f.n);
   formClose();
   if (root.toast) root.toast('Fiche n°' + f.n + ' enregistrée (formulaire)');
 }
@@ -746,11 +756,7 @@ function open(n) {
   ensureBox();
   ctxN = n;
   document.getElementById('fm-title').innerHTML = 'Aperçu du document — séance ' + n + ' · ' + esc(fmtShort(f.date));
-  const record = root.store && root.store.seances ? root.store.seances[ficCls + '|' + n] || {} : {};
-  document.getElementById('fm-body').innerHTML = `<div id="fm-session-status" class="no-print"><strong>État de la séance</strong><label class="badge b-green"><input type="checkbox" id="fm-done" ${record.done === true ? 'checked' : ''}> Séance assurée</label><label class="badge b-rose"><input type="checkbox" id="fm-rep" ${record.done === false ? 'checked' : ''}> Séance reportée</label><small>À confirmer lors de l’enregistrement de la fiche.</small></div>` + ficheHTML(f, true);
-  document.getElementById('fm-done').addEventListener('change', function () { if (this.checked) document.getElementById('fm-rep').checked = false; });
-  document.getElementById('fm-rep').addEventListener('change', function () { if (this.checked) document.getElementById('fm-done').checked = false; });
-  if (root.STI_ANNEX_TRACK) root.STI_ANNEX_TRACK.mountModal(ficCls, n, record, 'fm-body');
+  document.getElementById('fm-body').innerHTML = ficheHTML(f, true);
   document.getElementById('fm-hint').innerHTML = isEdited(n)
     ? '<span class="badge b-amber">fiche modifiée</span> vos corrections sont conservées dans votre espace.'
     : 'Tous les champs sont modifiables : cliquez dans le texte pour le corriger.';
@@ -803,14 +809,7 @@ function collect() {
 
 function save() {
   if (!ctxN) return;
-  const doneControl = document.getElementById('fm-done');
-  const repControl = document.getElementById('fm-rep');
-  const hasStatusControls = !!(doneControl && repControl);
-  const doneBox = hasStatusControls && doneControl.checked;
-  const repBox = hasStatusControls && repControl.checked;
-  if (doneBox && repBox) { if (root.toast) root.toast('Choisissez assurée ou reportée, pas les deux.'); return; }
   const f = collect();
-  if (doneBox && f.date > todayISO()) { if (root.toast) root.toast('Une séance future ne peut pas être déclarée assurée.'); return; }
   edits[ficCls + '|' + ctxN] = {
     titre: f.titre, modules: f.modules, methode: f.methode, maison: f.maison,
     objectifs: f.objectifs, prerequis: f.prerequis, criteres: f.criteres,
@@ -821,17 +820,10 @@ function save() {
   try {
     if (CF().synchro && root.store && typeof root.save === 'function') {
       const k = ficCls + '|' + ctxN;
-      const prep = prepText(f, ficCls);
-      const sessionData = Object.assign({}, root.store.seances[k] || {},
+      const prep = prepText(f);
+      root.store.seances[k] = Object.assign({}, root.store.seances[k] || {},
         { preparation: prep, devoirs: plat(f.maison), title: f.titre,
           prepFromFiche: false, titleFromFiche: false });
-      if (hasStatusControls) sessionData.done = doneBox ? true : (repBox ? false : undefined);
-      const annexSelection = root.STI_ANNEX_TRACK ? root.STI_ANNEX_TRACK.selection(ficCls, ctxN) : null;
-      if (annexSelection !== null) {
-        sessionData.annexes = annexSelection;
-        sessionData.annexesVersion = root.STI_ANNEX_TRACK.version;
-      }
-      root.store.seances[k] = sessionData;
       root.save(true);
     }
   } catch (e) {}
@@ -846,7 +838,115 @@ function reset() {
   if (root.toast) root.toast('Fiche n°' + ctxN + ' restaurée');
 }
 function openClassic() {
-  if (typeof classic === 'function' && ctxN) { close(); classic(ficCls, ctxN); }
+  if (typeof classic === 'function' && ctxN) { close(); classic(CLS, ctxN); }
+}
+
+/* ------------------------------------------------ couverture moyenne des deux livres
+   Reprend le KPI de l'application : moyenne des pourcentages de couverture des deux
+   livres (notions uniques du Smart Book abordées lors des séances assurées).      */
+function coverage() {
+  const T = root.STI_TRACK;
+  if (!T || typeof T.summary !== 'function') return null;
+  try {
+    const a = T.summary('3SI1'), b = T.summary('4SI2');
+    return { a: a.percent, b: b.percent, ca: a.covered, cb: b.covered,
+             tot: (a.total || 0) + (b.total || 0), covered: (a.covered || 0) + (b.covered || 0),
+             mean: Math.round((a.percent + b.percent) / 2 * 10) / 10 };
+  } catch (e) { return null; }
+}
+
+/* état de la case « séance assurée » de la séance affichée */
+/* notions du Smart Book : mêmes données que le suivi de l'application */
+function notionsLivre() {
+  const L = root.STI_DATA && root.STI_DATA.livresSTI;
+  const c = L && L[ficCls];
+  return (c && c.items) || [];
+}
+
+/* enregistre la sélection du formulaire dans la séance (sans passer par le rendu) */
+function syncNotions(n) {
+  const fr = document.getElementById('ffm-frame');
+  const w = fr && fr.contentWindow;
+  if (!w || !w.LIVRE || !n || !root.store || !root.store.seances) return;
+  const k = ficCls + '|' + n;
+  const o = root.store.seances[k] || (root.store.seances[k] = {});
+  o.notions = w.LIVRE.selection();
+  o.notionsVersion = 'smart-books-2026-v1';
+  try { if (typeof root.save === 'function') root.save(true); } catch (e) {}
+}
+
+function seanceEtat(n) {
+  const o = (root.store && root.store.seances && root.store.seances[ficCls + '|' + n]) || {};
+  return { assuree: o.done === true, reportee: o.done === false };
+}
+
+/* Appelé par le formulaire quand on coche « Séance assurée » / « Séance reportée ».
+   Enregistre l'état, relance le rendu (donc le recalcul de la couverture moyenne)
+   et renvoie false si l'opération est refusée.                                   */
+function markSeance(n, estAssuree, val) {
+  if (!n || !root.store || !root.store.seances) return false;
+  const iso = new Date().toISOString().slice(0, 10);
+  const s = (root.SESSIONS && root.SESSIONS[ficCls] || []).find(function (x) { return x.n === n; });
+  if (estAssuree && val && s && s.iso > iso) {
+    if (root.toast) root.toast('Une séance future ne peut pas être déclarée assurée.');
+    return false;
+  }
+  const k = ficCls + '|' + n;
+  if (estAssuree && val) syncNotions(n);        /* les notions cochées entrent dans la couverture */
+  const avant = coverage();
+  const o = root.store.seances[k] || (root.store.seances[k] = {});
+  o.done = val ? (estAssuree ? true : false) : undefined;
+  if (estAssuree && val) {                      /* une séance assurée n'est pas « reportée » */
+    o.notions = o.notions || [];
+    o.notionsVersion = o.notionsVersion || 'smart-books-2026-v1';
+  }
+  try { if (typeof root.save === 'function') root.save(true); } catch (e) {}
+  const apres = coverage();
+  lastCoverage = { avant: avant, apres: apres, quand: new Date() };
+  if (root.toast) {
+    if (apres && avant) {
+      const d = Math.round((apres.mean - avant.mean) * 10) / 10;
+      root.toast((estAssuree && val ? 'Séance assurée. ' : 'Séance non assurée. ') +
+        'Couverture moyenne : ' + avant.mean + ' % → ' + apres.mean + ' %' + (d ? ' (' + (d > 0 ? '+' : '') + d + ')' : ''));
+    } else {
+      root.toast(estAssuree && val ? 'Séance assurée' : 'Séance non confirmée');
+    }
+  }
+  peindreCouverture();
+  return true;
+}
+
+let lastCoverage = null;
+function derniereCouverture() {
+  if (!lastCoverage || !lastCoverage.apres) {
+    const c = coverage();
+    return c ? 'Couverture moyenne actuelle : ' + c.mean + ' % (3SI1 ' + c.a + ' % · 4SI2 ' + c.b + ' %).' : '';
+  }
+  const a = lastCoverage.avant, b = lastCoverage.apres;
+  return 'Couverture moyenne recalculée : ' + (a ? a.mean + ' % → ' : '') + b.mean + ' % — ' +
+    'notions uniques couvertes : ' + b.covered + ' / ' + b.tot + ' (3SI1 ' + b.a + ' % · 4SI2 ' + b.b + ' %).';
+}
+
+/* bandeau de couverture dans l'en-tête de la boîte */
+function peindreCouverture() {
+  const el = document.getElementById('ffm-cov');
+  if (!el) return;
+  const c = coverage();
+  if (!c) { el.textContent = ''; return; }
+  el.innerHTML = '<span class="muted">Couverture moyenne</span> <b>' + c.mean + ' %</b>' +
+    ' <span class="muted">· 3SI1 ' + c.a + ' % · 4SI2 ' + c.b + ' % · ' + c.covered + '/' + c.tot + ' notions uniques</span>';
+}
+
+/* avancement du référentiel (calculé dans le formulaire, affiché ici) */
+function avUpdate(pct, fait, total, classe) {
+  const el = document.getElementById('ffm-av');
+  if (!el) return;
+  const c = Math.round((pct || 0) * 2.55);
+  el.innerHTML = '<span style="display:inline-block;width:64px;height:6px;border-radius:4px;' +
+    'background:#e9e2db;vertical-align:middle;overflow:hidden">' +
+    '<span style="display:block;height:100%;width:' + c + '%;background:linear-gradient(90deg,#e4661f,#38968e)"></span>' +
+    '</span> Avancement ' + (pct || 0) + ' % <span class="muted">(' + (fait || 0) + '/' + (total || 0) +
+    ' notions' + (classe ? ' · ' + classe : '') + ')</span>';
 }
 
 /* --------------------------------------------------- ouverture d'un PDF
@@ -1320,7 +1420,8 @@ root.STI_FICHES = {
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,
-  form: n => openForm(n), formSave, formClose, formPrint, formReset, printSelected, pdf: openPdf,
+  form: n => openForm(n), formSave, formClose, formPrint, formReset, printSelected, pdf: openPdf, avUpdate,
+  markSeance, coverage, derniereCouverture, classicModal: () => { if (classic) classic.apply(root, [ficCls, formN]); },
   repTri: v => { repTri = v; const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },
   repCls: c => { repCls = CLS_REP[c] ? c : '4SI2'; repTri = 0;
                  const b = document.getElementById('rep-4si2'); if (b) b.outerHTML = repHTML(); },

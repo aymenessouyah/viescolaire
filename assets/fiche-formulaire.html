@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-form-build="v1.6.5">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -30,9 +30,109 @@ input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color
 .meta{margin-top:12px}
 .moy{margin-top:12px}
 .bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+/* ---- avancement : fonctions et propriétés des annexes ---- */
+.av-card{background:var(--card);border-radius:10px;padding:12px 14px;border-top:4px solid var(--c3)}
+/* --- tableau de bord : total, par classe, histogrammes par famille --- */
+.dash{display:grid;grid-template-columns:260px 1fr;gap:14px;margin-bottom:14px}
+.dash-total{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:12px 14px;text-align:left}
+.dash-big{font-size:40px;font-weight:800;line-height:1;color:var(--c3)}
+.dash-sub{font-size:12px;color:var(--mut);margin-top:4px}
+.dash-track{height:12px;border-radius:6px;background:#e9e2db;overflow:hidden;margin-top:10px}
+.dash-track>span{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--c1),var(--c3))}
+.dash-classes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cls-card{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;border-left:5px solid var(--c4)}
+.cls-card.on{border-left-color:var(--c3);box-shadow:0 0 0 2px rgba(42,157,143,.15) inset}
+.cls-card .cc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cls-card .cc-nom{font-weight:800;font-size:14px}
+.cls-card .cc-pct{font-weight:800;font-size:20px}
+.cls-card .cc-det{font-size:11.5px;color:var(--mut);margin-top:2px}
+.hist{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;margin-bottom:12px}
+.hist h4{margin:0 0 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);display:flex;gap:8px;align-items:baseline}
+.hist h4 b{color:var(--ink);font-size:13px;letter-spacing:0;text-transform:none}
+.hist h4 .src{font-weight:400;letter-spacing:0;text-transform:none;color:var(--mut);margin-left:auto;font-size:11px}
+.fams{display:block}
+.fam{border-bottom:1px dashed var(--line);padding:6px 0 8px}
+.fam:last-child{border-bottom:0}
+.fam-h{display:flex;gap:8px;align-items:baseline;font-size:11.5px;font-weight:800;letter-spacing:.06em;
+  text-transform:uppercase;margin-bottom:5px}
+.fam-h small{font-weight:700;color:var(--mut);letter-spacing:0;text-transform:none;margin-left:auto}
+.fam-h .av-bar{flex:1 1 60px;height:8px;border-radius:5px;background:#e9e2db;overflow:hidden;align-self:center;min-width:60px}
+.fam-h .av-bar>i{display:block;height:100%;background:currentColor;border-radius:5px}
+.row{display:grid;grid-template-columns:210px 1fr 74px;gap:9px;align-items:center;padding:1px 0;cursor:pointer}
+.row:hover{background:#fbf6f1}
+.row .lb{font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .hb{height:11px;border-radius:5px;background:#eae4dd;overflow:hidden}
+.row .hb>i{display:block;height:100%;border-radius:5px;background:currentColor;opacity:.9}
+.row .vl{font-size:11.5px;font-weight:700;color:var(--mut);text-align:right;white-space:nowrap}
+.row .vl b{color:var(--ink)}
+@media (max-width:1100px){.dash{grid-template-columns:1fr}.dash-classes{grid-template-columns:1fr}}
+.av-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.av-big{font-size:30px;font-weight:800;line-height:1;color:var(--c3)}
+.av-lab{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.av-track{height:10px;border-radius:6px;background:#e9e2db;overflow:hidden;flex:1 1 240px;min-width:150px}
+.av-track>span{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--c1),var(--c3));transition:width .25s}
+.av-chips{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:12px}
+.chip{text-align:left;background:var(--field);border:1px solid var(--line);border-radius:8px;padding:7px 9px;cursor:pointer;font:inherit;color:var(--ink);font-weight:700;opacity:.85}
+.chip .cc{display:block;font-size:11px;font-weight:600;color:var(--mut);margin-top:2px}
+.chip .ct{display:block;height:4px;border-radius:3px;background:#e9e2db;margin-top:5px;overflow:hidden}
+.chip .ct>span{display:block;height:100%;width:0;background:currentColor}
+.chip.on{opacity:1;box-shadow:0 0 0 2px var(--c4) inset}
+.av-panel{margin-top:14px}
+.av-cat{margin-bottom:12px}
+.av-cat h4{margin:0 0 5px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--c1);display:flex;gap:8px;align-items:baseline}
+.av-cat h4 .n{font-weight:400;color:var(--mut);letter-spacing:0;text-transform:none}
+.av-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:1px 16px}
+.av-item{display:flex;gap:7px;align-items:flex-start;font-size:12.5px;line-height:1.35;padding:2px 0;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.av-item input{margin:2px 0 0;accent-color:var(--c3);cursor:pointer}
+.av-item code{font:600 11.5px/1.35 ui-monospace,Consolas,monospace;background:var(--field);border:1px solid var(--line);
+  border-radius:4px;padding:0 4px;text-transform:none;letter-spacing:0;color:var(--ink);white-space:normal}
+.av-item .dd{color:var(--mut)}
+.av-item.ck code{background:#e6f3f1;border-color:#b8ddd8}
+.av-item.ck .dd{color:var(--ink)}
+.av-tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 2px}
+.av-tools button{padding:5px 10px;font-size:12px}
+.suivi{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.suivi label{display:inline-flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:13.5px;
+  font-weight:700;color:var(--ink);margin:0;cursor:pointer;background:var(--field);border:1px solid var(--line);
+  border-radius:999px;padding:7px 14px}
+.suivi input{margin:0;accent-color:var(--c3);width:16px;height:16px;cursor:pointer}
+.suivi .badge-ok{border-color:#b6e2c9;background:#eaf7ef}
+.suivi .badge-ko{border-color:#f0c9c0;background:#fdeeea}
+.suivi .etat{margin-left:auto;font-weight:800;color:var(--c3)}
+.av-cat h4 .mini{margin-left:auto;display:flex;gap:5px}
+.av-cat h4 .mini button{font:600 10.5px/1 'Segoe UI',system-ui;letter-spacing:.02em;text-transform:none;
+  padding:3px 7px;border-radius:5px;border:1px solid var(--line);background:var(--field);color:var(--mut);cursor:pointer}
+.av-cat h4 .mini button:hover{color:var(--ink);border-color:var(--c3)}
+.liv{background:var(--card);border-radius:10px;padding:10px 12px;border-top:4px solid var(--c4)}
+.liv-top{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.liv-top input[type=text]{max-width:260px;margin:0}
+.liv-top select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--ink)}
+.liv-count{margin-left:auto;font-weight:800;color:var(--c4);font-size:13px}
+.liv-list{max-height:520px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--field);padding:8px 12px}
+.liv-dom{margin:10px 0 4px;font:800 11.5px/1 'Segoe UI',system-ui;letter-spacing:.1em;text-transform:uppercase;color:var(--c4);
+  border-bottom:1px solid var(--line);padding-bottom:4px}
+.liv-cat{margin:8px 0 12px}
+.liv-cat h4{margin:0 0 4px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--c1);display:flex;gap:8px;align-items:baseline}
+.liv-cat h4 .n{font-weight:400;color:var(--mut);letter-spacing:0;text-transform:none}
+.liv-cat h4 .mini{margin-left:auto;display:flex;gap:5px}
+.liv-cat h4 .mini button{font:600 10.5px/1 'Segoe UI',system-ui;letter-spacing:.02em;text-transform:none;padding:3px 7px;
+  border-radius:5px;border:1px solid var(--line);background:var(--field);color:var(--mut);cursor:pointer}
+.liv-cat h4 .mini button:hover{color:var(--ink);border-color:var(--c4)}
+.liv-items{display:grid;grid-template-columns:1fr 1fr;gap:1px 18px}
+.liv-item{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;line-height:1.35;padding:2px 0;cursor:pointer;
+  text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.liv-item input{margin:2px 0 0;accent-color:var(--c4);cursor:pointer}
+.liv-item code{font:600 11.5px/1.35 ui-monospace,Consolas,monospace;background:#f3f0ec;border:1px solid var(--line);
+  border-radius:4px;padding:0 4px;color:var(--ink)}
+.liv-item .dd{color:var(--mut)}
+.liv-item .pg{color:var(--mut);font-size:11px;white-space:nowrap}
+.av-item .her{font:600 10px/1 'Segoe UI',system-ui;color:var(--mut);background:#efe9e2;border-radius:4px;padding:2px 4px;white-space:nowrap}
+.av-note{font-size:11.5px;color:var(--mut);margin:6px 0 0}
 button{font:inherit;font-weight:700;border:0;border-radius:6px;padding:9px 16px;cursor:pointer;background:var(--c1);color:#fff}
 button.sec{background:var(--mut)}
-@media (max-width:760px){.g4,.g3{grid-template-columns:1fr 1fr}.step{grid-template-columns:1fr}}
+@media (max-width:900px){.av-chips{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:760px){.g4,.g3{grid-template-columns:1fr 1fr}.step{grid-template-columns:1fr}.av-chips{grid-template-columns:1fr 1fr}}
 @media (max-width:480px){.g4,.g3{grid-template-columns:1fr}}
 @media print{.bar{display:none}input[type=text]{border:0;border-bottom:1px solid var(--line);border-radius:0;padding:2px 0;background:transparent}body{font-size:12px}}
 </style>
@@ -57,6 +157,31 @@ button.sec{background:var(--mut)}
 </div>
 <div class="box c meta"><label for="modules">Modules</label><input type="text" id="modules" value="SQL, HTML5, CSS, JavaScript, PHP"></div>
 
+<h2>Suivi de la séance</h2>
+<div class="box c suivi" id="suivi-bloc">
+  <label class="badge-ok"><input type="checkbox" id="assuree" onchange="SUIVI.set('assuree', this.checked)">
+    Séance assurée — contenu commun traité avec les deux groupes</label>
+  <label class="badge-ko"><input type="checkbox" id="reportee" onchange="SUIVI.set('reportee', this.checked)">
+    Séance reportée</label>
+  <span class="etat" id="suivi-etat">Non confirmée</span>
+</div>
+<p class="av-note" id="suivi-note">Valider « assurée » enregistre la séance, met à jour le cahier de
+   textes et recalcule la couverture moyenne des deux livres.</p>
+
+<h2>Notions du livre traitées dans cette séance</h2>
+<div class="liv" id="liv">
+  <div class="liv-top">
+    <select id="liv-dom" onchange="LIVRE.filtre()"><option value="">Tous les domaines</option></select>
+    <input type="text" id="liv-q" placeholder="Rechercher une notion…" oninput="LIVRE.filtre()">
+    <button type="button" onclick="LIVRE.tout(true)">Tout cocher</button>
+    <button type="button" class="sec" onclick="LIVRE.tout(false)">Tout décocher</button>
+    <span class="liv-count" id="liv-count">0 notion</span>
+  </div>
+  <div class="liv-list" id="liv-list"></div>
+  <p class="av-note">Ces notions alimentent le suivi du Smart Book : ce sont elles qui font
+     progresser la « Couverture moyenne — moyenne des deux livres · notions uniques ».</p>
+</div>
+
 <h2>Objectifs</h2>
 <div class="g g3" id="obj"></div>
 
@@ -71,6 +196,39 @@ button.sec{background:var(--mut)}
   <div class="g g3" id="moy"></div>
 </div>
 
+<h2>Avancement général — fonctions et propriétés</h2>
+<div class="dash" id="dash">
+  <div class="dash-total">
+    <div class="av-lab">Avancement total</div>
+    <div class="dash-big" id="dash-pct">0 %</div>
+    <div class="dash-sub" id="dash-sub">0 / 0 notions · les deux classes</div>
+    <div class="dash-track"><span id="dash-fill"></span></div>
+  </div>
+  <div class="dash-classes" id="dash-classes"></div>
+</div>
+<div id="dash-hist"></div>
+
+<div class="av-card" id="av">
+  <div class="av-head">
+    <div>
+      <div class="av-lab" id="av-title">Avancement du cours</div>
+      <div class="av-big"><span id="av-pct">0 %</span></div>
+      <div class="av-lab" id="av-count">0 / 0 notions couvertes</div>
+    </div>
+    <div class="av-track" role="progressbar" aria-label="Avancement général"><span id="av-fill"></span></div>
+    <button type="button" class="sec" id="av-reset" onclick="AV.reset()">Tout décocher</button>
+  </div>
+  <div class="av-chips" id="av-chips"></div>
+  <div class="av-tools">
+    <button type="button" onclick="AV.all(true)">Tout cocher (domaine)</button>
+    <button type="button" class="sec" onclick="AV.all(false)">Tout décocher (domaine)</button>
+  </div>
+  <div class="av-panel" id="av-panel"></div>
+  <p class="av-note" id="av-note"><b id="av-src">Annexe</b> — cochez une notion quand elle a été traitée
+     en classe : le pourcentage mesure l’avancement du programme par rapport au cours de la classe
+     affichée (3<sup>e</sup> SI suit l’annexe TT3STI, 4<sup>e</sup> SI l’annexe TT4STI).</p>
+</div>
+
 <div class="bar">
   <button type="button" onclick="window.print()">Imprimer la fiche</button>
   <button type="button" class="sec" onclick="resetAll()">Rétablir les valeurs d’origine</button>
@@ -78,6 +236,7 @@ button.sec{background:var(--mut)}
 </form>
 </div>
 
+<script src="assets/annexes-fonctions.js"></script>
 <script>
 var OBJ=[
  ['HTML5',['Page index','Background','Liste','Details et summary']],
@@ -118,6 +277,516 @@ function resetAll(){
   document.getElementById('f').reset();build();
 }
 build();
+
+/* ==================== suivi de la séance (assurée / reportée) ====================
+   La case « Séance assurée » vivait dans la fenêtre de séance de l'application ; elle est
+   reprise ici et transmise à la page hôte, qui enregistre et recalcule la couverture. */
+var SUIVI = (function () {
+  function etat(txt, ok) {
+    var e = document.getElementById('suivi-etat');
+    if (e) { e.textContent = txt; e.style.color = ok ? 'var(--c3)' : 'var(--mut)'; }
+  }
+  function set(quoi, val) {
+    var a = document.getElementById('assuree'), r = document.getElementById('reportee');
+    if (quoi === 'assuree' && val && r) r.checked = false;
+    if (quoi === 'reportee' && val && a) a.checked = false;
+    var P = window.parent;
+    var res = null;
+    try {
+      if (P && P !== window && P.STI_FICHES && P.STI_FICHES.markSeance)
+        res = P.STI_FICHES.markSeance(Number(document.getElementById('seance').value) || 0,
+                                     quoi === 'assuree' ? true : false, !!val);
+    } catch (e) {}
+    if (res === false) {                       /* refusé : on remet la case dans son état */
+      if (a) a.checked = !!(SUIVI.data && SUIVI.data.assuree);
+      if (r) r.checked = !!(SUIVI.data && SUIVI.data.reportee);
+      return;
+    }
+    SUIVI.data = { assuree: a && a.checked, reportee: r && r.checked };
+    etat(a && a.checked ? 'Assurée ✓' : (r && r.checked ? 'Reportée' : 'Non confirmée'), a && a.checked);
+    if (val) {
+      var n = document.getElementById('suivi-note');
+      if (n && P && P.STI_FICHES && P.STI_FICHES.derniereCouverture)
+        n.textContent = P.STI_FICHES.derniereCouverture();
+    }
+  }
+  return {
+    data: { assuree: false, reportee: false },
+    set: set,
+    /* appelé par la page hôte après le préremplissage */
+    init: function (o) {
+      o = o || {};
+      var a = document.getElementById('assuree'), r = document.getElementById('reportee');
+      if (a) a.checked = !!o.assuree;
+      if (r) r.checked = !!o.reportee;
+      SUIVI.data = { assuree: !!o.assuree, reportee: !!o.reportee };
+      etat(a && a.checked ? 'Assurée ✓' : (r && r.checked ? 'Reportée' : 'Non confirmée'), a && a.checked);
+    }
+  };
+})();
+window.SUIVI = SUIVI;
+
+/* ===================== notions du Smart Book de la séance =========================
+   Même référentiel que le suivi de l'application (data/livres-sti.js) : la sélection
+   est enregistrée dans la séance, ce qui recalcule la couverture des deux livres. */
+var LIVRE = (function () {
+  var items = [], sel = {}, q = '', d = '', jeu = null;
+  function esc2(v) { return esc(v); }
+  function norm(v) {
+    return String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim();
+  }
+  /* domaine du livre → domaine de l'annexe */
+  function dom(v) {
+    return ({ 'SQL / BD': 'SQL', 'SQL': 'SQL', 'CSS': 'CSS3', 'CSS3': 'CSS3',
+              'HTML5': 'HTML5', 'JavaScript': 'JavaScript', 'PHP': 'PHP' })[v] || v;
+  }
+  /* code court d'une notion du livre : <html> → html, alert() → alert, SELECT … → select */
+  function code(it) {
+    var lab = String(it.label).trim(), m;
+    m = lab.match(/^<([a-z0-9]+)/i); if (m) return m[1].toLowerCase();
+    m = lab.match(/^([a-zA-Z_$][\w$]*)\s*\(/); if (m) return m[1].toLowerCase();
+    m = lab.match(/^((?:[A-Z][A-Z0-9]{1,8}\s*){1,3})/); if (m) return norm(m[1]);
+    return norm(lab.split(/[^A-Za-z0-9_-]/)[0] || '');
+  }
+  function toks(v) { return norm(v).split(/[^a-z0-9_@#.$-]+/).filter(Boolean); }
+  /* rattachement d'une notion à une sous-catégorie de l'annexe */
+  function categorie(it, cats) {
+    var c = code(it), lab = ' ' + norm(it.label + ' ' + (it.description || '')) + ' ', i, k;
+    if (/^h[1-6]$/.test(c)) {
+      for (i = 0; i < cats.length; i++) if (toks(cats[i].items.map(function (x) { return x.c; }).join(',')).indexOf('h1') >= 0) return cats[i].n;
+    }
+    for (i = 0; i < cats.length; i++)
+      if (toks(cats[i].items.map(function (x) { return x.c; }).join(',')).indexOf(c) >= 0) return cats[i].n;
+    var best = null, bs = 0;
+    for (i = 0; i < cats.length; i++) {
+      var sc = 0;
+      toks(cats[i].items.map(function (x) { return x.c; }).join(',')).forEach(function (t) {
+        if (t.length < 4) return;
+        if (new RegExp('(^|[^a-z0-9])' + t.replace(/-/g, '\\-') + '([^a-z0-9]|$)').test(lab)) sc += t.length;
+      });
+      if (sc > bs) { bs = sc; best = cats[i].n; }
+    }
+    return best;
+  }
+  /* groupes : domaine → sous-catégorie → notions (les autres vont dans « Autres notions ») */
+  function groupes() {
+    var A = jeu || {}, out = [], vus = {};
+    Object.keys(A).forEach(function (domaine) {
+      var cats = A[domaine].cats || [], map = {}, autres = [];
+      items.forEach(function (it) {
+        if (dom(it.domain) !== domaine) return;
+        var k = categorie(it, cats);
+        if (k) { (map[k] = map[k] || []).push(it); } else { autres.push(it); }
+      });
+      var g = cats.map(function (c) { return { cat: c.n, items: map[c.n] || [] }; });
+      if (autres.length) g.push({ cat: 'Autres notions de ' + domaine, items: autres });
+      g = g.filter(function (x) { return x.items.length; });
+      if (g.length) out.push({ domaine: domaine, groupes: g });
+    });
+    /* domaines du livre absents de l'annexe (sécurité) */
+    var connus = Object.keys(A);
+    var rest = items.filter(function (it) { return connus.indexOf(dom(it.domain)) < 0; });
+    if (rest.length) out.push({ domaine: 'Autres', groupes: [{ cat: 'Notions non classées', items: rest }] });
+    return out;
+  }
+  function visibles(liste) {
+    var t = q.toLowerCase();
+    return liste.filter(function (r) {
+      return (!d || dom(r.domain) === d || r.domain === d) &&
+        (!t || (r.label + ' ' + r.description + ' ' + (r.detail || '')).toLowerCase().indexOf(t) >= 0);
+    });
+  }
+  function ligne(r) {
+    return '<label class="liv-item"><input type="checkbox"' + (sel[r.id] ? ' checked' : '') +
+      ' data-id="' + r.id + '" onchange="LIVRE.toggle(this)">' +
+      '<span><code>' + esc2(r.label) + '</code>' +
+      (r.description ? ' <span class="dd">— ' + esc2(r.description) + '</span>' : '') +
+      (r.pages && r.pages.length ? ' <span class="pg">p. ' + r.pages.join(', ') + '</span>' : '') +
+      '</span></label>';
+  }
+  function peindre() {
+    var html = '';
+    groupes().forEach(function (bloc) {
+      var gs = bloc.groupes.map(function (g) {
+        return { cat: g.cat, items: visibles(g.items), tous: g.items };
+      }).filter(function (g) { return g.items.length; });
+      if (!gs.length) return;
+      html += '<div class="liv-dom">' + esc2(bloc.domaine) + '</div>';
+      gs.forEach(function (g) {
+        var n = g.tous.filter(function (r) { return sel[r.id]; }).length;
+        html += '<div class="liv-cat"><h4>' + esc2(g.cat) +
+          ' <span class="n">' + n + '/' + g.tous.length + '</span>' +
+          '<span class="mini"><button type="button" onclick="LIVRE.cat(true,\'' +
+          esc2(bloc.domaine) + '\',\'' + esc2(g.cat).replace(/'/g, "\\'") + '\')">tout cocher</button>' +
+          '<button type="button" onclick="LIVRE.cat(false,\'' + esc2(bloc.domaine) + '\',\'' +
+          esc2(g.cat).replace(/'/g, "\\'") + '\')">tout décocher</button></span></h4>' +
+          '<div class="liv-items">' + g.items.map(ligne).join('') + '</div></div>';
+      });
+    });
+    document.getElementById('liv-list').innerHTML = html ||
+      '<p class="av-note">Aucune notion ne correspond à la recherche.</p>';
+    compter();
+  }
+  function compter() {
+    var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
+    var c = document.getElementById('liv-count');
+    if (c) c.textContent = n + (n > 1 ? ' notions' : ' notion');
+    Array.prototype.forEach.call(document.querySelectorAll('#liv-list .liv-cat'), function (box) {
+      var boxes = box.querySelectorAll('input[type=checkbox]');
+      var ck = 0; Array.prototype.forEach.call(boxes, function (b) { if (b.checked) ck++; });
+      var sp = box.querySelector('h4 .n');
+      if (sp) sp.textContent = ck + '/' + boxes.length;
+    });
+  }
+  function paquet(domaine, cat) {
+    var out = [];
+    groupes().forEach(function (b) {
+      if (b.domaine !== domaine) return;
+      b.groupes.forEach(function (g) { if (g.cat === cat) out = out.concat(g.items); });
+    });
+    return out;
+  }
+  return {
+    build: function (arr, jeux) {
+      items = arr || []; sel = {}; jeu = jeux || null;
+      var doms = [];
+      items.forEach(function (r) { var x = dom(r.domain); if (doms.indexOf(x) < 0) doms.push(x); });
+      var s = document.getElementById('liv-dom');
+      if (s) s.innerHTML = '<option value="">Tous les domaines (' + items.length + ')</option>' +
+        doms.map(function (x) { return '<option value="' + esc2(x) + '">' + esc2(x) + '</option>'; }).join('');
+      peindre();
+    },
+    select: function (ids) { sel = {}; (ids || []).forEach(function (i) { sel[i] = true; }); peindre(); },
+    selection: function () { return Object.keys(sel).filter(function (k) { return sel[k]; }); },
+    toggle: function (el) {
+      if (el.checked) sel[el.getAttribute('data-id')] = true; else delete sel[el.getAttribute('data-id')];
+      compter();
+    },
+    cat: function (on, domaine, cat) {
+      paquet(domaine, cat).forEach(function (r) { if (on) sel[r.id] = true; else delete sel[r.id]; });
+      peindre();
+    },
+    tout: function (on) {
+      visibles(items).forEach(function (r) { if (on) sel[r.id] = true; else delete sel[r.id]; });
+      peindre();
+    },
+    filtre: function () {
+      d = (document.getElementById('liv-dom') || {}).value || '';
+      q = (document.getElementById('liv-q') || {}).value || '';
+      peindre();
+    }
+  };
+})();
+window.LIVRE = LIVRE;
+
+/* ============ tableau de bord : total, par classe, histogrammes par famille ============
+   Lit les deux jeux (3SI1 → AnnexeTT3STI, 4SI2 → AnnexeTT4STI) dans localStorage :
+   « avancement total » = notions acquises des deux classes / total des deux annexes. */
+var DASH = (function () {
+  var KEY = 'sti_avancement_fonctions_v2';
+  function jeux() { return window.STI_ANNEXES_JEUX || {}; }
+  function lu(cls) {
+    try { return JSON.parse(localStorage.getItem(KEY + '|' + cls) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function stats(cls) {
+    var j = jeux()[cls]; if (!j) return null;
+    var dn = lu(cls), tot = 0, ck = 0, fam = [];
+    Object.keys(j.domaines).forEach(function (d) {
+      var dc = 0, dt = 0;
+      var cats = j.domaines[d].cats.map(function (c, ci) {
+        var cc = 0;
+        c.items.forEach(function (_, ii) { if (dn[d + '::' + ci + '::' + ii] != null) cc++; });
+        dc += cc; dt += c.items.length;
+        return { n: c.n, ck: cc, t: c.items.length, pct: c.items.length ? Math.round(cc * 100 / c.items.length) : 0 };
+      });
+      tot += dt; ck += dc;
+      fam.push({ d: d, ck: dc, t: dt, pct: dt ? Math.round(dc * 100 / dt) : 0, cats: cats, couleur: (j.domaines[d].couleur || '#666') });
+    });
+    return { cls: cls, ck: ck, tot: tot, pct: tot ? Math.round(ck * 100 / tot) : 0, fam: fam, source: j.source || '' };
+  }
+  var NUM = {};
+  function court(t) { return String(t).replace(/\s*\(.*?\)\s*/g, '').trim(); }
+  return {
+    stats: stats,
+    /* clic sur une barre : on affiche la famille dans le bloc Avancement et on met le groupe en évidence */
+    voir: function (cls, d, ci) {
+      try { AV.show(d); } catch (e) {}
+      var cats = document.querySelectorAll('#av-panel .av-cat');
+      var el = cats[ci];
+      if (!el) return;
+      el.scrollIntoView({ block: 'center' });
+      var h = el.querySelector('h4');
+      if (h) { h.style.transition = 'background .2s'; h.style.background = '#fdf0e4';
+               setTimeout(function () { h.style.background = ''; }, 1400); }
+    },
+    rendre: function (classeActive) {
+      var J = jeux(), ordre = Object.keys(J);
+      if (!ordre.length) return;
+      var res = {}, ck = 0, tot = 0;
+      ordre.forEach(function (c) { var x = stats(c); res[c] = x; if (x) { ck += x.ck; tot += x.tot; } });
+      var p = tot ? Math.round(ck * 100 / tot) : 0;
+      document.getElementById('dash-pct').textContent = p + ' %';
+      document.getElementById('dash-sub').textContent = ck + ' / ' + tot + ' notions · les deux classes (' +
+        ordre.map(function (c) { return c + ' ' + (res[c] ? res[c].tot : 0); }).join(' · ') + ')';
+      document.getElementById('dash-fill').style.width = p + '%';
+
+      /* avancement par classe */
+      document.getElementById('dash-classes').innerHTML = ordre.map(function (c) {
+        var x = res[c]; if (!x) return '';
+        return '<div class="cls-card' + (c === classeActive ? ' on' : '') + '">' +
+          '<div class="cc-top"><span class="cc-nom">' + c + (c === classeActive ? ' (fiche ouverte)' : '') +
+          '</span><span class="cc-pct">' + x.pct + ' %</span></div>' +
+          '<div class="cc-det">' + x.ck + ' / ' + x.tot + ' notions · annexe ' + x.source.replace(/^Annexe/, '') + '</div>' +
+          '<div class="dash-track"><span style="width:' + x.pct + '%"></span></div></div>';
+      }).join('');
+
+      /* histogrammes : une barre par sous-titre, regroupées par famille */
+      document.getElementById('dash-hist').innerHTML = ordre.map(function (c) {
+        var x = res[c]; if (!x) return '';
+        var fams = x.fam.map(function (f) {
+          var rows = f.cats.map(function (k, i) {
+            return '<div class="row" style="color:' + f.couleur + '" title="' + esc(k.n) + ' — ' + k.ck + '/' + k.t +
+              ' cases cochées — cliquer pour ouvrir le sous-titre dans le bloc Avancement" ' +
+              'onclick="DASH.voir(\'' + c + '\',\'' + esc(f.d) + '\',' + i + ')">' +
+              '<span class="lb">' + esc(court(k.n)) + '</span>' +
+              '<span class="hb"><i style="display:block;width:' + k.pct + '%"></i></span>' +
+              '<span class="vl"><b>' + k.pct + ' %</b> · ' + k.ck + '/' + k.t + '</span></div>';
+          }).join('');
+          return '<div class="fam"><div class="fam-h" style="color:' + f.couleur + '">' + esc(f.d) +
+            '<span class="av-bar"><i style="width:' + f.pct + '%"></i></span>' +
+            '<small>' + f.pct + ' % · ' + f.ck + '/' + f.t + '</small></div>' + rows + '</div>';
+        }).join('');
+        return '<div class="hist"><h4>Avancement par famille — ' + c + ' <b>' + x.pct + ' %</b>' +
+          '<span class="src">annexe ' + esc(x.source.replace(/^Annexe/, '')) +
+          ' · une barre par sous-titre</span></h4>' +
+          '<div class="fams">' + fams + '</div></div>';
+      }).join('');
+    }
+  };
+})();
+window.DASH = DASH;
+
+/* ======================= avancement : fonctions et propriétés =======================
+   Une case par balise / propriété / fonction des annexes, rangée en 5 domaines.
+   Le suivi est enregistré par classe (4SI2, 3SI1) et remonté à la page hôte. */
+var AV = (function () {
+  var KEY = 'sti_avancement_fonctions_v2';
+  var dom = 'HTML5', done = {}, ready = false;   /* done : clé de notion → n° de séance d'acquisition */
+
+  function domaine() {
+    var v = (document.getElementById('classe') || {}).value || '';
+    if (/3/.test(v) && /SI/i.test(v)) return '3SI1';
+    if (/4/.test(v) && /SI/i.test(v)) return '4SI2';
+    return String(v).trim() || 'classe';
+  }
+  /* jeu de données de la classe affichée : AnnexeTT3STI pour 3SI1, AnnexeTT4STI pour 4SI2 */
+  function jeu() {
+    var J = window.STI_ANNEXES_JEUX || {};
+    var c = domaine();
+    if (J[c]) return J[c];
+    /* repli : classe non reconnue → jeu 4SI2, sinon premier disponible */
+    return J['4SI2'] || J[Object.keys(J)[0]] || { domaines: window.STI_ANNEXES || {} };
+  }
+  function domaines() { return jeu().domaines || {}; }
+  function source() {
+    var j = jeu();
+    return (j.source ? 'Annexe ' + j.source.replace(/^Annexe/, '') : 'Annexe') +
+           (j.titre ? ' · ' + j.titre : '');
+  }
+  function cle() { return KEY + '|' + domaine(); }
+  /* la séance ouverte dans le formulaire */
+  function seq() { return Number((document.getElementById('seance') || {}).value) || 0; }
+  /* une notion est cochée dès qu'elle a été acquise dans une séance ≤ celle affichée */
+  function acquise(k) { return done[k] != null && (seq() === 0 || done[k] <= seq()); }
+  function lire() {
+    var d = {};
+    try { d = JSON.parse(localStorage.getItem(cle()) || '{}') || {}; } catch (e) { d = {}; }
+    /* reprise de l'ancien format (liste plate, sans séance) */
+    try {
+      var old = JSON.parse(localStorage.getItem('sti_avancement_fonctions_v1|' + domaine()) || 'null');
+      if (old) Object.keys(old).forEach(function (k) { if (d[k] == null) d[k] = 0; });
+    } catch (e) {}
+    return d;
+  }
+  function ecrire() { try { localStorage.setItem(cle(), JSON.stringify(done)); } catch (e) {} }
+  function id(d, c, i) { return d + '::' + c + '::' + i; }
+  function total(d) {
+    var A = domaines(); if (!A) return 0;
+    if (d) return A[d].cats.reduce(function (s, c) { return s + c.items.length; }, 0);
+    return Object.keys(A).reduce(function (s, k) { return s + total(k); }, 0);
+  }
+  function compte(d) {
+    var A = domaines(), n = 0; if (!A) return 0;
+    (d ? [d] : Object.keys(A)).forEach(function (k) {
+      A[k].cats.forEach(function (c, ci) { c.items.forEach(function (it, ii) { if (acquise(id(k, ci, ii))) n++; }); });
+    });
+    return n;
+  }
+  function nbCat(ci) {
+    var A = domaines(); if (!A) return [0, 0];
+    var c = A[dom].cats[ci], nn = 0;
+    c.items.forEach(function (_, ii) { if (acquise(id(dom, ci, ii))) nn++; });
+    return [nn, c.items.length];
+  }
+  function pct(a, b) { return b ? Math.round(a * 100 / b) : 0; }
+
+  function rendre() {
+    var A = domaines(), box = document.getElementById('av');
+    if (!box) return;
+    if (!A || !Object.keys(A).length) {
+      box.querySelector('#av-note').textContent =
+        'Référentiel indisponible : le fichier assets/annexes-fonctions.js n’a pas été chargé.';
+      return;
+    }
+    if (!A[dom]) dom = Object.keys(A)[0];
+    var t = total(), n = compte(), p = pct(n, t);
+    document.getElementById('av-pct').textContent = p + ' %';
+    document.getElementById('av-count').textContent = n + ' / ' + t + ' notions couvertes · ' + domaine();
+    try { if (window.DASH) window.DASH.rendre(domaine()); } catch (e) {}
+    var src = document.getElementById('av-src');
+    if (src) src.textContent = source();
+    var tt = document.getElementById('av-title');
+    if (tt) tt.textContent = 'Avancement du cours — ' + domaine();
+    document.getElementById('av-fill').style.width = p + '%';
+
+    /* pastilles des 5 domaines */
+    document.getElementById('av-chips').innerHTML = Object.keys(A).map(function (k) {
+      var tt = total(k), nn = compte(k), pp = pct(nn, tt);
+      return '<button type="button" class="chip' + (k === dom ? ' on' : '') + '" data-d="' + k + '"' +
+             ' style="color:' + A[k].couleur + '" onclick="AV.show(\'' + k + '\')">' +
+             '<span style="color:var(--ink)">' + A[k].label + '</span>' +
+             '<span class="cc">' + nn + '/' + tt + ' · ' + pp + ' %</span>' +
+             '<span class="ct"><span style="width:' + pp + '%"></span></span></button>';
+    }).join('');
+
+    /* détail du domaine choisi */
+    var d = A[dom];
+    document.getElementById('av-panel').innerHTML = d.cats.map(function (c, ci) {
+      var items = c.items.map(function (it, ii) {
+        var k = id(dom, ci, ii), on = acquise(k), her = on && done[k] < seq();
+        return '<label class="av-item' + (on ? ' ck' : '') + '">' +
+               '<input type="checkbox"' + (on ? ' checked' : '') + ' data-k="' + k + '"' +
+               ' onchange="AV.toggle(this)">' +
+               '<span><code>' + esc(it.c) + '</code>' +
+               (it.d ? ' <span class="dd">— ' + esc(it.d) + '</span>' : '') +
+               (her ? ' <span class="her" title="Acquise en séance ' + done[k] + '">S' + done[k] + '</span>' : '') +
+               '</span></label>';
+      }).join('');
+      var nb = nbCat(ci);
+      return '<div class="av-cat"><h4>' + esc(c.n) +
+             ' <span class="n">' + nb[0] + '/' + nb[1] + '</span>' +
+             '<span class="mini"><button type="button" onclick="AV.cat(true,' + ci + ')">tout cocher</button>' +
+             '<button type="button" onclick="AV.cat(false,' + ci + ')">tout décocher</button></span>' +
+             '</h4><div class="av-items">' + items + '</div></div>';
+    }).join('');
+    remonter(n, t, p);
+  }
+
+  function remonter(n, t, p) {
+    try {
+      var P = window.parent;
+      if (P && P !== window && P.STI_FICHES && typeof P.STI_FICHES.avUpdate === 'function')
+        P.STI_FICHES.avUpdate(p, n, t, domaine());
+    } catch (e) {}
+  }
+
+  return {
+    init: function () {
+      done = lire();
+      var A = domaines();
+      if (A && !A[dom]) dom = Object.keys(A)[0];
+      ready = true; rendre();
+      try { if (window.DASH) window.DASH.rendre(domaine()); } catch (e) {}
+    },
+    jeu: jeu,
+    source: source,
+    seq: seq,
+    show: function (k) { dom = k; rendre(); },
+    toggle: function (el) {
+      var k = el.getAttribute('data-k'), n = seq();
+      if (el.checked) {
+        if (done[k] == null || done[k] > n) done[k] = n;
+      } else {
+        if (done[k] != null && done[k] < n) {
+          /* acquise lors d'une séance précédente : on ne la retire pas de l'historique */
+          el.checked = true;
+          var no = document.getElementById('suivi-note');
+          if (no) no.textContent = 'Cette notion a été validée en séance ' + done[k] +
+            ' : elle reste cochée pour les séances suivantes (avancement cumulé).';
+          return;
+        }
+        delete done[k];
+      }
+      ecrire();
+      var ci = Number(k.split('::')[1]);
+      var h = document.querySelectorAll('#av-panel .av-cat h4')[ci];
+      if (h) {
+        var nb = nbCat(ci), mini = h.querySelector('.mini');
+        h.innerHTML = esc(domaines()[dom].cats[ci].n) +
+          ' <span class="n">' + nb[0] + '/' + nb[1] + '</span>';
+        if (mini) h.appendChild(mini);
+      }
+      var lab = el.parentNode;
+      if (lab) lab.classList.toggle('ck', el.checked);
+      if (window.DASH) window.DASH.rendre(domaine());
+      rendreChiffres();
+    },
+    /* tout cocher / tout décocher pour UN groupe (une sous-catégorie) */
+    cat: function (on, ci) {
+      var A = domaines(); if (!A) return;
+      var n = seq(), c = A[dom].cats[ci];
+      c.items.forEach(function (_, ii) {
+        var k = id(dom, ci, ii);
+        if (on) { if (done[k] == null || done[k] > n) done[k] = n; }
+        else if (done[k] != null && done[k] >= n) delete done[k];
+      });
+      ecrire(); rendre();
+    },
+    all: function (on) {
+      var A = domaines(); if (!A) return;
+      var n = seq();
+      A[dom].cats.forEach(function (c, ci) {
+        c.items.forEach(function (_, ii) {
+          var k = id(dom, ci, ii);
+          if (on) { if (done[k] == null || done[k] > n) done[k] = n; }
+          else if (done[k] != null && done[k] >= n) delete done[k];
+        });
+      });
+      ecrire(); rendre();
+    },
+    reset: function () {
+      if (!confirm('Décocher toutes les notions du référentiel (toutes séances confondues) ?')) return;
+      done = {}; ecrire(); rendre();
+    },
+    /* changement de séance / de classe : on relit l'état et on réaffiche */
+    refresh: function () { done = lire(); rendre(); },
+    /* pour la page hôte */
+    etat: function () { return { classe: domaine(), fait: compte(), total: total(), pct: pct(compte(), total()), detail: done }; }
+  };
+
+  function rendreChiffres() {
+    var t = total(), n = compte(), p = pct(n, t);
+    document.getElementById('av-pct').textContent = p + ' %';
+    document.getElementById('av-count').textContent = n + ' / ' + t + ' notions couvertes · ' + domaine();
+    document.getElementById('av-fill').style.width = p + '%';
+    Array.prototype.forEach.call(document.querySelectorAll('#av-chips .chip'), function (ch) {
+      var k = ch.getAttribute('data-d'), tt = total(k), nn = compte(k), pp = pct(nn, tt);
+      var cc = ch.querySelector('.cc'), bar = ch.querySelector('.ct>span');
+      if (cc) cc.textContent = nn + '/' + tt + ' · ' + pp + ' %';
+      if (bar) bar.style.width = pp + '%';
+    });
+    remonter(n, t, p);
+  }
+})();
+window.AV = AV;
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', AV.init); else AV.init();
+/* séance ou classe modifiées à la main : on relit l'état et on change de référentiel */
+(function () {
+  var s = document.getElementById('seance');
+  if (s) s.addEventListener('change', function () { AV.refresh(); });
+  var c = document.getElementById('classe');
+  if (c) c.addEventListener('change', function () { AV.refresh(); });
+})();
 </script>
 </body>
 </html>

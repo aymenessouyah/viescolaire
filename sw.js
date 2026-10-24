@@ -1,13 +1,13 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.6.0-print-center';
+const VERSION='sti-espace-v1.8.5-print-center';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
   "./manifest.webmanifest",
   "./assets/style.css",
   "./assets/app.js",
+  "./assets/cahier-pdf.js",
   "./assets/suivi-sti.js",
-  "./assets/suivi-annexes.js",
   "./assets/suivi-sti.css",
   "./assets/theme-classe.css",
   "./assets/theme-classe.js",
@@ -34,6 +34,7 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/cahier-print-data.js",
   "./assets/fiches.css",
   "./assets/fiche-formulaire.html",
+  "./assets/annexes-fonctions.js",
   "./data/fiches.js",
   "./data/fiches3SI1.js",
   "./data/repartition4SI2.js",
@@ -90,6 +91,8 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./docs/fiches-4si-2026/S48.pdf",
   "./docs/fiches-4si-2026/S49.pdf",
   "./docs/fiches-4si-2026/S50.pdf",
+  "./docs/AnnexeTT3STI.pdf",
+  "./docs/AnnexeTT4STI.pdf",
   "./docs/sti-smart-book-3si-2026.pdf",
   "./docs/sti-smart-book-4si-2026.pdf",
   "./docs/fiches-3si-2026/Fiches_3SI1_2026-2027.pdf",
@@ -151,8 +154,19 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
 const corePaths=new Set(CORE_ASSETS.map(p=>new URL(p,self.registration.scope).pathname));
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CORE_CACHE);
- try{await cache.addAll(CORE_ASSETS.map(p=>new Request(p,{cache:'reload'})));}
- catch(e){await caches.delete(CORE_CACHE);throw e;} // Keep the old active worker if a mandatory file is unavailable.
+ /* Téléchargement fichier par fichier : un fichier pas encore déposé (par exemple
+    assets/cahier-pdf.js ajouté dans cette version) ne doit plus bloquer l'installation.
+    Avant, cache.addAll() échouait sur un seul 404 : le nouveau service worker était
+    rejeté, l'ancien restait actif et servait indéfiniment l'ancien assets/app.js.
+    Seuls les fichiers indispensables au démarrage restent obligatoires. */
+ const ESSENTIELS=/(^|\/)(index\.html|assets\/app\.js|assets\/style\.css)$/;
+ const manquants=[];
+ await Promise.all(CORE_ASSETS.map(async p=>{
+   try{const r=await fetch(new Request(p,{cache:'reload'}));
+       if(r.ok)await cache.put(p,r);else manquants.push(p);}catch(e){manquants.push(p);}
+ }));
+ const bloquants=manquants.filter(p=>ESSENTIELS.test(p));
+ if(bloquants.length){await caches.delete(CORE_CACHE);throw new Error('Fichiers essentiels indisponibles : '+bloquants.join(', '));}
  /* prise en main immédiate de la nouvelle version (correctifs PDF, fiches, 3SI1) */
  await self.skipWaiting();
 })()));
@@ -176,12 +190,48 @@ self.addEventListener('fetch',event=>{
     onglet était remplacé par l'application. */
  const fichier=/\.[a-z0-9]{2,5}$/i.test(url.pathname) && !/\/(index\.html)?$/i.test(url.pathname);
  if(req.mode==='navigate'&&url.pathname.startsWith(scopePath)&&!fichier){
-  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);return await cache.match('./index.html')||fetch(req);})());return;
+  /* Réseau d'abord : une nouvelle index.html est prise en compte dès le premier
+     rechargement, sans attendre un changement de version du service worker.
+     Le cache ne sert que hors ligne. */
+  event.respondWith((async()=>{
+    const cache=await caches.open(CORE_CACHE);
+    try{const r=await fetch(req,{cache:'reload'});
+        if(r.ok)cache.put('./index.html',r.clone());
+        return r;}
+    catch(e){return (await cache.match('./index.html'))||new Response('Application indisponible hors ligne. Reconnectez-vous une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}
+  })());return;
+ }
+ /* La page du formulaire de fiche change souvent : réseau d'abord, cache seulement hors ligne.
+    Sans cela, une copie ancienne restait servie après chaque mise à jour. */
+ if(/\/assets\/fiche-formulaire\.html$/.test(url.pathname)){
+  event.respondWith((async()=>{try{const r=await fetch(req,{cache:'reload'});if(r.ok){const c=await caches.open(CORE_CACHE);c.put(req,r.clone());}return r;}
+   catch(e){const c=await caches.open(CORE_CACHE);return (await c.match(req,{ignoreSearch:true}))||new Response('Formulaire indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;
  }
  if(corePaths.has(url.pathname)){
-  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE);const hit=await cache.match(req,{ignoreSearch:true});return hit||fetch(req);})());return;
+  /* Cache immédiat + mise à jour silencieuse : au rechargement suivant, le fichier
+     servi est celui du dépôt. Supprime le blocage « ancien app.js servi pour toujours ». */
+  const maj=caches.open(CORE_CACHE).then(c=>fetch(req,{cache:'reload'}).then(r=>{if(r.ok)return c.put(req,r.clone());}).catch(()=>{}));
+  event.waitUntil(maj);
+  event.respondWith((async()=>{
+    const cache=await caches.open(CORE_CACHE);
+    const hit=await cache.match(req,{ignoreSearch:true});
+    if(hit)return hit;
+    await maj;
+    return (await cache.match(req,{ignoreSearch:true}))||new Response('Ressource indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});
+  })());return;
  }
- if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')||url.pathname.includes('/icons/')){
+ /* Icônes : réseau d'abord, sinon cache — sinon une nouvelle icône installée ne
+    serait jamais remplacée (les icônes étaient auparavant figées dans DOCS_CACHE). */
+ if(url.pathname.includes('/icons/')){
+  event.respondWith((async()=>{
+    const cache=await caches.open(DOCS_CACHE);
+    try{const r=await fetch(req,{cache:'reload'});
+        if(r.ok)cache.put(req,r.clone());
+        return r;}
+    catch(e){return (await cache.match(req,{ignoreSearch:true}))||new Response('Icône indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}
+  })());return;
+ }
+ if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')){
   event.respondWith((async()=>{const cache=await caches.open(DOCS_CACHE),hit=await cache.match(req,{ignoreSearch:true});if(hit)return hit;try{const r=await fetch(req);if(r.ok)await cache.put(req,r.clone());return r;}catch(e){return new Response('Ce document n’a pas encore été téléchargé. Reconnectez-vous puis ouvrez-le une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());
  }
 });

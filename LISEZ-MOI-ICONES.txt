@@ -1,0 +1,33 @@
+ICÔNE 3D — model.glb devient l'icône de l'application
+=====================================================
+Oui pour le logo, NON directement comme icône : un fichier .glb (modèle 3D)
+ne peut pas être lu par Windows, Android ou iOS au moment d'installer une
+application — ces systèmes attendent des images PNG (ou SVG pour un favicon).
+Le modèle a donc été rendu une fois en 3D, puis figé en PNG à chaque taille
+demandée par l'installation.
+
+FICHIERS À DÉPOSER (dossier icons/ du dépôt)
+  icons/icon-192.png            192×192    Android, PC, onglet du navigateur
+  icons/icon-512.png            512×512    haute résolution (install, splash)
+  icons/icon-maskable-512.png   512×512    Android adaptatif — zone sûre respectée
+  icons/apple-touch-icon.png    180×180    iOS / iPadOS (écran d'accueil)
+  icons/logo-3d-512.png         512×512    fond transparent — pour l'interface
+  sw.js                         (version v1.8.4-icone-3d)
+
+  icons/model.glb est déjà dans le dépôt : il ne sert qu'à régénérer les PNG
+  et, plus tard, à un éventuel logo animé dans l'application.
+
+APRÈS DÉPÔT
+  1. Recharger le site.
+  2. Désinstaller l'ancienne application si elle était installée, puis réinstaller :
+     le système ne modifie l'icône d'une application déjà installée qu'au bout
+     d'un certain délai (ou jamais sur Windows sans réinstallation).
+  3. Chrome / Edge (PC) : bouton « Installer l'application » dans le navigateur,
+     ou icône d'installation dans la barre d'adresse.
+  4. Android : menu ⋮ → « Ajouter à l'écran d'accueil » / « Installer l'application ».
+  5. iOS : Partager → « Sur l'écran d'accueil ».
+
+CE QUI A CHANGÉ DANS sw.js
+  Les icônes étaient servies depuis DOCS_CACHE, sans version : une nouvelle icône
+  n'aurait jamais remplacé l'ancienne. Elles sont maintenant demandées au réseau
+  d'abord, avec repli sur le cache hors ligne.

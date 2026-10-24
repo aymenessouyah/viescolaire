@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.5.8-ouvrir-formulaire` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.6-couverture-2col` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -17,6 +17,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | `data/repartition3SI1.js` | **La répartition 3SI1** : 54 séances datées (mardi et jeudi), devoirs, domaines et pages du Smart Book 3e. | 22 Ko |
 | `data/fiches3SI1.js` | **Les 54 fiches 3SI1** au modèle v3 (objectifs, méthode, prérequis, critères, déroulement, travail à la maison). | 208 Ko |
 | `docs/fiches-3si-2026/` | 27 PDF (deux séances par fichier) + `Fiches_3SI1_2026-2027.pdf` (recueil 54 pages). | 1,8 Mo |
+| `assets/annexes-fonctions.js` | référentiel d'avancement (5 domaines, 209 fonctions et propriétés) |
 | `assets/fiche-formulaire.html` | **La page du formulaire** (fournie par l'enseignant) : sert de contenu à la grande boîte « Modifier la fiche et les coches ». | 8 Ko |
 | `data/fiches.js` | **Les 50 fiches pédagogiques 4SI2** préremplies au modèle « Séance 8-9 v3 » : objectifs (3 colonnes), méthode active, prérequis, critères de réussite, 4 étapes du déroulement, travail à la maison. | 178 Ko |
 | `assets/fiches.js` | Module d'intégration : onglet « Fiches pédagogiques », boîte de fiche éditable, menu d'impression, bloc « nouvelle répartition », report des préparations. | 34 Ko |
@@ -28,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.5.8-ouvrir-formulaire` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.6-couverture-2col` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -271,6 +272,217 @@ ouverture d'un `blob:` d'**une page** dont le titre de séance correspond, 0 err
 texte entre le document imprimé et `S13.pdf` : titres, objectifs, déroulement et travail à la maison
 identiques (seules différences : casse des titres mise en majuscules par la feuille d'impression, et
 une phrase répétée tronquée par le gabarit du PDF).
+
+### ③ sexies Avancement général par fonctions (HTML5, CSS3, JavaScript, SQL, PHP)
+
+Nouvelle partie en bas du formulaire (`assets/fiche-formulaire.html`), intitulée **« Avancement
+général — fonctions et propriétés »**, alimentée par le référentiel `assets/annexes-fonctions.js`
+extrait du document *Récapitulatif des fonctions et propriétés des annexes — 4ème SI*.
+
+| Domaine | Sous-catégories | Notions (cases à cocher) |
+|---|---|---|
+| HTML5 | 9 (structure, structuration, conteneurs, listes, tableaux, texte et média, formulaires, événements, attributs globaux) | 58 |
+| CSS3 | 12 (sélecteurs, pseudo-classes, texte, listes, arrière-plan, tableaux, boîtes et positionnement, bordures, transformation, filtres, transition, animation) | 62 |
+| JavaScript | 8 (opérateurs, entrées/sorties, conversion et test, Math, chaînes, Date, tableaux, DOM) | 42 |
+| SQL | 4 (LDD, LMD, fonctions de chaînes, fonctions de date) | 16 |
+| PHP | 9 (types, variables, mathématiques, chaînes, date, tableaux, langage, superglobales, MySQLi) | 31 |
+| **Total** | **42** | **209** |
+
+Fonctionnement :
+
+- **cinq pastilles filtre** (une par domaine) avec `couvert / total` et pourcentage ;
+- un **pourcentage global** et une barre de progression, plus un compteur `n / 209` ;
+- une **case par fonction / propriété / balise**, rangée sous sa sous-catégorie, avec sa description
+  en petit (ex. `ch.substring(d, f) — sous-câine`) ;
+- compteur par sous-catégorie (`3/3`, `4/6`…) mis à jour à chaque coche ;
+- boutons **Tout cocher / Tout décocher** pour le domaine affiché et **Tout décocher** (global, avec
+  confirmation) ;
+- **enregistrement par classe** dans `localStorage` (`sti_avancement_fonctions_v1|<classe>`) : 4SI2 et
+  3SI1 ont chacun leur avancement ;
+- l'en-tête de la boîte affiche une **mini-barre « Avancement n % (x/209 notions · classe) »** grâce à
+  `STI_FICHES.avUpdate()`, appelé depuis le formulaire (`window.parent.STI_FICHES`).
+
+Vérifié dans le navigateur : référentiel chargé (5 domaines, 209 notions), 58 cases pour HTML5 / 31
+pour PHP, coche de 3 notions → `1 % · 3/209`, « Tout cocher » HTML5 + 12 CSS3 + 7 JavaScript →
+`37 % · 77/209` et mini-barre de l'en-tête synchronisée, réouverture → **77 conservés**, passage en
+3SI1 → compteur **propre à la classe** (0/209), 0 erreur JS.
+
+### ③ septies Suivi de la séance, actions par groupe, couverture, cumul
+
+Quatre compléments au formulaire, après la bascule de `openModal` vers la boîte de fiche qui avait
+masqué la fenêtre de séance d'origine :
+
+1. **La case « Séance assurée » est rétablie**, dans une section *Suivi de la séance* placée après les
+   informations générales : deux cases (*Séance assurée — contenu commun traité avec les deux groupes*,
+   *Séance reportée*), mutuellement exclusives, avec l'état affiché à droite (Assurée ✓ / Reportée /
+   Non confirmée). Elle appelle `STI_FICHES.markSeance(n, assurée, valeur)`, qui enregistre
+   `store.seances[classe|n].done`, enregistre la sélection de notions puis relance le rendu : **le cahier
+   de textes et le tableau de bord se mettent à jour immédiatement**. Une séance future reste refusée
+   (« Une séance future ne peut pas être déclarée assurée »), la case revient à son état antérieur.
+   Un bouton **« Fiche de séance »** dans l'en-tête rouvre la fenêtre d'origine
+   (déroulement réel, observations, notions du Smart Book) : `STI_FICHES.classicModal()`.
+2. **Boutons « tout cocher » / « tout décocher » par groupe** dans le bloc d'avancement : chaque
+   sous-catégorie (ex. *Structure du document*, *Formulaires*, *MySQLi*…) porte ses deux boutons et son
+   compteur est recalculé aussitôt.
+3. **Recalcul de la « Couverture moyenne — moyenne des deux livres · notions uniques »** à chaque
+   validation : `markSeance()` relit `STI_TRACK.summary()` pour 3SI1 et 4SI2, avant/après, et affiche
+   le résultat dans un message (`Couverture moyenne : 12,3 % → 12,6 % (+0,3)`) et dans une seconde
+   ligne d'en-tête (`Couverture moyenne x % · 3SI1 a % · 4SI2 b % · n/602 notions uniques`) — même
+   calcul que le KPI du tableau de bord.
+4. **Cumul d'une fiche sur l'autre** : les notions du livre cochées en séance X-1 sont **cochées
+   d'office** en séance X (union des notions de toutes les séances précédentes de la classe) ; dans le
+   bloc d'avancement, chaque notion cochée mémorise **la séance d'acquisition** (`S1`, `S2`… affichée en
+   pastille) et une notion héritée ne peut pas être décochée sans le signaler
+   (« Cette notion a été validée en séance 1 : elle reste cochée pour les séances suivantes
+   (avancement cumulé) »). Les boutons de groupe ne retirent que les notions acquises dans la séance
+   courante. L'enregistrement d'une notion dans le référentiel d'annexes est donc horodaté par séance
+   (`localStorage sti_avancement_fonctions_v2|<classe>`, ancien format repris automatiquement).
+
+Vérifié : case assurée préremplie et état « Assurée ✓ » après validation, `store.seances['3SI1|1'].done
+= true`, 1 notion enregistrée, KPI du tableau de bord `0 % → 0,2 %` et ligne d'en-tête
+`0,2 % · 3SI1 0,4 % · 1/602` ; boutons de groupe 9 sous-catégories (`8/8` après « tout cocher »,
+`4 %`) ; héritage `S1` sur 8 notions et 2 notions du livre en séance 2 ; bouton *Fiche de séance* →
+fenêtre d'origine avec `#m-done` et `#sti-check-panel` ; 0 erreur JS.
+
+### ③ octies Un référentiel d'annexe par classe (AnnexeTT3STI / AnnexeTT4STI)
+
+Le cas pratique ne suit plus un référentiel unique : **chaque classe a son annexe**.
+
+| Classe | Annexe (PDF dans `docs/`) | Modules | Notions (cases) |
+|---|---|---|---|
+| **3<sup>e</sup> SI** | `AnnexeTT3STI.pdf` — 7 pages | HTML5, CSS3 (avec Animation), JavaScript, SQL (LDD, LMD) | **169** |
+| **4<sup>e</sup> SI** | `AnnexeTT4STI.pdf` — 9 pages | HTML5, CSS3 (**sans Animation**), JavaScript, **PHP**, SQL (LDD, LMD, fonctions de chaînes et de dates) | **202** |
+
+Modifications :
+
+- **`assets/annexes-fonctions.js`** restructuré en `STI_ANNEXES_JEUX` (`3SI1`, `4SI2`) avec, pour chaque
+  jeu, `source`, `pages`, `titre`, `fichier` et `domaines` ; `STI_ANNEXES_TOTAL = {3SI1:169, 4SI2:202}`.
+  La 4<sup>e</sup> SI perd la sous-catégorie *Animation* (absente de son annexe), la 3<sup>e</sup> SI perd
+  PHP et les fonctions SQL de chaînes / de dates (absentes de la sienne) ;
+- **formulaire** : le bloc d'avancement lit le jeu de la classe affichée (`AV.jeu()`), affiche la source
+  (« Annexe TT3STI · HTML5, CSS3, JavaScript, SQL »), le titre « Avancement du cours — 3SI1/4SI2 » et
+  les pastilles correspondantes (4 en 3<sup>e</sup> SI, 5 en 4<sup>e</sup> SI) ; changer la classe dans le
+  champ *Classe* recharge le référentiel (les compteurs restent propres à chaque classe) ;
+- **`docs/AnnexeTT3STI.pdf`** et **`docs/AnnexeTT4STI.pdf`** sont déposés dans le site, ajoutés à
+  `DOC_ASSETS` (110 documents hors ligne) et référencés dans `data/docs.js` (groupe *Annexes de cours*) ;
+- **`data/competences.js`** : chaque compétence pointe d'abord vers l'annexe de sa classe
+  (`AnnexeTT3STI.pdf` pour 3SI1, `AnnexeTT4STI.pdf` pour 4SI2) avant les annexes par module ;
+- **`data/annexes.js`** : champ `classes` par annexe (PHP réservé à la 4<sup>e</sup> SI) et nouveau
+  repère `STI_ANNEXE_REF` ; la page *Annexes intégrales* affiche désormais un badge
+  « 3<sup>e</sup> et 4<sup>e</sup> SI » ou « 4<sup>e</sup> SI uniquement ».
+
+Vérifié dans le navigateur : 3SI1 → source `Annexe TT3STI`, **0/169**, pastilles HTML5 · CSS3 ·
+JavaScript · SQL, sous-catégories SQL réduites à LDD et LMD ; 4SI2 → source `Annexe TT4STI`, **0/202**,
+5 pastilles dont PHP, 9 sous-catégories, aucune *Animation* ; coche « tout cocher » HTML5 → `34 % ·
+58/169` en 3SI1 ; les deux PDF sont servis en `application/pdf` ; liens de compétences et badges
+corrects ; cache `108/110` ; 0 erreur JS.
+
+### ③ nonies Cas pratique 3e SI arrêté au SELECT simple · notions du livre sur deux colonnes
+
+**1. Périmètre du cas pratique 3<sup>e</sup> SI.** Le programme de la 3<sup>e</sup> SI s'arrête au
+**SELECT simple, sans jointure, avec les fonctions d'agrégat**. Le référentiel 3SI1 passe à
+**178 notions**, avec un domaine SQL redécoupé :
+
+| Sous-catégorie (3SI1) | Notions |
+|---|---|
+| LDD (définition des données) | 4 (`CREATE TABLE`, `ALTER TABLE`, `DROP …`, types) |
+| LMD (manipulation des données) | 6 (`INSERT`, `UPDATE`, `DELETE`, `SELECT simple`, `WHERE`, `ORDER BY`) |
+| **Fonctions d'agrégat** | 6 (`COUNT`, `SUM`, `AVG`, `MIN`/`MAX`, `GROUP BY`, `HAVING`) |
+
+Aucune mention de jointure ne subsiste dans le référentiel ni dans les fiches 3SI1 : les 87 occurrences
+des fiches (`data/fiches3SI1.js`) et les 9 de la répartition (`data/repartition3SI1.js`) ont été
+réécrites (séances 35 à 41, 51, 53 et 54 : « SELECT avec WHERE et ORDER BY », « GROUP BY et HAVING »,
+« filtres, agrégats et regroupements », erreurs types « agrégat sans GROUP BY », etc.).
+
+**2 et 3. « Notions du livre traitées dans cette séance » repensé.** La liste n'est plus une suite
+plate de 269 / 333 cases mais un **classement par domaine puis par sous-catégorie de l'annexe de la
+classe** — la même arborescence que le bloc d'avancement :
+
+- en-tête de domaine (HTML5, CSS3, JavaScript, SQL / PHP) ;
+- sous-catégories : *Structure du document*, *Structuration d'une page*, *Conteneurs*, *Listes*,
+  *Tableaux*, *Texte et média*, *Formulaires*, *Événements*… ;
+- **une grille de deux colonnes** par sous-catégorie (`grid-template-columns:1fr 1fr`) ;
+- **« tout cocher » / « tout décocher » devant chaque sous-titre**, avec le compteur `n/total` de la
+  sous-catégorie recalculé à chaque coche ;
+- les notions sans correspondance dans l'annexe sont regroupées sous « Autres notions de *domaine* » ;
+- la recherche et le filtre par domaine continuent de fonctionner et reforment les groupes.
+
+Vérifié : 3SI1 → 4 domaines, **31 groupes**, 269 notions affichées en 2 colonnes ; « tout cocher » sur
+*Structure du document* → `8/8` et `8 notions` ; 4SI2 → 5 domaines, 38 groupes, 333 notions, groupe
+*MySQLi* → `8/8` ; recherche « input » → 3 groupes / 3 notions ; bloc d'avancement toujours pourvu de
+ses 18 boutons de groupe (202 notions 4SI2, 178 en 3SI1) ; 0 erreur JS.
+
+### ③ decies Le formulaire était servi depuis le cache — corrigé
+
+**Symptôme :** après la mise à jour, la boîte « Fiche pédagogique » affichait encore l'ancienne page
+(pas de classement par sous-catégorie, pas de deux colonnes, pas de boutons de groupe), alors que le
+fichier livré était correct.
+
+**Cause reproduite en test :** `assets/fiche-formulaire.html` est dans `CORE_ASSETS` du service worker
+et la branche `corePaths` faisait `cache.match(req, {ignoreSearch:true})` **avant** le réseau. Le
+`fetch(..., {cache:'no-cache'})` de `formHTML()` ne contourne que le cache HTTP, **pas** le cache du
+service worker : toute copie ancienne restait donc servie. Preuve : en injectant une ancienne page dans
+`CORE_CACHE`, la boîte affichait « ANCIENNE VERSION DU FORMULAIRE », 0 groupe, aucune colonne.
+
+**Corrections :**
+
+1. **`sw.js`** — branche dédiée, **réseau d'abord** pour `assets/fiche-formulaire.html`
+   (`fetch(req,{cache:'reload'})`, remise en cache de la réponse fraîche), repli sur le cache seulement
+   hors ligne (503 explicite sinon) ;
+2. **`assets/fiches.js`** — `const FORM_BUILD = 'v1.6.4'`, requête `…?v=v1.6.4` (cache-busting HTTP) ;
+3. **`assets/fiche-formulaire.html`** — marqueur `<html data-form-build="v1.6.4">` ;
+4. **témoin de version visible** dans l'en-tête de la boîte : « formulaire v1.6.4 ✓ » en gris, ou en
+   rouge « copie ancienne : v1.6.x (attendu v1.6.4) — actualisez la page (Ctrl+F5) ».
+
+Vérifié : cache pollué avec une ancienne page → la boîte affiche bien la **nouvelle** (38 groupes,
+`683px 683px`) ; 3SI1 → 31 groupes, 269 notions, **62 boutons de groupe** ; 4SI2 → 38 groupes,
+333 notions, **76 boutons** ; hors ligne → le formulaire reste disponible depuis le cache, témoin
+« ✓ » ; 0 erreur JS.
+
+### ③ undecies Tableau de bord d'avancement : total, par classe, histogrammes par famille
+
+En tête du bloc *Avancement général* du formulaire, un tableau de bord résume l'avancement à trois
+niveaux (données lues dans `localStorage`, donc **les deux classes à la fois**) :
+
+1. **Avancement total** — notions acquises des deux classes / total des deux annexes
+   (`255 / 380 · 3SI1 178 · 4SI2 202`), avec un grand pourcentage et une barre ;
+2. **Avancement par classe** — une carte par classe : pourcentage, `n / total`, annexe de référence
+   (`TT3STI` / `TT4STI`), barre de progression ; la classe de la fiche ouverte est encadrée
+   (« 4SI2 (fiche ouverte) ») ;
+3. **Avancement par famille** — un **histogramme par classe** : une barre horizontale par
+   **sous-titre** de l'annexe (Structure du document, Structuration d'une page, Conteneurs, Listes,
+   Tableaux, Texte et média, Formulaires, Événements, Attributs globaux pour HTML5 ; Sélecteurs,
+   Pseudo-classes, Texte… pour CSS3 ; etc.), groupées par famille et colorées comme le domaine, avec
+   l'en-tête de famille (pourcentage global) et, pour chaque barre, `% · n/total`.
+   **Un clic sur une barre** ouvre la famille correspondante dans le bloc *Avancement* et met le
+   sous-titre en évidence.
+
+Le tableau de bord se recalcule à chaque coche (bloc *Avancement* et *Notions du livre*), à chaque
+bouton de groupe, à chaque changement de classe ou de séance.
+
+Vérifié : `70 % · 266/380`, 3SI1 `75 % · 134/178`, 4SI2 `65 % · 132/202` ; deux histogrammes de
+**32 et 41 barres** (une par sous-titre, aucune jointure de données manquante) ; clic sur une barre →
+famille active et sous-titre mis en évidence ; 0 erreur JS.
+
+### ③ duodecies Carte « Couverture moyenne » décomposée en deux blocs
+
+Dans le tableau de bord de l'application, la carte *Couverture moyenne* (2<sup>e</sup> KPI) est
+désormais composée de deux parties :
+
+1. **une ligne** : le pourcentage moyen (`1,1 %`) et son intitulé *Couverture moyenne* ;
+2. **sur la même ligne, deux colonnes** : la couverture de chaque livre — `3SI1 1,5 % · 4/269 notions`
+   et `4SI2 0,6 % · 2/333 notions`, chacune avec sa pastille, sa barre et son compteur, dans la
+   couleur de la classe (bleu 3SI1, vert 4SI2) ;
+3. en pied, le rappel « Moyenne des deux livres · notions uniques ».
+
+La carte occupe **deux colonnes de la grille** des KPI (`grid-template-columns:repeat(5,…)` +
+`grid-column:span 2`) pour que les deux sous-blocs respirent, et retombe sur deux colonnes en dessous
+de 1 000 px. Les valeurs proviennent toujours de `STI_TRACK.summary()`, donc la carte se met à jour dès
+qu'une séance est validée ou qu'une notion est cochée.
+
+Vérifié : `1,1 %` en tête, colonnes `3SI1 1,5 % · 4/269` et `4SI2 0,6 % · 2/333` sur une même ligne
+(2 colonnes de 174 px), hauteur alignée sur les trois autres cartes (154 px), `data-ref-kpi="1"` toujours
+renseigné (compatibilité avec les tests et le bandeau de la boîte de fiche), 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 
