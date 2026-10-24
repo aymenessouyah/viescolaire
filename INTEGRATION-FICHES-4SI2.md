@@ -2,7 +2,7 @@
 
 Document de raccordement : ce qui a été ajouté au site, **où** chaque chose s'applique,
 et comment le refaire ou le modifier plus tard.
-Version de l'application : `v1.6.2-annexes-tt` — site testé en local (`python3 -m http.server`)
+Version de l'application : `v1.6.3-notions-2col` — site testé en local (`python3 -m http.server`)
 et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et téléphone.
 
 ---
@@ -29,7 +29,7 @@ et vérifié au navigateur (Chromium/Playwright) sur ordinateur, tablette et té
 | Chemin | Modification |
 |---|---|
 | `index.html` | 3 lignes ajoutées : `<link rel="stylesheet" href="assets/fiches.css">` (après `agent-sti.css`), `<script src="data/repartition4SI2.js">` et `<script src="data/fiches.js">` (après `data/ajustements-sti.js`), `<script src="assets/fiches.js">` (après `assets/color-mode.js`). |
-| `sw.js` | `VERSION` → `sti-espace-v1.6.2-annexes-tt` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
+| `sw.js` | `VERSION` → `sti-espace-v1.6.3-notions-2col` (force le renouvellement du cache hors ligne) ; `data/fiches.js`, `data/fiches3SI1.js`, `data/repartition4SI2.js` et `data/repartition3SI1.js` dans `CORE_ASSETS` ; les 54 PDF (4SI2 + 3SI1) dans `DOC_ASSETS` (mise en cache hors ligne). |
 
 > Rien d'autre n'est touché : `assets/app.js`, `assets/interface-reference.js` et les autres
 > fichiers de données restent identiques. L'intégration se fait par greffe (voir §2), ce qui
@@ -376,6 +376,41 @@ JavaScript · SQL, sous-catégories SQL réduites à LDD et LMD ; 4SI2 → sourc
 5 pastilles dont PHP, 9 sous-catégories, aucune *Animation* ; coche « tout cocher » HTML5 → `34 % ·
 58/169` en 3SI1 ; les deux PDF sont servis en `application/pdf` ; liens de compétences et badges
 corrects ; cache `108/110` ; 0 erreur JS.
+
+### ③ nonies Cas pratique 3e SI arrêté au SELECT simple · notions du livre sur deux colonnes
+
+**1. Périmètre du cas pratique 3<sup>e</sup> SI.** Le programme de la 3<sup>e</sup> SI s'arrête au
+**SELECT simple, sans jointure, avec les fonctions d'agrégat**. Le référentiel 3SI1 passe à
+**178 notions**, avec un domaine SQL redécoupé :
+
+| Sous-catégorie (3SI1) | Notions |
+|---|---|
+| LDD (définition des données) | 4 (`CREATE TABLE`, `ALTER TABLE`, `DROP …`, types) |
+| LMD (manipulation des données) | 6 (`INSERT`, `UPDATE`, `DELETE`, `SELECT simple`, `WHERE`, `ORDER BY`) |
+| **Fonctions d'agrégat** | 6 (`COUNT`, `SUM`, `AVG`, `MIN`/`MAX`, `GROUP BY`, `HAVING`) |
+
+Aucune mention de jointure ne subsiste dans le référentiel ni dans les fiches 3SI1 : les 87 occurrences
+des fiches (`data/fiches3SI1.js`) et les 9 de la répartition (`data/repartition3SI1.js`) ont été
+réécrites (séances 35 à 41, 51, 53 et 54 : « SELECT avec WHERE et ORDER BY », « GROUP BY et HAVING »,
+« filtres, agrégats et regroupements », erreurs types « agrégat sans GROUP BY », etc.).
+
+**2 et 3. « Notions du livre traitées dans cette séance » repensé.** La liste n'est plus une suite
+plate de 269 / 333 cases mais un **classement par domaine puis par sous-catégorie de l'annexe de la
+classe** — la même arborescence que le bloc d'avancement :
+
+- en-tête de domaine (HTML5, CSS3, JavaScript, SQL / PHP) ;
+- sous-catégories : *Structure du document*, *Structuration d'une page*, *Conteneurs*, *Listes*,
+  *Tableaux*, *Texte et média*, *Formulaires*, *Événements*… ;
+- **une grille de deux colonnes** par sous-catégorie (`grid-template-columns:1fr 1fr`) ;
+- **« tout cocher » / « tout décocher » devant chaque sous-titre**, avec le compteur `n/total` de la
+  sous-catégorie recalculé à chaque coche ;
+- les notions sans correspondance dans l'annexe sont regroupées sous « Autres notions de *domaine* » ;
+- la recherche et le filtre par domaine continuent de fonctionner et reforment les groupes.
+
+Vérifié : 3SI1 → 4 domaines, **31 groupes**, 269 notions affichées en 2 colonnes ; « tout cocher » sur
+*Structure du document* → `8/8` et `8 notions` ; 4SI2 → 5 domaines, 38 groupes, 333 notions, groupe
+*MySQLi* → `8/8` ; recherche « input » → 3 groupes / 3 notions ; bloc d'avancement toujours pourvu de
+ses 18 boutons de groupe (202 notions 4SI2, 178 en 3SI1) ; 0 erreur JS.
 
 ### ④ Le menu d'impression — 4 entrées
 
