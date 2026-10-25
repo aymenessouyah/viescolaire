@@ -7,6 +7,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const agentSource = fs.readFileSync(path.join(root, 'assets/agent-sti.js'), 'utf8');
 const edgeSource = fs.readFileSync(path.join(root, 'supabase/functions/assistant-ia/index.ts'), 'utf8');
+const supabaseConfig = fs.readFileSync(path.join(root, 'supabase/config.toml'), 'utf8');
 
 function loadAgentHelpers() {
   const sandbox = {
@@ -79,4 +80,19 @@ test('la fonction IA valide une transcription sans note et exige au moins une im
   assert.match(edgeSource, /La prélecture doit fournir une transcription sans évaluation/);
   assert.match(edgeSource, /task === "transcription" && cleanText\(payload\?\.input\?\.type_devoir, 30\) !== "théorique"/);
   assert.match(edgeSource, /task === "transcription" && attachments\.length === 0/);
+});
+
+test('la fonction Agent STI appelle Gemini avec les images inline et une sortie JSON', () => {
+  assert.match(supabaseConfig, /verify_jwt\s*=\s*true/);
+  assert.match(edgeSource, /const authError = await authenticatedUser\(request\)/);
+  assert.match(edgeSource, /Deno\.env\.get\("GEMINI_API_KEY"\)/);
+  assert.match(edgeSource, /Deno\.env\.get\("GEMINI_MODEL"\)/);
+  assert.match(edgeSource, /generativelanguage\.googleapis\.com\/v1beta\/models/);
+  assert.match(edgeSource, /"x-goog-api-key": apiKey/);
+  assert.match(edgeSource, /inlineData: \{ mimeType: image\[1\], data: image\[2\] \}/);
+  assert.match(edgeSource, /responseMimeType: "application\/json"/);
+  assert.match(edgeSource, /providerData\?\.candidates\?\.\[0\]\?\.content\?\.parts/);
+  assert.match(edgeSource, /clearTimeout\(timer\)/);
+  assert.doesNotMatch(edgeSource, /api\.openai\.com|AI_API_KEY/);
+  assert.match(agentSource, /Gemini configuré/);
 });

@@ -16,7 +16,7 @@ L'**Agent STI** est un véritable agent pédagogique intégré à Vie Scolaire. 
 Navigateur / GitHub Pages
   → Supabase Auth (session du professeur)
   → Edge Function assistant-ia
-  → API compatible OpenAI Chat Completions
+  → Google Gemini API `generateContent`
   → JSON validé et affiché dans l'Agent STI
 ```
 
@@ -24,32 +24,24 @@ La clé de l'IA est un **secret Supabase**. Elle n'apparaît ni dans GitHub, ni 
 
 ## 1. Choisir le modèle
 
-La fonction utilise une API compatible avec le format OpenAI `POST /chat/completions`. Elle accepte donc plusieurs fournisseurs. Pour la correction de photos, choisir impérativement un modèle **vision** capable de recevoir des images.
+La fonction appelle directement l’API **Google Gemini `generateContent`**. Il faut un modèle Gemini qui prend en charge les images et le mode JSON : ces capacités sont nécessaires à la transcription manuscrite et aux documents structurés.
 
-Réglages disponibles :
+Réglages disponibles dans les secrets Supabase :
 
 | Secret | Rôle |
 |---|---|
-| `AI_API_KEY` | Clé privée du fournisseur d'IA — obligatoire |
-| `AI_MODEL` | Identifiant exact du modèle — obligatoire |
-| `AI_BASE_URL` | Base de l'API ; par défaut `https://api.openai.com/v1` |
-| `AI_MAX_TOKENS` | Limite de réponse, de 1000 à 12000 ; facultatif |
+| `GEMINI_API_KEY` | Clé privée Gemini — obligatoire. Le projet Supabase actuel possède déjà ce secret. |
+| `GEMINI_MODEL` | Identifiant du modèle à utiliser — facultatif; par défaut `gemini-2.0-flash`. |
+| `GEMINI_MODELE` | Ancien nom accepté pour le réglage du modèle, afin de rester compatible avec `corriger-ia`. |
+| `GEMINI_MAX_OUTPUT_TOKENS` | Limite de réponse, de 1000 à 12000; facultatif. |
 
-Exemple avec le réglage par défaut : remplacer le modèle ci-dessous par un modèle effectivement disponible sur votre compte.
-
-```bash
-supabase secrets set \
-  AI_API_KEY="VOTRE_CLE_PRIVEE" \
-  AI_MODEL="VOTRE_MODELE"
-```
-
-Pour un fournisseur compatible installé à une autre adresse :
+Le modèle par défaut reprend celui de l’ancienne fonction `corriger-ia`. Si ce modèle n’est plus disponible sur votre compte, définissez `GEMINI_MODEL` avec un modèle Gemini vision prenant en charge la sortie JSON :
 
 ```bash
-supabase secrets set AI_BASE_URL="https://adresse-du-fournisseur/v1"
+supabase secrets set GEMINI_MODEL="MODELE_GEMINI_DISPONIBLE"
 ```
 
-**Ne communiquez pas votre clé dans une conversation, un ticket ou un fichier du dépôt.**
+La clé API reste un secret côté serveur; ne la communiquez pas dans une conversation, un ticket ou un fichier du dépôt. Si `GEMINI_API_KEY` n’existe pas ou doit être renouvelée, ajoutez-la directement dans Supabase → Edge Functions → Secrets.
 
 ## 2. Déployer la fonction
 
@@ -113,10 +105,10 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 | Message | Vérification |
 |---|---|
 | `Connexion professeur requise` | Se reconnecter depuis le bouton Compte de la plateforme. |
-| `Agent non configuré` | Vérifier `AI_API_KEY` et `AI_MODEL` dans Supabase → Edge Functions → Secrets. |
-| Code 401 ou 403 du fournisseur | Vérifier la clé, le compte et les autorisations du modèle. |
-| Le texte fonctionne mais pas les photos | Utiliser un modèle vision et vérifier que le fournisseur accepte les images en `image_url`. |
-| Réponse JSON incomplète | Réessayer, réduire la demande ou choisir un modèle prenant bien en charge le mode JSON. |
+| `Agent non configuré` | Vérifier `GEMINI_API_KEY` dans Supabase → Edge Functions → Secrets. Vérifier aussi que `GEMINI_MODEL` est disponible sur le compte. |
+| Code 401 ou 403 de Gemini | Vérifier la clé, le compte et les autorisations du modèle. |
+| Le texte fonctionne mais pas les photos | Choisir un modèle Gemini vision et vérifier que les images sont transmises en `inlineData`. |
+| Réponse JSON incomplète | Réessayer, réduire la demande ou choisir un modèle Gemini prenant bien en charge le mode JSON. |
 | Délai dépassé | Réduire le nombre d'images ou de séances demandées, puis réessayer. |
 
 ## Limites volontaires

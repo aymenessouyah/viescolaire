@@ -1,6 +1,5 @@
 // Agent STI — Supabase Edge Function (Deno)
-// Secrets requis : AI_API_KEY et AI_MODEL.
-// Facultatif : AI_BASE_URL (API compatible OpenAI Chat Completions).
+// Secrets requis : GEMINI_API_KEY. Le modèle Gemini reste configurable par secret.
 // Aucune donnée reçue n'est journalisée par cette fonction.
 
 const CORS = {
@@ -383,14 +382,14 @@ Deno.serve(async request => {
   catch (_) { return json({ error: "Corps de requête JSON invalide." }, 400); }
 
   const task = cleanText(payload?.task, 30);
-  const apiKey = Deno.env.get("AI_API_KEY") || "";
-  const model = Deno.env.get("AI_MODEL") || "";
+  const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY") || "";
+  const model = cleanText(Deno.env.get("GEMINI_MODEL") || Deno.env.get("GEMINI_MODELE") || "gemini-2.0-flash", 100);
   if (task === "status") {
-    return json({ ok: true, configured: Boolean(apiKey && model), model: apiKey && model ? model : null });
+    return json({ ok: true, provider: "Gemini", configured: Boolean(apiKey && model), model: apiKey && model ? model : null });
   }
   if (!TASKS.has(task)) return json({ error: "Outil d'agent inconnu." }, 400);
   if (!apiKey || !model) {
-    return json({ error: "Agent non configuré : ajoutez les secrets AI_API_KEY et AI_MODEL dans Supabase." }, 503);
+    return json({ error: "Agent non configuré : vérifiez le secret GEMINI_API_KEY et le modèle Gemini dans Supabase." }, 503);
   }
 
   const attachments = validAttachments(payload?.attachments);
@@ -409,40 +408,41 @@ Deno.serve(async request => {
     context: payload?.context && typeof payload.context === "object" ? payload.context : {},
     input: payload?.input && typeof payload.input === "object" ? payload.input : {},
   };
-  const prompt = `${COMMON_RULES}\n${TASK_PROMPTS[task]}\n\nDonnées de travail JSON :\n${JSON.stringify(safePayload)}`;
-  const userContent: any = attachments.length
-    ? [
-        { type: "text", text: prompt },
-        ...attachments.map(item => ({ type: "image_url", image_url: { url: item.data } })),
-      ]
-    : prompt;
+  const systemInstruction = `${COMMON_RULES}\n${TASK_PROMPTS[task]}`;
+  const userParts: any[] = [{ text: `Données de travail JSON :\n${JSON.stringify(safePayload)}` }];
+  attachments.forEach(item => {
+    const image = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(item.data);
+    if (image) userParts.push({ inlineData: { mimeType: image[1], data: image[2] } });
+  });
 
-  const baseUrl = (Deno.env.get("AI_BASE_URL") || "https://api.openai.com/v1").replace(/\/$/, "");
-  const endpoint = baseUrl.endsWith("/chat/completions") ? baseUrl : `${baseUrl}/chat/completions`;
-  const maxTokens = Number(Deno.env.get("AI_MAX_TOKENS") || (task === "repartition" ? "7000" : "5000"));
+  const defaultOutputTokens = task === "repartition" ? 7000 : 5000;
+  const configuredOutputTokens = Number(Deno.env.get("GEMINI_MAX_OUTPUT_TOKENS"));
+  const maxOutputTokens = Number.isFinite(configuredOutputTokens)
+    ? Math.max(1000, Math.min(12000, Math.trunc(configuredOutputTokens)))
+    : defaultOutputTokens;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 95_000);
+  const timer = setTimeout(() => controller.abort(), 95_000);
 
   try {
-    const aiResponse = await fetch(endpoint, {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+    const geminiResponse = await fetch(endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: COMMON_RULES },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
-        temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
-        max_tokens: Math.max(1000, Math.min(12000, maxTokens)),
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: "user", parts: userParts }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
+          maxOutputTokens: Math.max(1000, Math.min(12000, maxOutputTokens)),
+        },
       }),
       signal: controller.signal,
     });
 
-    const raw = await aiResponse.text();
-    if (!aiResponse.ok) {
-      let message = `Le fournisseur IA a répondu avec le code ${aiResponse.status}.`;
+    const raw = await geminiResponse.text();
+    if (!geminiResponse.ok) {
+      let message = `Gemini a répondu avec le code ${geminiResponse.status}.`;
       try {
         const parsed = JSON.parse(raw);
         message += ` ${cleanText(parsed?.error?.message || parsed?.message, 500)}`;
@@ -452,12 +452,14 @@ Deno.serve(async request => {
 
     let providerData: any;
     try { providerData = JSON.parse(raw); }
-    catch (_) { return json({ error: "Réponse illisible du fournisseur IA." }, 502); }
+    catch (_) { return json({ error: "Réponse illisible de Gemini." }, 502); }
 
-    let content = providerData?.choices?.[0]?.message?.content;
-    if (Array.isArray(content)) content = content.map((part: any) => part?.text || "").join("");
-    if (typeof content !== "string" || !content.trim()) {
-      return json({ error: "Le modèle n'a produit aucun contenu exploitable." }, 502);
+    const responseParts = providerData?.candidates?.[0]?.content?.parts;
+    const content = Array.isArray(responseParts)
+      ? responseParts.map((part: any) => typeof part?.text === "string" ? part.text : "").join("")
+      : "";
+    if (!content.trim()) {
+      return json({ error: "Gemini n'a produit aucun contenu exploitable." }, 502);
     }
 
     let result: any;
@@ -473,12 +475,12 @@ Deno.serve(async request => {
       ok: true,
       task,
       result,
-      meta: { model, request_id: crypto.randomUUID(), images: attachments.length },
+      meta: { provider: "Gemini", model, request_id: crypto.randomUUID(), images: attachments.length },
     });
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "AbortError";
-    return json({ error: timedOut ? "Le modèle a dépassé le délai d'attente." : "Le service IA est momentanément injoignable." }, 504);
+    return json({ error: timedOut ? "Gemini a dépassé le délai d'attente." : "Le service Gemini est momentanément injoignable." }, 504);
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timer);
   }
 });
