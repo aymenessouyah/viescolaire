@@ -1333,7 +1333,7 @@ function cahierPDF(){
   try {
     blob = window.STI_PDF.cahier({
       titre: "Cahier de textes — Lycée Rafèha",
-      sous: "Sciences techniques de l’informatique 2026-2027 · " + periode,
+      sous: "Sciences et technologies de l’informatique 2026-2027 · " + periode,
       infos: [{k:"Séances", v:String(list.length)}, {k:"Assurées", v:String(done)},
               {k:"Renseignées", v:String(renseignees)}, {k:"Édité le", v:edite}]
              .concat(cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri)
