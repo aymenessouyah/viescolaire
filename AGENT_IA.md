@@ -53,7 +53,7 @@ supabase link --project-ref oaahxobzbnmaohcmdrbu
 supabase functions deploy assistant-ia --project-ref oaahxobzbnmaohcmdrbu
 ```
 
-Ne pas utiliser `--no-verify-jwt` : l'accès doit rester réservé aux professeurs connectés. La fonction vérifie également la session auprès de Supabase Auth.
+La fonction utilise `verify_jwt = false` au gateway pour que le précontrôle CORS `OPTIONS`, qui ne contient pas de jeton, puisse atteindre la fonction. Cela ne rend pas les générations anonymes : `assistant-ia/index.ts` exige un Bearer token et vérifie chaque `POST` auprès de Supabase Auth. Ne supprimez pas ce contrôle d’authentification dans le code.
 
 Après le déploiement, la fonction est appelée automatiquement à partir de l'URL Supabase déjà configurée dans l'application :
 

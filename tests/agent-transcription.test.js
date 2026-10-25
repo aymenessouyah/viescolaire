@@ -83,13 +83,16 @@ test('la fonction IA valide une transcription sans note et exige au moins une im
 });
 
 test('la fonction Agent STI appelle Gemini avec les images inline et une sortie JSON', () => {
-  assert.match(supabaseConfig, /verify_jwt\s*=\s*true/);
-  assert.match(edgeSource, /const authError = await authenticatedUser\(request\)/);
+  assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
+  assert.match(edgeSource, /if \(request\.method === "OPTIONS"\)[\s\S]*?const authError = await authenticatedUser\(request\)/);
+  assert.match(edgeSource, /if \(!authorization\?\.startsWith\("Bearer "\)\) return json/);
+  assert.match(edgeSource, /\/auth\/v1\/user/);
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_API_KEY"\)/);
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_MODEL"\)/);
   assert.match(edgeSource, /generativelanguage\.googleapis\.com\/v1beta\/models/);
   assert.match(edgeSource, /"x-goog-api-key": apiKey/);
-  assert.match(edgeSource, /inlineData: \{ mimeType: image\[1\], data: image\[2\] \}/);
+  assert.match(edgeSource, /const \[header, encoded\] = item\.data\.split\(",", 2\)/);
+  assert.match(edgeSource, /inlineData: \{ mimeType: header\.slice\(5, header\.indexOf\(";"\)\), data \}/);
   assert.match(edgeSource, /responseMimeType: "application\/json"/);
   assert.match(edgeSource, /providerData\?\.candidates\?\.\[0\]\?\.content\?\.parts/);
   assert.match(edgeSource, /clearTimeout\(timer\)/);

@@ -1,6 +1,7 @@
 project_id = "oaahxobzbnmaohcmdrbu"
 
-# L'Agent STI exige une session professeur valide.
-# Ne jamais désactiver cette vérification pour la fonction publique appelée par le site.
+# Le preflight CORS OPTIONS ne peut pas contenir le JWT de la session.
+# Le gateway laisse donc passer OPTIONS; chaque POST reste protégé par le contrôle
+# Bearer + Supabase Auth de authenticatedUser() dans assistant-ia/index.ts.
 [functions.assistant-ia]
-verify_jwt = true
+verify_jwt = false
