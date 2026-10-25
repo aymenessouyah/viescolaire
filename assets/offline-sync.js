@@ -7,8 +7,21 @@ const M=root.STI_MERGE,esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 let db=null,state=null,scope='',lastSeen=null,busy=false,timer=null,queue=Promise.resolve(),initDone=false,pendingLink=null,blockedTab=false,status={code:'starting',text:'Initialisation locale…'},readyResolve;
 const ready=new Promise(r=>readyResolve=r),el=id=>document.getElementById(id),now=()=>new Date().toISOString();
 const defaults=()=>({times:clone(root.STI_DATA.reference.HORAIRES_DEFAUT),seances:{},profil:null,classes:null,eleves:{},epreuves:{},notes:{},presences:{}});
-function biz(o){const d=defaults();for(const k of FIELDS)if(o&&o[k]!==undefined)d[k]=clone(o[k]);return d;}
-const current=()=>biz(root.store),rawLocal=()=>{try{const x=localStorage.getItem(KEY);return x?biz(JSON.parse(x)):defaults();}catch(e){return defaults();}};
+function profileBelongsToCurrentUser(profile){
+ const user=root.authSession?.()?.user;if(!profile||typeof profile!=='object'||!user?.id)return false;
+ const id=String(profile.prof_id||''),email=String(profile.email||'').toLowerCase(),activeEmail=String(user.email||'').toLowerCase();
+ if(id)return id===String(user.id);
+ return !!(email&&activeEmail&&email===activeEmail);
+}
+function biz(o){const d=defaults();for(const k of FIELDS)if(o&&o[k]!==undefined)d[k]=clone(o[k]);if(!profileBelongsToCurrentUser(d.profil))d.profil=null;return d;}
+function remoteBiz(o,identity){
+ const d=defaults();for(const k of FIELDS)if(o&&o[k]!==undefined)d[k]=clone(o[k]);
+ const profile=d.profil;if(!profile||typeof profile!=='object')return d;
+ const id=String(profile.prof_id||''),email=String(profile.email||'').toLowerCase(),ownerEmail=String(identity.email||'').toLowerCase();
+ if(id&&id!==String(identity.id)||!id&&email&&ownerEmail&&email!==ownerEmail){d.profil=null;return d;}
+ d.profil={...profile,prof_id:String(identity.id),email:identity.email||profile.email||''};return d;
+}
+const current=()=>biz(root.store),rawCurrent=()=>{const d=defaults();for(const k of FIELDS)if(root.store&&root.store[k]!==undefined)d[k]=clone(root.store[k]);return d;},rawLocal=()=>{try{const x=localStorage.getItem(KEY);return x?biz(JSON.parse(x)):defaults();}catch(e){return defaults();}};
 function useful(o){return !!root.store.saved||!!o.profil||Object.keys(o.seances||{}).length>0||['eleves','epreuves','notes','presences'].some(k=>Object.values(o[k]||{}).some(v=>Array.isArray(v)?v.length:Object.keys(v||{}).length))||!eq(o.times,defaults().times);}
 function setupDB(){return new Promise((resolve,reject)=>{const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>{const d=req.result;d.createObjectStore('scopes',{keyPath:'id'});d.createObjectStore('backups',{keyPath:'id'});};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);req.onblocked=()=>reject(new Error('Fermez les autres onglets pour initialiser le stockage.'));});}
 function read(table,id){return new Promise((res,rej)=>{const q=db.transaction(table).objectStore(table).get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
@@ -22,6 +35,14 @@ function badge(){const c=['clean'].includes(status.code)?'b-green':['syncing','s
 function renderStatus(){const html=badge()+(state?.lastOk?'<span class="tiny muted">Dernière synchronisation : '+esc(new Date(state.lastOk).toLocaleString('fr-FR'))+'</span>':'');for(const id of ['cloud-bar','cloud-bar-ref','cloud-bar2']){const e=el(id);if(e)e.innerHTML=html;}const b=el('sti-sync-details');if(b)b.textContent=status.code==='conflict'?'Résoudre les conflits':'Hors ligne & synchronisation';}
 function setStatus(code,text){status={code,text};renderStatus();}
 function signedIdentity(){const cfg=root.cloudCfg?.(),auth=root.authSession?.();if(!cfg?.url||!cfg.key)return null;if(cfg.table!=='espace_pedagogique')throw new Error('La synchronisation sécurisée nécessite la table espace_pedagogique.');if(!cfg.auth)throw new Error('Activez l’accès protégé par mot de passe dans la configuration Cloud.');if(!auth?.user?.id)return null;return{id:auth.user.id,email:auth.user.email||auth.user.id,url:cfg.url.replace(/\/$/,''),annee:root.SCHOOL.annee,scope:cfg.url.replace(/\/$/,'')+'|'+auth.user.id+'|'+root.SCHOOL.annee};}
+function backupSnapshot(){
+ if(!initDone||!db||!state||blockedTab||pendingLink||state.conflict)return null;
+ let identity;try{identity=signedIdentity();}catch(error){return null;}
+ if(!identity||identity.scope!==scope||state.owner?.id!==identity.id||state.owner?.url!==identity.url)return null;
+ try{if(localStorage.getItem(PIN)!==scope)return null;}catch(error){return null;}
+ const data=clone(current());data.saved=root.store.saved||null;
+ return{userId:identity.id,schoolYear:identity.annee,data};
+}
 function editing(){return !!document.querySelector('.modal.on,dialog[open]')||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);}
 function schedule(delay=1000){clearTimeout(timer);timer=setTimeout(()=>request(false),delay);}
 function replaceLocal(data,saved){const d=biz(data);for(const k of FIELDS)root.store[k]=clone(d[k]);if(saved!==undefined)root.store.saved=saved;lastSeen=current();let stored=true;try{localStorage.setItem(KEY,JSON.stringify(root.store));}catch(e){stored=false;}if(state)state.idbOnly=!stored;return stored;}
@@ -45,10 +66,10 @@ async function establish(identity,head){
  await activate(identity,head,'remote');return true;
 }
 async function activate(identity,head,mode){
- const original=current();await backup('Avant association à un compte',original);if(state)await persist();
+ const original=rawCurrent();await backup('Avant association à un compte',original);if(state)await persist();
  const existing=await read('scopes',identity.scope);if(signedIdentity()?.scope!==identity.scope)throw Object.assign(new Error('Compte changé — association annulée.'),{kind:'account'});scope=identity.scope;
- state=existing||{id:scope,owner:identity,base:head?biz(head.payload):defaults(),headId:head?.id??null,lastOk:null,conflict:null,local:defaults()};state.owner=identity;
- let local=mode==='merge'?original:existing?.local||(head?biz(head.payload):defaults());
+ state=existing||{id:scope,owner:identity,base:head?remoteBiz(head.payload,identity):defaults(),headId:head?.id??null,lastOk:null,conflict:null,local:defaults()};state.owner=identity;if(existing&&state.base)state.base=remoteBiz(state.base,identity);
+ let local=mode==='merge'?current():existing?.local?remoteBiz(existing.local,identity):(head?remoteBiz(head.payload,identity):defaults());
  if(mode==='merge')state.base=head?null:defaults();
  replaceLocal(local,mode==='merge'?root.store.saved:head?.payload?.saved||null);await persist();localStorage.setItem(PIN,scope);blockedTab=false;pendingLink=null;refresh();
 }
@@ -67,7 +88,7 @@ async function syncLocked(manual){
  if(editing()){setStatus('pending','Modifications en attente — synchronisation après la saisie');schedule(3000);return;}
  setStatus('syncing','Synchronisation en cours…');
  for(let attempt=0;attempt<5;attempt++){
-  const result=await rpc(identity),head=result.head,remote=head?biz(head.payload):defaults();
+  const result=await rpc(identity),head=result.head,remote=head?remoteBiz(head.payload,identity):defaults();
   if(editing()){setStatus('pending','Réception différée pendant la saisie');schedule(3000);return;}
   if(!await establish(identity,head))return;
   const tabMerge=M.merge(lastSeen,current(),rawLocal());if(tabMerge.conflicts.length){await holdConflict(lastSeen,current(),rawLocal(),null,'tab');return;}if(!eq(current(),tabMerge.value)){replaceLocal(tabMerge.value);refresh();}
@@ -97,7 +118,11 @@ async function syncLocked(manual){
 async function request(manual=false){await ready;if(!db){setStatus('storage','Stockage durable indisponible — exportez vos données');return;}if(busy){if(manual)setStatus('syncing','Synchronisation déjà en cours…');return;}busy=true;
  try{await queue;if(navigator.locks)await navigator.locks.request('sti-sync-'+(scope||'local'),()=>syncLocked(manual));else await syncLocked(manual);}
  catch(e){if(e.kind==='auth'){setStatus('auth',e.message);if(manual)root.openAuth();}else if(['server','account'].includes(e.kind))setStatus(e.kind,e.message);else if(e.name==='QuotaExceededError'||e.name==='InvalidStateError')storageFailure(e);else{setStatus(navigator.onLine?'pending':'offline','Échange interrompu — modifications conservées, nouvelle tentative prévue');schedule(15000);}}
- finally{busy=false;}
+ finally{
+  busy=false;
+  try{const badgeCheck=root.ensureProfessorBadgeProfile?.();badgeCheck?.catch?.(error=>console.warn('Badge professeur non vérifié',error?.message||error));}catch(error){console.warn('Badge professeur non vérifié',error?.message||error);}
+  try{root.STI_DRIVE_BACKUP?.workspaceReady?.();}catch(error){console.warn('Sauvegarde Google Drive non vérifiée',error?.message||error);}
+ }
 }
 function beforeSave(o){if(!initDone||!lastSeen)return true;
  let pin;try{pin=localStorage.getItem(PIN);}catch(e){}
@@ -126,6 +151,6 @@ window.addEventListener('focus',()=>schedule(500));document.addEventListener('vi
 window.addEventListener('storage',e=>{if(e.key===PIN&&e.newValue&&e.newValue!==scope){blockedTab=true;setStatus('account','Autre compte ouvert dans un onglet — rechargez cette page');}if(e.key===KEY&&initDone&&!blockedTab){if(editing())return;const other=rawLocal(),m=M.merge(lastSeen,current(),other);if(m.conflicts.length){holdConflict(lastSeen,current(),other,null,'tab').catch(storageFailure);return;}if(!eq(current(),m.value)){replaceLocal(m.value);refresh();localChanged();}}});
 async function init(){lastSeen=current();try{db=await setupDB();scope=localStorage.getItem(PIN)||'unbound';state=await read('scopes',scope)||{id:scope,owner:null,base:null,headId:null,local:current(),conflict:null,lastOk:null};if(state.idbOnly){replaceLocal(state.local);refresh();}await persist();initDone=true;readyResolve();if(state.conflict)setStatus('conflict','Conflits à résoudre — deux versions conservées');else setStatus(navigator.onLine?'pending':'offline',navigator.onLine?'Vérification du Cloud en attente':'Hors ligne — données locales disponibles');schedule(1200);setInterval(()=>{if(!document.hidden)schedule(100);},30000);}
  catch(e){initDone=true;readyResolve();storageFailure(e);}}
-root.STI_SYNC={canUpdate:()=>!editing()&&!busy,flush:()=>persist(),request,beforeSave,localChanged,badge,renderStatus,details,onLogin:()=>{pendingLink=null;return request(true);},onLogout:()=>setStatus('auth','Déconnecté — modifications conservées sur cet appareil'),status:()=>({...status,scope,lastOk:state?.lastOk||null,pending:state?.base?!eq(current(),state.base):true,conflicts:state?.conflict?M.merge(state.conflict.unknown?undefined:state.conflict.base,state.conflict.local,state.conflict.remote).conflicts.length:0}),ready};
+root.STI_SYNC={canUpdate:()=>!editing()&&!busy,flush:()=>persist(),request,beforeSave,localChanged,badge,renderStatus,details,backupSnapshot,onLogin:()=>{pendingLink=null;return request(true);},onLogout:()=>setStatus('auth','Déconnecté — modifications conservées sur cet appareil'),status:()=>({...status,scope,lastOk:state?.lastOk||null,pending:state?.base?!eq(current(),state.base):true,conflicts:state?.conflict?M.merge(state.conflict.unknown?undefined:state.conflict.base,state.conflict.local,state.conflict.remote).conflicts.length:0}),ready};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })(window);

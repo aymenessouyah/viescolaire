@@ -107,3 +107,14 @@ test('la fin du T1 reprend le trimestre propre à chaque répartition de classe'
   assert.equal(normalized['3SI1'].find(session => session.n === 23).tri, 2);
   assert.equal(normalized['4SI2'].find(session => session.n === 22).tri, 1);
 });
+
+test('les séances de plusieurs classes le même jour ne reçoivent qu’un seul emplacement de signature', () => {
+  const days = printData.groupByDate([
+    { cls: '4SI2', n: 2, iso: '2026-10-02' },
+    { cls: '3SI1', n: 1, iso: '2026-10-01' },
+    { cls: '3SI1', n: 3, iso: '2026-10-02' }
+  ]);
+  assert.deepEqual(Array.from(days, day => [day.iso, day.items.length]), [
+    ['2026-10-01', 1], ['2026-10-02', 2]
+  ]);
+});

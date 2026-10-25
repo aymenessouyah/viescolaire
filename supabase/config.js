@@ -23,10 +23,10 @@
        sauvegarde du cloud avant toute saisie locale ;
      • coupure réseau : travail local, puis reprise automatique de l'envoi.
 
-   Accès protégé (auth: true) : la base n'accepte que le compte unique créé
-   dans Supabase (Authentication → Users). L'application demande alors la
-   connexion (fenêtre « Connexion à la sauvegarde distante ») sur chaque
-   appareil et garde la session ouverte ensuite.
+   Accès protégé (auth: true) : chaque professeur possède son propre compte
+   Supabase. Créer le premier compte administrateur dans Authentication → Users,
+   puis créer les autres comptes depuis « Gérer les professeurs » après avoir
+   déployé la fonction Edge admin-users. Chaque appareil garde sa session.
    ========================================================================= */
 window.STI_SUPABASE = {
   url:   "https://oaahxobzbnmaohcmdrbu.supabase.co",   // projet « aymenessouyah-vie-scolaire »
@@ -35,5 +35,8 @@ window.STI_SUPABASE = {
   device: "Poste principal — Prof. Aymen",
   auto:  true,                        // envoi automatique à chaque enregistrement
   auth:  true,                        // accès protégé par mot de passe
-  admin: "aymenessouyah@gmail.com"    // compte administrateur : gestion des professeurs
+  admin: "aymenessouyah@gmail.com",   // compte administrateur : gestion des professeurs
+  // ID client OAuth Google de type « application Web » (public, sans secret).
+  // À renseigner après activation de l’API Google Drive ; voir README.md.
+  googleDriveClientId: ""
 };
