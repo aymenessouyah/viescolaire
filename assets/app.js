@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.17.9-unified-cahier-export";
+const APP_VER = "v1.18.0-agent-curriculum-selection";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

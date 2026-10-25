@@ -27,7 +27,7 @@ function cleanText(value: unknown, max = 800): string {
 
 const COMMON_RULES = `
 Tu es « Agent STI », l'agent pédagogique personnel d'un enseignant tunisien de
-Systèmes et Technologies de l'Informatique (STI), en 3SI1 et 4SI2.
+Sciences et technologies de l’informatique (STI), en 3SI1 et 4SI2.
 
 RÈGLES IMPÉRATIVES
 - Rédige en français, avec un vocabulaire adapté au secondaire tunisien.
@@ -55,6 +55,12 @@ La séance dure 2 heures par groupe. Propose un déroulement réaliste de 4 à 7
 dont les durées totalisent environ 120 minutes. Intègre accueil/rappel seulement si
 utile, activité, trace écrite ou production, vérification des acquis et synthèse.
 Ne remplis pas le contenu réellement effectué : il s'agit d'une préparation.
+- Si input.notions_selectionnees contient des entrées, utilise-les comme périmètre
+  prioritaire et reporte leurs notions dans le champ « notions » de la fiche. N'ajoute
+  pas d'autres notions qui élargissent le contenu au-delà de la séance.
+- Si input.competences_selectionnees contient des entrées, construis les objectifs
+  et l'évaluation autour de ces compétences et reporte-les dans le champ « competences ».
+  Si les sélections sont vides, appuie-toi sur la séance et le contexte transmis sans inventer.
 
 FORMAT JSON EXACT :
 {
@@ -71,6 +77,7 @@ FORMAT JSON EXACT :
     }
   ],
   "notions": ["notion 1", "notion 2"],
+  "competences": ["compétence travaillée"],
   "travail_maison": "travail précis et faisable, ou Aucun",
   "supports": ["support réellement nécessaire"],
   "evaluation": "dispositif court de vérification des acquis",
@@ -91,6 +98,12 @@ La difficulté progressive part de l'application directe vers le raisonnement ou
 production. Pour un devoir, répartis un barème total cohérent sur 20 points, sauf
 instruction différente. Pour chaque exercice, la correction doit répondre à TOUTES
 les questions et expliquer les étapes utiles, y compris le code complet si demandé.
+- Si input.notions_selectionnees contient des entrées, construis les exercices autour
+  de ces notions, reporte-les dans le champ « notions » et ne les élargis pas à des
+  notions sans rapport. Sinon, utilise les suggestions de input.notions_du_referentiel.
+- Si input.competences_selectionnees contient des entrées, évalue explicitement ces
+  compétences et reporte-les dans le champ « competences »; sinon, appuie-toi sur le
+  contexte transmis.
 
 FORMAT JSON EXACT :
 {
@@ -99,6 +112,7 @@ FORMAT JSON EXACT :
   "duree": "60 min",
   "bareme_total": "20 points ou Non barémé",
   "introduction": "consignes générales courtes",
+  "notions": ["notion ciblée"],
   "exercices": [
     {
       "titre": "titre de l'exercice",
