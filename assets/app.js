@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.15.0-canvas-professor-signature";
+const APP_VER = "v1.16.0-current-trimester-assured-cahier";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1096,8 +1096,13 @@ function renderProg(){
 
 
 /* ---------------- 6. CAHIER DE TEXTES ---------------- */
-/* Cahier : les séances passées sans décision d'abord, sans modifier les fiches. */
-let cahCls = "both", cahTri = 0, cahStatus = "pending";
+/* Le cahier s'ouvre sur les trimestres des répartitions datées, avec les séances comme repli. */
+const CAHIER_PLANS = {
+  "3SI1": Array.isArray(DATA.repartition3SI1) ? DATA.repartition3SI1 : [],
+  "4SI2": Array.isArray(DATA.repartition4SI2) ? DATA.repartition4SI2 : []
+};
+const initialCahierFilters = window.STI_CAHIER_DEFAULTS.initialFilters(SESSIONS, todayISO(), CAHIER_PLANS);
+let cahCls = "both", cahTri = initialCahierFilters.tri, cahStatus = initialCahierFilters.status;
 /* classes réellement paramétrées, limitées à celles qui ont une répartition */
 function classesCahier(){
   const ids = (Array.isArray(store.classes) && store.classes.length ? store.classes.map(c=>c.id) : Object.keys(SESSIONS));
@@ -1114,6 +1119,7 @@ function renderCahier(){
   const cahierBox=document.getElementById("v-cahier");
   if(!isProfessorConnected()){if(cahierBox)cahierBox.innerHTML="";return;}
   const t = todayISO();
+  const currentTri = window.STI_CAHIER_DEFAULTS.currentTrimester(SESSIONS, t, CAHIER_PLANS);
   const period = classesCahier().filter(c=>cahCls==="both"||cahCls===c).flatMap(c=>sessionsOf(c,cahTri));
   const pending = s => { const o=store.seances[s.cls+"|"+s.n]||{};return s.iso<t&&o.done!==true&&o.done!==false; };
   const list=period.filter(s=>cahStatus==="all"||cahStatus==="pending"&&pending(s)||cahStatus==="done"&&seanceState(s)==="faite"||cahStatus==="reported"&&store.seances[s.cls+"|"+s.n]?.done===false).sort((a,b)=>b.iso.localeCompare(a.iso)||a.cls.localeCompare(b.cls)||b.n-a.n);
@@ -1135,10 +1141,10 @@ function renderCahier(){
   const box=document.getElementById("v-cahier");
   box.innerHTML=`
   <div class="sec-head"><div><h2>${ic("pen")} Cahier de textes numérique</h2>
-    <p class="lead">Par défaut : les dates passées sans confirmation, de la plus récente à la plus ancienne. Les séances assurées ou reportées sont exclues de cette liste, mais restent accessibles dans les filtres.</p></div>
+    <p class="lead">Par défaut : les séances assurées du trimestre en cours, des plus récentes aux plus anciennes. Les autres statuts et trimestres restent accessibles avec les filtres.</p></div>
     <div class="row no-print">
       <select id="cah-class" aria-label="Classe du cahier" style="width:auto"><option value="both" ${cahCls==="both"?"selected":""}>Les deux classes</option><option value="3SI1" ${cahCls==="3SI1"?"selected":""}>3SI1</option><option value="4SI2" ${cahCls==="4SI2"?"selected":""}>4SI2</option></select>
-      <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre</option>`).join("")}</select>
+      <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre${n===currentTri?" — en cours":""}</option>`).join("")}</select>
       <select id="cah-status" aria-label="État des séances du cahier" style="width:auto"><option value="pending" ${cahStatus==="pending"?"selected":""}>À confirmer (dates passées)</option><option value="all" ${cahStatus==="all"?"selected":""}>Toutes les séances</option><option value="done" ${cahStatus==="done"?"selected":""}>Assurées</option><option value="reported" ${cahStatus==="reported"?"selected":""}>Reportées</option></select>
       <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu({cahier:{classe:'${cahCls}',trimestre:${cahTri},statut:'${cahStatus}'}})" title="Ouvrir le centre et affiner l'impression par classe">${ic("print")} Centre d'impression</button>
       <button class="btn btn-xs btn-line" onclick="printCahier()" title="Document imprimable : en-tête, séances de la période, travail donné">${ic("print")} Imprimer le cahier</button>
@@ -1219,7 +1225,7 @@ function dashRappelsCard(){
         <button class="btn btn-xs btn-soft" onclick="openModal('${x.cls}',${x.n})">Compléter</button></div>`; };
     if (!nA && !nI) return `<div class="card" id="dash-rappels" style="margin-bottom:16px"><div class="card-b spread">
         <div class="row" style="gap:10px"><span class="badge b-green">à jour</span><strong>Cahier de textes : aucune séance en attente, aucune fiche incomplète.</strong></div>
-        <button class="btn btn-xs btn-line" onclick="cahOuvrir('all')">Ouvrir le cahier</button></div></div>`;
+        <button class="btn btn-xs btn-line" onclick="cahOuvrir()">Ouvrir le cahier</button></div></div>`;
     return `<div class="card" id="dash-rappels" style="margin-bottom:16px">
       <div class="card-h"><h3>${ic("alert")} Rappels du cahier de textes</h3>
         <span class="row" style="gap:8px">${nA?`<span class="badge b-amber">${nA} séance${nA>1?"s":""} à confirmer</span>`:""}${nI?`<span class="badge b-rose">${nI} fiche${nI>1?"s":""} incomplète${nI>1?"s":""}</span>`:""}</span></div>
@@ -1612,11 +1618,12 @@ function cahierRappels(){
   [1, 2, 3].forEach(tri => ["3SI1", "4SI2"].forEach(c => { const v = verrouInfo(c, tri); if (v) verrous.push({ cls: c, tri: tri, v: v }); }));
   return { attente: attente, incompletes: incompletes, verrous: verrous };
 }
-/* ouvrir le cahier sur un filtre donné */
+/* Ouvrir le cahier sur le trimestre courant; un statut explicitement demandé reste prioritaire. */
 function cahOuvrir(status, cls){
-  cahStatus = status || "pending";
-  cahCls = cls || "both";
-  cahTri = 0;
+  const filters = window.STI_CAHIER_DEFAULTS.filtersForOpen(SESSIONS, todayISO(), status, cls, CAHIER_PLANS);
+  cahStatus = filters.status;
+  cahCls = filters.cls;
+  cahTri = filters.tri;
   if (typeof go === "function") go("v-cahier");
   renderCahier();
 }
