@@ -260,14 +260,12 @@ hebdomadaire Google Drive** ; pour retirer l’autorisation Google elle-même, u
 **Configuration OAuth à faire avant de demander l’accord aux professeurs :**
 
 1. Dans Google Cloud Console, choisir un projet et activer **Google Drive API**.
-2. Configurer l’écran de consentement OAuth. En mode test, ajouter les comptes Google des professeurs comme
-   utilisateurs de test.
-3. Créer un identifiant OAuth de type **Application Web** et ajouter comme origine JavaScript autorisée
-   `https://aymenessouyah.github.io` (et `http://localhost:8000` uniquement pour les tests locaux).
-4. Copier le **Client ID** — pas de secret client — dans `googleDriveClientId` du fichier
-   `supabase/config.js`, publier le changement, puis vérifier le premier consentement avec un compte test.
+2. Configurer Google Auth Platform. Choisir l’audience **Externe** si les professeurs utilisent des comptes Google de domaines différents; le mode **Interne** convient uniquement à une organisation Google Workspace unique. En mode **Test**, seuls les comptes ajoutés aux testeurs peuvent se connecter. Pour ouvrir l’accès aux professeurs, compléter la marque et publier l’application en production.
+3. Page d’accueil : `https://aymenessouyah.github.io/viescolaire/`. Politique de confidentialité publique : `https://aymenessouyah.github.io/viescolaire/politique-confidentialite.html`. Le domaine autorisé et l’origine JavaScript sont `aymenessouyah.github.io` et `https://aymenessouyah.github.io` respectivement. Si Google exige une validation de domaine, suivre la procédure Search Console; un domaine personnalisé peut être nécessaire.
+4. Créer un identifiant OAuth de type **Application Web**, activer uniquement le scope Drive nécessaire (`drive.file`) et ajouter l’origine JavaScript autorisée `https://aymenessouyah.github.io` (et `http://localhost:8000` uniquement pour les tests locaux). Le flux utilisé par le site n’exige pas d’URI de redirection.
+5. Copier le **Client ID** — pas de secret client — dans `googleDriveClientId` du fichier `supabase/config.js`, publier le changement, puis vérifier la connexion avec un compte professeur qui n’est pas inscrit aux testeurs.
 
-Le Client ID est public et peut être inclus dans le site ; aucun secret OAuth ne doit être ajouté au dépôt.
+Le Client ID est public et peut être inclus dans le site ; aucun secret OAuth ne doit être ajouté au dépôt. La page de confidentialité publiée doit rester cohérente avec le fournisseur d’IA et les services réellement configurés.
 Tant que `googleDriveClientId` est vide, les sauvegardes Drive restent inactives et l’interface indique que
 la configuration Google est requise. Le connecteur Google Drive de l’assistant ne peut pas remplacer cette
 autorisation : chaque professeur doit choisir et autoriser son propre compte dans l’application.
