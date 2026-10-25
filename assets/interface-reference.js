@@ -251,8 +251,8 @@ function shell(){
   const planning=document.createElement('div');planning.className='ref-planning';planning.setAttribute('role','group');planning.setAttribute('aria-label','Emploi du temps et répartitions trimestrielles');
   planning.innerHTML='<div class="vs-navlabel">PLANIFICATION</div>';
   tabs.insertBefore(planning,buttons[6]);if(edt)planning.appendChild(edt);if(oldRep)oldRep.remove();
-  [1,2,3].forEach(t=>{const b=document.createElement('button');b.type='button';b.className='tab ref-term';b.dataset.repTerm=t;b.setAttribute('onclick',"setTri("+t+");go('v-rep')");b.innerHTML=icon('calendar',18)+'<span>Répartition — '+t+(t===1?'er':'e')+' trimestre</span>';planning.appendChild(b);});
-  const extras=buttons.slice(6).filter(b=>b!==edt&&b!==oldRep),details=document.createElement('details');details.className='ref-tools';details.innerHTML='<summary>OUTILS STI & DONNÉES</summary>';extras.forEach(b=>details.appendChild(b));if(extras.some(b=>b.classList.contains('on')))details.open=true;tabs.appendChild(details);termChanged(ctx.term||1);
+  if(oldRep){[1,2,3].forEach(t=>{const b=document.createElement('button');b.type='button';b.className='tab ref-term';b.dataset.repTerm=t;b.setAttribute('onclick',"setTri("+t+");go('v-rep')");b.innerHTML=icon('calendar',18)+'<span>Répartition — '+t+(t===1?'er':'e')+' trimestre</span>';planning.appendChild(b);});}
+  const extras=buttons.slice(6).filter(b=>b!==edt&&b!==oldRep),details=document.createElement('details');details.className='ref-tools';details.innerHTML='<summary>OUTILS STI & DONNÉES</summary>';extras.forEach(b=>details.appendChild(b));if(extras.some(b=>b.classList.contains('on')))details.open=true;tabs.appendChild(details);if(oldRep)termChanged(ctx.term||1);
  }
  const summaries=classes.map(summary),covered=summaries.reduce((n,s)=>n+s.covered,0),total=summaries.reduce((n,s)=>n+s.total,0);el('ref-year').innerHTML=`<div class="side-label">Année scolaire 2026–2027</div><div class="year-card"><div class="year-top">${icon('calendar',15)}<span class="year-title">STI · 3SI1 & 4SI2</span></div><div class="year-bar"><div class="year-fill" style="width:${covered/total*100}%"></div></div><div class="year-foot">${covered} / ${total} notions des livres abordées<br>Deux groupes par classe · suivi commun</div></div>`;
  el('ref-date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
@@ -293,5 +293,5 @@ document.addEventListener('click',e=>{if(!e.composedPath().some(node=>node.class
 setInterval(()=>{if(ctx&&!document.hidden&&notificationDay!==today())notifications();},30000);
 window.addEventListener('focus',()=>notifications());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)notifications();});
-root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.8.8-private-data-gate'};
+root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.8.9-logout-privacy'};
 })(window);
