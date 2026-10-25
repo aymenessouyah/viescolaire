@@ -35,6 +35,10 @@
 .sti-badge-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
 .sti-badge-form-grid>div{min-width:0}
 .sti-badge-form-grid .full{grid-column:1/-1}
+.sti-signature-field{display:grid;gap:7px}
+.sti-signature-canvas{display:block;width:100%;height:auto;aspect-ratio:640/180;border:1px dashed var(--line,#cbd5d8);border-radius:10px;background:#fff;touch-action:none;cursor:crosshair}
+.sti-signature-controls{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.teacher-signature-ink{color:#17382e}
 .sti-admin-photo-preview{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;margin-top:10px;padding:10px;border:1px dashed var(--line,#dce3e7);border-radius:12px;background:var(--surface-2,#f8fafb)}
 .sti-admin-photo-preview img,.sti-admin-photo-empty{width:72px;height:72px;border:3px solid #13a893;border-radius:50%;object-fit:cover;background:#e8ebed}
 .sti-admin-photo-empty{display:grid;place-items:center;color:#77858e;font-size:10px;text-align:center}

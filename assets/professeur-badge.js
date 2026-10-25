@@ -7,6 +7,7 @@
   const SUBJECT = 'Sciences et technologies de l’informatique';
   const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
   const MAX_PHOTO_BYTES = 1024 * 1024;
+  const MAX_SIGNATURE_CHARS = 100000;
   let cachedUserId = '';
   let cachedProfile = null;
   let profileLoadedFor = '';
@@ -245,12 +246,15 @@
     if (path && !String(path).startsWith(userId + '/')) path = '';
     if (file) path = await uploadPhoto(userId, await compressPhoto(file), token);
     if (!path) throw new Error('La photo du professeur est obligatoire pour créer le badge.');
+    const signature = String(profile.signature || '').trim();
+    if (signature.length > MAX_SIGNATURE_CHARS) throw new Error('La signature dessinée est trop volumineuse. Effacez-la puis recommencez plus simplement.');
+    if (signature && root.STI_SIGNATURE && !root.STI_SIGNATURE.isValid(signature)) throw new Error('La signature doit être tracée dans le canevas du profil.');
     const row = {
       prof_id: userId,
       nom: String(profile.nom || '').trim(),
       fonction: String(profile.fonction || 'Professeur').trim() || 'Professeur',
       matiere: String(profile.matiere || SUBJECT).trim() || SUBJECT,
-      signature: String(profile.signature || '').trim().slice(0, 100),
+      signature: signature,
       badge_code: String(profile.badge_code || (cachedProfile && cachedProfile.badge_code) || makeBadgeCode(userId)),
       photo_path: path,
       updated_at: new Date().toISOString()

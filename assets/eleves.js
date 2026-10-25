@@ -494,7 +494,7 @@ function profileBadgeData(){
     nom:value("#pf-nom")||old.nom||"",
     fonction:value("#pf-function")||old.fonction||"Professeur",
     matiere:value("#pf-mat")||old.matiere||(window.STI_PROF_BADGE&&window.STI_PROF_BADGE.subject)||"Sciences et technologies de l’informatique",
-    signature:value("#pf-signature").slice(0,100),
+    signature:window.STI_SIGNATURE?.value("pf-signature-canvas")||"",
     email:authUser(),
     badge_code:old.badge_code||(window.STI_PROF_BADGE&&window.STI_PROF_BADGE.makeBadgeCode(user.id))||""
   });
@@ -527,7 +527,6 @@ async function openProfil(){
   b.querySelector("#pf-nom").value = profile.nom || "";
   b.querySelector("#pf-function").value = profile.fonction || "Professeur";
   b.querySelector("#pf-mat").value = (!profile.matiere||profile.matiere==="STI") ? (window.STI_PROF_BADGE?.subject||"Sciences et technologies de l’informatique") : profile.matiere;
-  b.querySelector("#pf-signature").value = profile.signature || "";
   b.querySelector("#pf-photo").value = "";
   const em = b.querySelector("#pf-email");
   if (em) em.textContent = authUser() || "(non connecté)";
@@ -535,6 +534,7 @@ async function openProfil(){
   if(status)status.textContent=profile.photo_path?"Photo de profil enregistrée." : (window.STI_PROF_BADGE?.lastError()?"Vérifiez la migration Supabase du badge : "+window.STI_PROF_BADGE.lastError():"Une photo est nécessaire pour créer le badge.");
   if(error)error.textContent="";
   b.classList.add("on");
+  window.STI_SIGNATURE?.attach(b.querySelector("#pf-signature-canvas"),profile.signature||"");
   renderProfileBadgePreview();
   if(profile.photo_path&&window.STI_PROF_BADGE){
     window.STI_PROF_BADGE.loadProfilePhoto(profile.photo_path).then(()=>{
@@ -549,13 +549,16 @@ function closeProfil(){
   window.STI_PROF_BADGE?.clearDraftPhoto();
   renderSiteProfessorBadge();
 }
+function undoProfileSignature(){window.STI_SIGNATURE?.undo("pf-signature-canvas");}
+function clearProfileSignature(){window.STI_SIGNATURE?.clear("pf-signature-canvas");}
 async function saveProfil(){
+
   if(typeof window.isProfessorConnected!=="function"||!window.isProfessorConnected()){closeProfil();openAuth();return;}
   const b = document.getElementById("profil-modal"),error=b.querySelector("#pf-error"),button=b.querySelector("#pf-save");
   const nom = b.querySelector("#pf-nom").value.trim();
   const mat = b.querySelector("#pf-mat").value.trim() || "Sciences et technologies de l’informatique";
   const fonction = b.querySelector("#pf-function").value.trim() || "Professeur";
-  const signature = b.querySelector("#pf-signature").value.trim().slice(0,100);
+  const signature = window.STI_SIGNATURE?.value("pf-signature-canvas")||"";
   const photoFile=b.querySelector("#pf-photo").files[0]||null;
   if(error)error.textContent="";
   if (!nom){ if(error)error.textContent="Indiquez votre nom et votre prénom."; return; }
@@ -1091,6 +1094,7 @@ window.vocOuvrir = vocOuvrir; window.vocToggle = vocToggle; window.vocStop = voc
 window.vocTraiter = vocTraiter; window.vocAnalyse = vocAnalyse; window.vocCible = vocCible;
 window.setPresence = setPresence; window.vocSuivantNonMarque = vocSuivantNonMarque;
 window.openProfil = openProfil; window.closeProfil = closeProfil; window.saveProfil = saveProfil;
+window.undoProfileSignature = undoProfileSignature; window.clearProfileSignature = clearProfileSignature;
 window.profilePhotoChanged = profilePhotoChanged; window.renderProfileBadgePreview = renderProfileBadgePreview; window.renderSiteProfessorBadge = renderSiteProfessorBadge; window.printProfilBadge = printProfilBadge;
 window.applyProfil = applyProfil;
 function initializeConnectedProfile(){

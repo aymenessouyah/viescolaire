@@ -175,7 +175,7 @@ https://aymenessouyah.github.io/viescolaire/
 
 Le lien de récupération revient à cette page d’accueil ; l’application y ouvre le formulaire de nouveau mot de passe. Elle reconnaît les jetons Supabase dans le fragment ou la query string, valide aussi un `token_hash` si nécessaire et affiche une boîte explicative lorsqu’un lien est incomplet ou expiré. Si le site est publié sous une autre URL, il faut modifier `PASSWORD_RECOVERY_REDIRECT_URL` dans `assets/app.js` et autoriser cette même URL dans Supabase.
 
-La signature du professeur se règle dans **Mon profil**. Le champ actuel est une saisie textuelle ; lorsqu’elle est renseignée, elle apparaît à la fin des séances de chaque date dans le cahier affiché, imprimé ou exporté en PDF.
+Chaque professeur trace sa signature au doigt ou à la souris dans **Mon profil**. Le dessin est conservé dans son profil privé et apparaît à la fin de chaque journée dans le cahier affiché, imprimé ou exporté en PDF. Les anciennes signatures textuelles ne sont pas converties automatiquement : chaque professeur doit redessiner sa signature une première fois.
 
 ### 5.3 Badges et photos des professeurs
 
