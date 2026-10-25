@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.17.6-privacy-policy";
+const APP_VER = "v1.17.7-cahier-three-columns";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1235,43 +1235,51 @@ function renderCahier(){
     <div class="kpi k-amber"><div class="lbl">${ic("pen")} Fiches renseignées</div><div class="val">${filled}</div><div class="foo">dans les classes et trimestres sélectionnés</div></div>
     <div class="kpi k-navy"><div class="lbl">${ic("check")} Fiches complètes</div><div class="val">${nbComplets}</div><div class="foo">préparation <b>et</b> contenu réalisé renseignés</div></div>
   </div>
-  <div class="card"><div class="card-h"><h3>${ic("clock")} ${labels[cahStatus]}</h3><span class="badge b-grey">${list.length} entrées</span></div><div class="card-b">
+  <div class="card cahier-table-card"><div class="card-h"><h3>${ic("clock")} ${labels[cahStatus]}</h3><span class="badge b-grey">${list.length} entrées</span></div><div class="card-b">
     <p class="tiny muted" style="margin-bottom:14px">${cahStatus==="pending"?"Ni « assurée », ni « reportée » ; dates antérieures à aujourd’hui. Aucune séance n’est confirmée automatiquement.":"Tri de la plus récente à la plus ancienne. Le statut enregistré est conservé."}</p>
     <div id="cah-semaines">${semaines.map(g=>{
       const ass = g.items.filter(s=>seanceState(s)==="faite").length;
       const att = g.items.filter(s=>pending(s)).length;
-      return `<div class="cah-sem">
-        <div class="cah-sem-h"><span class="d">Semaine du ${fmtLong(g.k)}</span>
-          <span class="badge b-grey">${g.items.length} séance${g.items.length>1?"s":""}</span>
+      return `<section class="cah-sem">
+        <div class="cah-sem-h"><div><span class="cah-week-kicker">RÉCAPITULATIF HEBDOMADAIRE</span><strong class="cah-week-title">Semaine du ${fmtLong(g.k)}</strong></div>
+          <div class="row" style="gap:6px"><span class="badge b-grey">${g.items.length} séance${g.items.length>1?"s":""}</span>
           ${ass?`<span class="badge b-green">${ass} assurée${ass>1?"s":""}</span>`:""}
-          ${att?`<span class="badge b-amber">${att} à confirmer</span>`:""}</div>
-        <div class="tl">${g.items.map((s,dayIndex)=>{
+          ${att?`<span class="badge b-amber">${att} à confirmer</span>`:""}</div></div>
+        <div class="cah-table-wrap"><table class="cah-table" aria-label="Cahier de textes — semaine du ${escapeHtml(fmtShort(g.k))}">
+          <thead><tr><th scope="col">Date</th><th scope="col">Le travail réalisé</th><th scope="col">Signature</th></tr></thead>
+          <tbody>${g.items.map((s,dayIndex)=>{
       const o=store.seances[s.cls+"|"+s.n]||{},st=seanceState(s),flag=s.blk&&s.blk.k!=="cours",c=complet(s);
       const finJour=dayIndex===g.items.length-1||g.items[dayIndex+1].iso!==s.iso;
       const verrouSeance = seanceVerrouillee(s);
-      const rep = o.report ? `<div class="tiny" style="margin-top:4px;color:var(--rose,#b3261e)">↪ Reportée — motif : ${escapeHtml(o.report.motif)}${o.report.vers?" · remplacée le "+fmtShort(o.report.vers):""}</div>` : "";
-      return `<div class="tl-item ${flag?"t-eval":""}" data-cah-key="${s.cls}|${s.n}" data-cah-date="${s.iso}"><div class="spread"><div>
-        <div class="d">${fmtLong(s.iso)} • <span class="badge ${clsChip(s.cls)}">${s.cls}</span> ${st==="faite"?'<span class="badge b-green">assurée</span>':st==="reportee"?'<span class="badge b-rose">reportée</span>':s.iso<t?'<span class="badge b-amber">à confirmer</span>':s.iso===t?'<span class="badge b-grey">aujourd’hui</span>':'<span class="badge b-grey">à venir</span>'}</div>
-        <div class="t">Séance n°${s.n} — ${escapeHtml(titleOf(s,store))}</div>
-        <div class="s">${o.contenu?escapeHtml(o.contenu):"Contenu réalisé non renseigné."}</div>
-        ${!o.contenu&&s.blk?.det?'<div class="tiny muted" style="margin-top:4px">Préparation prévue : '+escapeHtml(s.blk.det)+'</div>':""}
-        <div class="tiny muted" style="margin-top:3px">${slotsTxt(s.cls,s.iso)}</div>
-        ${o.devoirs?'<div class="tiny" style="margin-top:4px;color:var(--amber)">📚 Travail donné : '+escapeHtml(o.devoirs)+'</div>':""}
-        ${o.obs?'<div class="tiny muted">📝 '+escapeHtml(o.obs)+'</div>':""}${rep}
-      </div><div class="no-print" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
-        <div class="cah-dots" title="Préparation · contenu réalisé · travail donné">
-          <i class="${c.prep?"on":""}" title="Préparation ${c.prep?"renseignée":"manquante"}"></i>
-          <i class="${c.contenu?"on":""}" title="Contenu réalisé ${c.contenu?"renseigné":"manquant"}"></i>
-          <i class="${c.devoirs?"on":""}" title="Travail donné ${c.devoirs?"renseigné":"manquant"}"></i>
-        </div>
-        <button class="btn btn-xs btn-soft" onclick="openModal('${s.cls}',${s.n})">${ic("edit")} ${cahStatus==="pending"?"Vérifier la fiche":"Modifier"}</button>
-        ${verrouSeance?'<span class="badge b-rose" title="'+escapeHtml(verrouMsg(verrouSeance))+'">verrouillé</span>':`
-        <div class="row" style="gap:6px">
-          <button class="btn btn-xs btn-line" onclick="cahReport('${s.cls}',${s.n})" title="Reporter la séance avec un motif ; le contenu suit">${ic("out")} Reporter</button>
-          <button class="btn btn-xs btn-line" onclick="cahDuplicate('${s.cls}',${s.n})" title="Copier le contenu sur la séance suivante de la même classe">${ic("file")} Dupliquer</button>
-        </div>`}</div></div></div>${signatureMarkup&&finJour?`<div class="cah-day-signature"><span>Signature du professeur — ${fmtShort(s.iso)}</span>${signatureMarkup}</div>`:""}`;
-    }).join("")||`<p class="muted tiny" id="cah-empty">${cahStatus==="pending"?"Aucune séance passée à confirmer dans ce périmètre. Les séances assurées et reportées restent accessibles avec le filtre d’état.":"Aucune séance pour ces filtres."}</p>`}</div>
-        </div></div>`;}).join("")}
+      const statusLabel=st==="faite"?"Assurée":st==="reportee"?"Reportée":s.iso===t?"Aujourd’hui":s.iso<t?"À confirmer":"À venir";
+      const statusClass=st==="faite"?"b-green":st==="reportee"?"b-rose":s.iso<t?"b-amber":"b-grey";
+      const report = o.report ? `<div class="cah-work-detail cah-work-report">↪ Reportée — motif : ${escapeHtml(o.report.motif)}${o.report.vers?" · remplacée le "+fmtShort(o.report.vers):""}</div>` : "";
+      const signatureCell=finJour
+        ? (signatureMarkup?`<div class="cah-signature-box">${signatureMarkup}<span class="cah-signature-date">Journée du ${fmtShort(s.iso)}</span></div>`
+          : `<div class="cah-signature-missing"><span>Signature non configurée</span><button class="btn btn-xs btn-soft no-print" type="button" onclick="openProfil()">Mon profil</button></div>`)
+        : `<span class="cah-signature-follow" aria-label="Signature à la fin de la journée" title="Signature inscrite à la dernière séance du jour">—</span>`;
+      return `<tr class="cah-row ${flag?"is-eval":""} ${st==="faite"?"is-done":st==="reportee"?"is-reported":""}" data-cah-key="${s.cls}|${s.n}" data-cah-date="${s.iso}">
+        <td class="cah-date-cell"><time class="cah-date-main" datetime="${s.iso}">${fmtLong(s.iso)}</time>
+          <div class="cah-date-meta"><span class="badge ${clsChip(s.cls)}">${s.cls}</span><span>Séance n°${s.n}</span></div>
+          <span class="badge ${statusClass}">${statusLabel}</span>
+          <small class="cah-time">${escapeHtml(slotsTxt(s.cls,s.iso))}</small>
+        </td>
+        <td class="cah-work-cell"><div class="cah-work-top"><div><span class="cah-work-kicker">TRAVAIL DE LA SÉANCE</span><h4 class="cah-work-title">${escapeHtml(titleOf(s,store))}</h4></div>
+          <div class="cah-row-actions no-print"><div class="cah-dots" title="Préparation · contenu réalisé · travail donné"><i class="${c.prep?"on":""}" title="Préparation ${c.prep?"renseignée":"manquante"}"></i><i class="${c.contenu?"on":""}" title="Contenu réalisé ${c.contenu?"renseigné":"manquant"}"></i><i class="${c.devoirs?"on":""}" title="Travail donné ${c.devoirs?"renseigné":"manquant"}"></i></div>
+            <button class="btn btn-xs btn-soft" type="button" onclick="openModal('${s.cls}',${s.n})">${ic("edit")} ${cahStatus==="pending"?"Vérifier":"Modifier"}</button>
+            ${verrouSeance?'<span class="badge b-rose" title="'+escapeHtml(verrouMsg(verrouSeance))+'">verrouillé</span>':`<div class="row" style="gap:5px"><button class="btn btn-xs btn-line" type="button" onclick="cahReport('${s.cls}',${s.n})" title="Reporter la séance avec un motif ; le contenu suit">${ic("out")} Reporter</button><button class="btn btn-xs btn-line" type="button" onclick="cahDuplicate('${s.cls}',${s.n})" title="Copier le contenu sur la séance suivante de la même classe">${ic("file")} Dupliquer</button></div>`}
+          </div></div>
+          <div class="cah-work-body"><div class="cah-work-detail"><strong>Réalisé :</strong> ${o.contenu?escapeHtml(o.contenu):'<span class="muted">Contenu réalisé non renseigné.</span>'}</div>
+          ${!o.contenu&&s.blk?.det?`<div class="cah-work-detail cah-work-planned"><strong>Prévu :</strong> ${escapeHtml(s.blk.det)}</div>`:""}
+          ${o.devoirs?`<div class="cah-work-detail cah-work-homework"><strong>À faire :</strong> ${escapeHtml(o.devoirs)}</div>`:""}
+          ${o.obs?`<div class="cah-work-detail"><strong>Observation :</strong> ${escapeHtml(o.obs)}</div>`:""}${report}</div>
+        </td>
+        <td class="cah-signature-cell">${signatureCell}</td>
+      </tr>`;
+    }).join("")}</tbody>
+        </table></div>
+      </section>`;
+    }).join("")||`<div class="cah-empty-state"><span class="cah-empty-icon">${ic("calendar")}</span><strong>Aucune séance dans cette sélection</strong><span>${cahStatus==="pending"?"Aucune séance passée à confirmer. Les séances assurées ou reportées restent accessibles avec le filtre d’état.":"Modifiez les filtres pour afficher des séances."}</span></div>`}</div>
   </div></div>`;
   box.querySelector('#cah-class').onchange=e=>{if(["both","3SI1","4SI2"].includes(e.target.value)){cahCls=e.target.value;renderCahier();}};
   box.querySelector('#cah-term').onchange=e=>{const v=Number(e.target.value);if([0,1,2,3].includes(v)){cahTri=v;renderCahier();}};
@@ -1346,47 +1354,58 @@ function printCahier(){
     const corps = g.items.map((s,dayIndex)=>{
       const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
       const finJour=dayIndex===g.items.length-1||g.items[dayIndex+1].iso!==s.iso;
-      const signatureRow=finJour?`<tr class="day-signature"><td colspan="6"><div><span>Signature du professeur — ${esc(fmtShort(s.iso))}</span>${signatureMarkup}</div></td></tr>`:"";
-      return `<tr>
-        <td class="d">${esc(fmtShort(s.iso))}</td>
-        <td class="c">${esc(s.cls)}</td>
-        <td class="n">${s.n}</td>
-        <td><b>${esc(titleOf(s,store))}</b>${o.contenu?`<div class="cc">${esc(o.contenu)}</div>`:(s.blk&&s.blk.det?`<div class="cc mut">Prévu : ${esc(s.blk.det)}</div>`:"")}${o.obs?`<div class="cc mut">Obs. : ${esc(o.obs)}</div>`:""}</td>
-        <td class="dv">${o.devoirs?esc(o.devoirs):"—"}</td>
-        <td class="et ${st==="faite"?"ok":(st==="reportee"?"no":"at")}">${st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")}</td>
-      </tr>${signatureRow}`;
+      const statusLabel=st==="faite"?"Assurée":st==="reportee"?"Reportée":s.iso===todayISO()?"Aujourd’hui":s.iso<todayISO()?"À confirmer":"À venir";
+      const statusClass=st==="faite"?"ok":st==="reportee"?"no":s.iso<todayISO()?"at":"future";
+      const realisation=o.contenu&&o.contenu.trim()?`<div class="work-line"><b>Réalisé :</b> ${esc(o.contenu)}</div>`:`<div class="work-line muted"><b>Réalisé :</b> non renseigné</div>`;
+      const prevu=!o.contenu&&s.blk&&s.blk.det?`<div class="work-line muted"><b>Prévu :</b> ${esc(s.blk.det)}</div>`:"";
+      const devoirs=o.devoirs&&o.devoirs.trim()?`<div class="work-line homework"><b>À faire :</b> ${esc(o.devoirs)}</div>`:"";
+      const observation=o.obs&&o.obs.trim()?`<div class="work-line muted"><b>Observation :</b> ${esc(o.obs)}</div>`:"";
+      const report=o.report?`<div class="work-line report"><b>Reportée :</b> ${esc(o.report.motif)}${o.report.vers?" · remplacée le "+esc(fmtShort(o.report.vers)):""}</div>`:"";
+      const signatureCell=finJour?(signatureMarkup?`<div class="signature-box">${signatureMarkup}<small>Signature du professeur</small></div>`:`<div class="signature-empty"><span></span><small>Signature à apposer</small></div>`):"";
+      return `<tr class="session-row ${st==="faite"?"done":st==="reportee"?"reported":""}">
+        <td class="date-cell"><time datetime="${esc(s.iso)}">${esc(fmtLong(s.iso))}</time><div class="date-meta"><b>${esc(s.cls)}</b><span>Séance n°${s.n}</span></div><span class="status ${statusClass}">${statusLabel}</span><small class="slots">${esc(slotsTxt(s.cls,s.iso))}</small></td>
+        <td class="work-cell"><strong class="work-title">${esc(titleOf(s,store))}</strong>${realisation}${prevu}${devoirs}${observation}${report}</td>
+        <td class="signature-cell">${signatureCell}</td>
+      </tr>`;
     }).join("");
-    return `<tr class="sem"><td colspan="6">Semaine du ${esc(fmtLong(g.k))} — ${g.items.length} séance${g.items.length>1?"s":""}</td></tr>${corps}`;
+    return `<tr class="sem"><td colspan="3">Semaine du ${esc(fmtLong(g.k))} — ${g.items.length} séance${g.items.length>1?"s":""}</td></tr>${corps}`;
   }).join("");
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
   <style>
-    @page{size:A4 portrait;margin:13mm 11mm}
+    @page{size:A4 portrait;margin:12mm 10mm}
     *{box-sizing:border-box}
-    body{font:11.5px/1.4 Arial,Helvetica,sans-serif;color:#222;margin:0}
-    h1{font-size:19px;margin:0 0 2px;color:#175C41}
-    .sub{font-size:11px;color:#666;margin-bottom:3px}
-    .bar{height:3px;background:#E4661F;margin:6px 0 10px}
-    .infos{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:#444;margin-bottom:8px}
-    .infos b{color:#175C41}
-    table{width:100%;border-collapse:collapse}
-    th{background:#175C41;color:#fff;font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:5px 6px}
-    td{border-bottom:1px solid #e2ddd6;padding:4px 6px;vertical-align:top}
-    tr.sem td{background:#FDF4EC;color:#a8541a;font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;border:0;padding:5px 6px}
-    tr.day-signature{break-inside:avoid;page-break-inside:avoid}
-    tr.day-signature td{border:0;border-bottom:1px solid #e2ddd6;padding:2px 6px 8px}
-    tr.day-signature div{display:flex;justify-content:flex-end;align-items:center;gap:12px;min-height:44px}
-    tr.day-signature span{font-size:9px;color:#777}
-    tr.day-signature .teacher-signature-ink{display:block;width:165px;height:46px;max-width:42%;overflow:visible}
-    td.d{white-space:nowrap;width:52px;font-weight:700}
-    td.c{width:44px;font-weight:700;color:#14684A}
-    td.n{width:22px;text-align:right;color:#666}
-    td.et{width:74px;white-space:nowrap;font-weight:700;font-size:10.5px}
-    td.et.ok{color:#0f7a4f}td.et.no{color:#b3261e}td.et.at{color:#b07a00}
-    td.dv{width:150px;color:#555}
-    .cc{color:#444;margin-top:2px}
-    .cc.mut{color:#777;font-size:10.5px}
-    .foot{margin-top:10px;font-size:10px;color:#777;display:flex;justify-content:space-between}
-    .sig{margin-top:16px;display:flex;gap:40px;font-size:10.5px;color:#555}
+    body{font:11px/1.4 Arial,Helvetica,sans-serif;color:#1b2d3d;margin:0}
+    h1{font-size:19px;margin:0 0 2px;color:#0b2545}
+    .sub{font-size:10.5px;color:#627487;margin-bottom:3px}
+    .bar{height:3px;background:#0fb3a3;margin:7px 0 10px}
+    .infos{display:flex;gap:16px;flex-wrap:wrap;font-size:10px;color:#44596b;margin-bottom:9px}
+    .infos b{color:#0b2545}
+    table{width:100%;border-collapse:collapse;table-layout:fixed}
+    th{background:#0b2545;color:#fff;font-size:9.5px;letter-spacing:.055em;text-transform:uppercase;text-align:left;padding:7px 8px}
+    th:first-child{width:20%}th:nth-child(2){width:55%}th:last-child{width:25%;text-align:center}
+    td{border-bottom:1px solid #dce6ef;padding:7px 8px;vertical-align:top;overflow-wrap:anywhere}
+    tr.session-row{break-inside:avoid;page-break-inside:avoid}
+    tr.session-row.done td:first-child{border-left:3px solid #0d8a5c}
+    tr.session-row.reported td:first-child{border-left:3px solid #c22c48}
+    tr.sem td{background:#eef5fa;color:#234d6d;font-weight:700;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;border:0;padding:6px 8px}
+    .date-cell time{display:block;color:#0b2545;font-weight:700}
+    .date-meta{display:flex;gap:7px;align-items:center;margin:5px 0;color:#52687b;font-size:9.5px}
+    .date-meta b{color:#0d705f}
+    .status{display:inline-block;padding:2px 6px;border-radius:999px;font-size:8.5px;font-weight:700;background:#f1f5f9;color:#566b7f}
+    .status.ok{background:#e9f9f2;color:#0d754f}.status.no{background:#fdeef1;color:#a5223b}.status.at{background:#fff6e3;color:#8a5a08}
+    .slots{display:block;margin-top:5px;font-size:8.5px;color:#718397}
+    .work-title{display:block;color:#0b2545;font-size:11px;margin-bottom:4px}
+    .work-line{margin-top:3px;color:#33485b;white-space:pre-wrap}
+    .work-line b{color:#172b40}
+    .work-line.muted{color:#758596;font-size:9.5px}.work-line.homework{color:#395e80}.work-line.report{color:#a5223b}
+    .signature-cell{text-align:center;vertical-align:middle}
+    .signature-box{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+    .signature-box .teacher-signature-ink{display:block;width:145px;height:39px;max-width:100%;overflow:visible}
+    .signature-box small,.signature-empty small{color:#788696;font-size:8px}
+    .signature-empty{min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px}
+    .signature-empty span{display:block;width:92%;height:24px;border-bottom:1px solid #8897a5}
+    .foot{margin-top:11px;font-size:9px;color:#778596;display:flex;justify-content:space-between}
+    .sig{margin-top:16px;display:flex;gap:40px;font-size:10px;color:#55697c}
     .sig div{flex:1;border-top:1px solid #bbb;padding-top:4px}
   </style></head><body>
   <h1>Cahier de textes — ${esc(SCHOOL && SCHOOL.nom ? SCHOOL.nom : "Lycée Rafèha")}</h1>
@@ -1395,11 +1414,11 @@ function printCahier(){
   <div class="infos">
     <span><b>Classe(s)</b> ${esc(cahCls==="both"?"3SI1 et 4SI2":cahCls)}</span>
     <span><b>Séances</b> ${list.length}</span>
-    <span><b>Assurées (sélection)</b> ${list.filter(s=>seanceState(s)==="faite").length}</span>
+    <span><b>Assurées</b> ${list.filter(s=>seanceState(s)==="faite").length}</span>
     <span><b>Édité le</b> ${esc(fmtLong(todayISO()))}</span>
     ${cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri) ? `<span><b>Trimestre verrouillé</b> ${esc(verrouInfo(cahCls,cahTri).par)} le ${esc(fmtLong(verrouInfo(cahCls,cahTri).le))}</span>` : ""}
   </div>
-  <table><thead><tr><th>Date</th><th>Cl.</th><th>N°</th><th>Contenu traité</th><th>Travail donné</th><th>État</th></tr></thead>
+  <table aria-label="Cahier de textes à trois colonnes"><thead><tr><th>Date</th><th>Le travail réalisé</th><th>Signature</th></tr></thead>
   <tbody>${rows}</tbody></table>
   <div class="sig"><div>Visa du chef d’établissement</div></div>
   <div class="foot"><span>${esc((activeProfessorProfile()?.nom)||authUser()||"Professeur")}</span><span>Généré par l’espace pédagogique</span></div>
@@ -1452,17 +1471,20 @@ function cahierPDF(){
       const n = tri.filter(x=>lundiDe(x.iso)===k).length;
       rows.push({type:"sem", label:"Semaine du "+fmtLong(k)+" — "+n+" séance"+(n>1?"s":"")});
     }
-    day.items.forEach(s=>{
+    day.items.forEach((s,dayIndex)=>{
       const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
-      let contenu = titleOf(s,store);
-      if (o.contenu && o.contenu.trim()) contenu += " — " + o.contenu.trim();
-      if (o.obs && o.obs.trim()) contenu += " (obs. : " + o.obs.trim() + ")";
+      const statusLabel=st==="faite"?"Assurée":st==="reportee"?"Reportée":s.iso===todayISO()?"Aujourd’hui":s.iso<todayISO()?"À confirmer":"À venir";
+      const work=["Séance n°"+s.n+" — "+titleOf(s,store)];
+      if(o.contenu&&o.contenu.trim())work.push("Réalisé : "+o.contenu.trim());
+      else{work.push("Réalisé : non renseigné");if(s.blk&&s.blk.det)work.push("Prévu : "+s.blk.det);}
+      if(o.devoirs&&o.devoirs.trim())work.push("À faire : "+o.devoirs.trim());
+      if(o.obs&&o.obs.trim())work.push("Observation : "+o.obs.trim());
+      if(o.report)work.push("Reportée : "+String(o.report.motif||"")+(o.report.vers?" · remplacée le "+fmtShort(o.report.vers):""));
       rows.push({type:"row",
-        cells:[fmtShort(s.iso), s.cls, String(s.n), contenu, (o.devoirs||"—").trim(),
-               st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")],
-        etat: st==="faite"?"ok":(st==="reportee"?"no":"at")});
+        cells:[fmtShort(s.iso)+" · "+s.cls+" · n°"+s.n+" · "+statusLabel,work.join(" | "),""],
+        signature:dayIndex===day.items.length-1?{strokes:signatureStrokes,label:"Signature du professeur — "+fmtShort(day.iso)}:null,
+        fond:st==="faite"});
     });
-    rows.push({type:"signature",label:"Signature — "+fmtShort(day.iso),strokes:signatureStrokes});
   });
   const done = list.filter(s=>seanceState(s)==="faite").length;
   const renseignees = list.filter(s=>{ const o=store.seances[s.cls+"|"+s.n]||{}; return o.preparation||o.contenu||o.devoirs; }).length;
@@ -1477,8 +1499,8 @@ function cahierPDF(){
               {k:"Renseignées", v:String(renseignees)}, {k:"Édité le", v:edite}]
              .concat(cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri)
                ? [{k:"Visé par", v:verrouInfo(cahCls,cahTri).par + " le " + fmtShort(verrouInfo(cahCls,cahTri).le)}] : []),
-      colonnes: ["Date","Cl.","N°","Contenu traité","Travail donné","État"],
-      largeurs: [54,32,22,245,110,52],
+      colonnes: ["Date","Le travail réalisé","Signature"],
+      largeurs: [82,290,143],
       rows: rows,
       pied: "Cahier de textes numérique · généré depuis l’espace STI"
     });

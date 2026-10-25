@@ -3,7 +3,7 @@
    sauts de page, numérotation) directement en JavaScript, avec l'encodage WinAnsi
    pour les accents français. Utilisation :
      const blob = window.STI_PDF.cahier({ titre, sous, infos, colonnes, largeurs, rows, pied });
-     // rows : {type:'sem', label}, {type:'row', cells:[…], etat} ou {type:'signature', label, value}
+     // rows : {type:'sem', label}, {type:'row', cells:[…], signature:{strokes}} ou {type:'signature', label, value}
 */
 (function (root) {
   'use strict';
@@ -121,7 +121,10 @@
         var k = wrap(t, 8, wds[i] - 8, i === 0).length;
         if (k > n) n = k;
       });
-      return n * 10.2 + 5;
+      var h = n * 10.2 + 5;
+      /* Réserver un espace réel pour la signature manuscrite dans la 3e colonne. */
+      if (r.signature) h = Math.max(h, 58);
+      return h;
     }
 
     function signatureStrokes(r) {
@@ -182,6 +185,31 @@
       y -= h;
     }
 
+    function drawSignatureCell(signature, rowTop, rowHeight, columnIndex) {
+      var strokes = signatureStrokes(signature);
+      var left = M;
+      for (var i = 0; i < columnIndex; i++) left += wds[i];
+      var pad = 7, width = Math.max(20, wds[columnIndex] - pad * 2);
+      var lineY = rowTop - rowHeight + 9;
+      var inkHeight = Math.min(28, Math.max(12, rowHeight - 24));
+      var inkBottom = lineY + 6, inkTop = inkBottom + inkHeight;
+      strokes.forEach(function (stroke) {
+        var firstX = left + pad + stroke[0][0] * width;
+        var firstY = inkTop - stroke[0][1] * inkHeight;
+        if (stroke.length === 1) {
+          ops.push('0.09 0.22 0.18 rg ' + (firstX - 1) + ' ' + (firstY - 1) + ' 2 2 re f 0 0 0 rg');
+          return;
+        }
+        var path = '0.09 0.22 0.18 RG 1.2 w ' + firstX + ' ' + firstY + ' m';
+        stroke.slice(1).forEach(function (point) {
+          path += ' ' + (left + pad + point[0] * width) + ' ' + (inkTop - point[1] * inkHeight) + ' l';
+        });
+        ops.push(path + ' S 0 0 0 RG');
+      });
+      ops.push('0.68 0.68 0.68 RG 0.65 w ' + (left + pad) + ' ' + lineY + ' m ' +
+        (left + wds[columnIndex] - pad) + ' ' + lineY + ' l S 0 0 0 RG');
+    }
+
     doc.rows.forEach(function (r, idx) {
       if (r.type === 'signature') {
         drawSignature(r);
@@ -222,6 +250,7 @@
         });
         x += wds[i];
       });
+      if (r.signature) drawSignatureCell(r.signature, y, h, cols.length - 1);
       ops.push('0 0 0 rg 0.88 0.86 0.83 RG 0.5 w ' + M + ' ' + (y - h) + ' m ' + (W - M) + ' ' + (y - h) + ' l S');
       y -= h;
     });

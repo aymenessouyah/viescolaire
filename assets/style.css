@@ -163,8 +163,47 @@ table.tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;ba
 .tl-item .d{font-size:11.5px;font-weight:800;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
 .tl-item .t{font-weight:700;font-size:13.5px}
 .tl-item .s{font-size:12px;color:var(--ink-3)}
-.cah-day-signature{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin:-6px 0 10px;padding:3px 10px 7px;border-bottom:1px dashed var(--line-2);color:var(--ink-3);font-size:10.5px}
-.cah-day-signature .teacher-signature-ink{display:block;flex:0 1 170px;width:170px;height:46px;max-width:40vw;overflow:visible}
+/* ---------- Cahier de textes : tableau éditorial à trois colonnes ---------- */
+.cahier-table-card .card-b{padding:16px}
+.cah-sem+.cah-sem{margin-top:18px}
+.cah-sem-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:9px;padding:12px 15px;border:1px solid var(--line);border-radius:13px;background:linear-gradient(120deg,#f7fbff,#fff)}
+.cah-week-kicker,.cah-work-kicker{display:block;color:var(--ink-3);font-size:9px;font-weight:800;letter-spacing:.09em}
+.cah-week-title{display:block;margin-top:3px;color:var(--navy);font-size:14px}
+.cah-table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px;background:var(--card)}
+.cah-table{width:100%;min-width:740px;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:12.5px}
+.cah-table th{position:sticky;top:0;z-index:2;padding:11px 13px;background:linear-gradient(120deg,var(--navy),var(--navy-2));color:#fff;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em}
+.cah-table th:first-child{width:170px}
+.cah-table th:last-child{width:180px;text-align:center}
+.cah-table td{padding:13px;border-bottom:1px solid var(--line-2);vertical-align:top;background:var(--card)}
+.cah-date-cell{width:170px}
+.cah-work-cell{color:var(--ink-2)}
+.cah-table tbody tr:last-child td{border-bottom:0}
+.cah-table tbody tr:hover td{background:#f9fcff}
+.cah-table .cah-row.is-eval td{background:#fcf9ff}
+.cah-table .cah-row.is-done .cah-date-cell{box-shadow:inset 3px 0 0 var(--green)}
+.cah-table .cah-row.is-reported .cah-date-cell{box-shadow:inset 3px 0 0 var(--rose)}
+.cah-date-main{display:block;color:var(--ink);font-size:12.5px;font-weight:800;line-height:1.4}
+.cah-date-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:8px 0}
+.cah-time{display:block;margin-top:8px;color:var(--ink-3);font-size:10.5px;line-height:1.4}
+.cah-work-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.cah-work-title{margin:3px 0 0;color:var(--navy);font-size:14px;line-height:1.4}
+.cah-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;max-width:310px}
+.cah-work-body{display:grid;gap:6px;margin-top:10px}
+.cah-work-detail{color:var(--ink-2);font-size:12.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.cah-work-detail strong{color:var(--ink);font-weight:750}
+.cah-work-planned{padding:7px 9px;border-left:3px solid var(--amber);border-radius:0 7px 7px 0;background:var(--amber-bg);color:#75531e}
+.cah-work-homework{padding:7px 9px;border-left:3px solid #4b82bb;border-radius:0 7px 7px 0;background:var(--sky-2)}
+.cah-work-report{color:var(--rose)}
+.cah-signature-cell{text-align:center;vertical-align:middle!important;border-left:1px solid var(--line-2)}
+.cah-signature-box{display:flex;min-height:58px;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.cah-signature-box .teacher-signature-ink{display:block;width:145px;height:42px;max-width:100%;overflow:visible}
+.cah-signature-date{color:var(--ink-3);font-size:9.5px}
+.cah-signature-missing{display:flex;min-height:58px;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink-3);font-size:10.5px}
+.cah-signature-follow{display:inline-flex;width:25px;height:25px;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:50%;color:var(--ink-4);font-size:12px}
+.cah-empty-state{display:grid;justify-items:center;gap:7px;padding:38px 20px;border:1px dashed var(--line);border-radius:13px;background:var(--sky-2);color:var(--ink-3);text-align:center;font-size:12px}
+.cah-empty-state strong{color:var(--ink);font-size:14px}
+.cah-empty-icon{color:var(--blue)}
+.cah-empty-icon svg{width:24px;height:24px;stroke:currentColor}
 
 /* ---------- Calendrier mois ---------- */
 .cal-head{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
