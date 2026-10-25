@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.13.0-sticky-professor-badge";
+const APP_VER = "v1.14.0-password-recovery-dialog";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1779,28 +1779,55 @@ function cleanRecoveryUrl(){
     else window.history.replaceState(null,"",window.location.pathname);
   }catch(error){try{window.history.replaceState(null,"",window.location.pathname);}catch(e){}}
 }
-function showPasswordReset(message=""){
+function showPasswordReset(message="", color=""){
   const modal=document.getElementById("password-reset-modal"),err=document.getElementById("password-reset-err"),submit=document.getElementById("password-reset-submit");
-  if(err){err.textContent=message;err.style.color=message?"#b02a3a":"";}
+  if(err){err.textContent=message;err.style.color=color||(message?"#b02a3a":"");}
   if(submit)submit.disabled=!passwordRecoveryToken;
   if(modal)modal.classList.add("on");
   if(passwordRecoveryToken)setTimeout(()=>document.getElementById("password-reset-new")?.focus(),60);
 }
+async function verifyPasswordRecoveryTokenHash(tokenHash){
+  try{
+    if(!cloudReady())throw new Error("La connexion Supabase n’est pas configurée.");
+    const c=cloudCfg(),baseUrl=c.url.endsWith("/")?c.url.slice(0,-1):c.url,response=await fetch(baseUrl+"/auth/v1/verify",{
+      method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},
+      body:JSON.stringify({token_hash:tokenHash,type:"recovery"})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){const error=new Error(data.msg||data.error_description||data.message||data.error||"HTTP "+response.status);error.status=response.status;throw error;}
+    if(!data.access_token)throw new Error("Supabase n’a pas retourné de jeton de récupération.");
+    passwordRecoveryToken=data.access_token;
+    showPasswordReset();
+  }catch(error){
+    passwordRecoveryToken="";
+    const message=error.status===400||error.status===401||error.status===403||/expired|invalid/i.test(error.message||"")
+      ?"Ce lien est expiré ou invalide. Demandez un nouveau lien avec « Mot de passe oublié ? »."
+      :"La vérification du lien a échoué : "+(error.message||error);
+    showPasswordReset(message);
+  }
+}
 function handlePasswordRecoveryRedirect(){
-  const query=new URLSearchParams(window.location.search||""),fragment=new URLSearchParams((window.location.hash||"").replace(/^#/,""));
-  const get=key=>fragment.get(key)||query.get(key),type=get("type");
-  if(type!=="recovery")return;
-  const accessToken=get("access_token"),errorCode=get("error_code"),description=get("error_description")||get("error");
+  const recovery=window.STI_PASSWORD_RECOVERY?.parseLocation(window.location);
+  if(!recovery?.isRecovery)return;
   cleanRecoveryUrl();
-  if(accessToken){
-    passwordRecoveryToken=accessToken;
+  if(recovery.accessToken){
+    passwordRecoveryToken=recovery.accessToken;
     authClear();
     showPasswordReset();
     return;
   }
-  const message=errorCode==="otp_expired"||/expired|invalid/i.test(description||"")
+  if(recovery.tokenHash){
+    authClear();
+    showPasswordReset("Vérification du lien de réinitialisation…","var(--ink-2)");
+    verifyPasswordRecoveryTokenHash(recovery.tokenHash);
+    return;
+  }
+  const description=recovery.description||"";
+  const message=recovery.errorCode==="otp_expired"||/expired|invalid/i.test(description)
     ?"Ce lien est expiré ou invalide. Fermez cette fenêtre puis demandez un nouveau lien avec « Mot de passe oublié ? »."
-    :"Le lien de réinitialisation est incomplet. Demandez-en un nouveau depuis l’écran de connexion.";
+    :recovery.code
+      ?"Le lien de réinitialisation ne contient pas de jeton exploitable. Demandez-en un nouveau depuis l’écran de connexion."
+      :"Le lien de réinitialisation est incomplet. Demandez-en un nouveau depuis l’écran de connexion.";
   showPasswordReset(message);
 }
 function closePasswordReset(){

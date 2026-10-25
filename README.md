@@ -173,7 +173,7 @@ Pour activer **« Mot de passe oublié ? »**, ouvrez **Authentication → URL C
 https://aymenessouyah.github.io/viescolaire/
 ```
 
-Le lien de récupération revient à cette page d’accueil ; l’application y ouvre le formulaire de nouveau mot de passe. Si le site est publié sous une autre URL, il faut modifier `PASSWORD_RECOVERY_REDIRECT_URL` dans `assets/app.js` et autoriser cette même URL dans Supabase.
+Le lien de récupération revient à cette page d’accueil ; l’application y ouvre le formulaire de nouveau mot de passe. Elle reconnaît les jetons Supabase dans le fragment ou la query string, valide aussi un `token_hash` si nécessaire et affiche une boîte explicative lorsqu’un lien est incomplet ou expiré. Si le site est publié sous une autre URL, il faut modifier `PASSWORD_RECOVERY_REDIRECT_URL` dans `assets/app.js` et autoriser cette même URL dans Supabase.
 
 La signature du professeur se règle dans **Mon profil**. Le champ actuel est une saisie textuelle ; lorsqu’elle est renseignée, elle apparaît à la fin des séances de chaque date dans le cahier affiché, imprimé ou exporté en PDF.
 
