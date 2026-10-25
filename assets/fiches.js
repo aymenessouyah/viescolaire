@@ -1009,8 +1009,9 @@ function printDoc(html, landscape, extraStyle) {
   if (old) old.remove();
   const fr = document.createElement('iframe');
   fr.id = 'print-frame';
-  fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-  document.body.appendChild(fr);
+  /* Une vraie surface de page évite les impressions blanches dans les navigateurs
+     qui ignorent les iframes d'impression de taille nulle. Elle reste sous l'app. */
+  fr.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + (landscape ? '297mm' : '210mm') + ';height:' + (landscape ? '210mm' : '297mm') + ';border:0;pointer-events:none';
   const doc = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
     <link rel="stylesheet" href="assets/fiches.css">
     <style>@page{size:${landscape ? '11in 8.5in' : 'A4 portrait'};margin:${landscape ? '0' : '12mm 10mm'};}
@@ -1029,15 +1030,30 @@ function printDoc(html, landscape, extraStyle) {
     .rp tr{page-break-inside:avoid}
     ${extraStyle || ''}
     </style></head><body>${html}</body></html>`;
-  fr.srcdoc = doc;
   fr.onload = function () {
-    setTimeout(function () {
-      try { fr.contentWindow.focus(); fr.contentWindow.print(); }
-      catch (e) { if (root.toast) root.toast('Impression bloquée par le navigateur'); }
-    }, 250);
+    const launchPrint = function () {
+      try {
+        if (!fr.contentWindow) throw new Error('Fenêtre d’impression absente');
+        fr.contentWindow.focus();
+        fr.contentWindow.print();
+      } catch (e) {
+        if (root.toast) root.toast('Impression bloquée par le navigateur');
+      }
+    };
+    const fontsReady = fr.contentDocument && fr.contentDocument.fonts
+      ? Promise.resolve(fr.contentDocument.fonts.ready).catch(function () {}) : Promise.resolve();
+    fontsReady.then(function () { setTimeout(launchPrint, 120); });
+    if (fr.contentWindow) {
+      fr.contentWindow.addEventListener('afterprint', function () {
+        setTimeout(function () { if (fr.isConnected) fr.remove(); }, 100);
+      }, { once: true });
+    }
+    /* Nettoyage de secours si le navigateur ne déclenche pas afterprint. */
+    setTimeout(function () { if (fr.isConnected) fr.remove(); }, 600000);
   };
+  document.body.appendChild(fr);
+  fr.srcdoc = doc;
 }
-
 function printFiche(n) {
   const f = fiche(n);
   if (!f) return;
@@ -1062,6 +1078,30 @@ function printRepartition(tri) {
   printDoc(html, false);
 }
 
+function cahierPlanForClass(className) {
+  const saved = root.STI_DATA && root.STI_DATA['repartition' + className];
+  if (Array.isArray(saved) && saved.length) return saved;
+  const sessions = root.SESSIONS && root.SESSIONS[className] || [];
+  return sessions.map(function (session) {
+    return {
+      num: session.n, iso: session.iso, tri: session.tri,
+      t: session.blk && session.blk.t || 'Séance à planifier',
+      k: session.blk && session.blk.k || '',
+      d: session.blk && session.blk.d || '',
+      det: session.blk && session.blk.det || ''
+    };
+  });
+}
+function cahierPlanMap() {
+  return { '3SI1': cahierPlanForClass('3SI1'), '4SI2': cahierPlanForClass('4SI2') };
+}
+function cahierPrintSessions() {
+  const source = root.SESSIONS || {};
+  if (root.STI_CAHIER_PRINT_DATA && root.STI_CAHIER_PRINT_DATA.withPlans) {
+    return root.STI_CAHIER_PRINT_DATA.withPlans(source, cahierPlanMap());
+  }
+  return source;
+}
 function cahierPrintState(s) {
   const record = root.store && root.store.seances ? root.store.seances[s.cls + '|' + s.n] || {} : {};
   if (root.STI_CAHIER_PRINT_DATA) return root.STI_CAHIER_PRINT_DATA.state(s, record, todayISO());
@@ -1073,20 +1113,226 @@ function cahierPrintState(s) {
   return 'future';
 }
 function selectCahierPrintSessions(classe, trimestre, statut) {
+  const source = cahierPrintSessions();
   if (root.STI_CAHIER_PRINT_DATA) return root.STI_CAHIER_PRINT_DATA.select(
-    root.SESSIONS || {}, root.store && root.store.seances || {},
+    source, root.store && root.store.seances || {},
     { classe: classe, trimestre: trimestre, statut: statut }, todayISO());
   const classes = classe === 'both' ? ['3SI1', '4SI2'] : (['3SI1', '4SI2'].includes(classe) ? [classe] : []);
   const tri = Number(trimestre) || 0;
   const status = ['all', 'pending', 'done', 'reported', 'future'].includes(statut) ? statut : 'all';
-  const source = root.SESSIONS || {};
   return classes.flatMap(c => source[c] || []).filter(s => {
-    const state = cahierPrintState(s);
-    return (!tri || Number(s.tri) === tri) && (status === 'all' || state === status);
-  }).sort((a, b) => a.iso.localeCompare(b.iso) || a.cls.localeCompare(b.cls) || a.n - b.n);
+    const currentState = cahierPrintState(s);
+    return (!tri || Number(s.tri) === tri) && (status === 'all' || currentState === status);
+  }).sort((a, b) => a.iso.localeCompare(b.iso) || Number(a.tri) - Number(b.tri) || a.cls.localeCompare(b.cls) || a.n - b.n);
 }
-function cahierPrintStateLabel(state) {
-  return ({ done: 'Séance assurée', reported: 'Séance reportée', pending: 'À confirmer', today: 'Aujourd’hui — à confirmer', future: 'À venir' })[state] || 'À confirmer';
+function cahierSelectedClasses(classe) {
+  return classe === 'both' ? ['3SI1', '4SI2'] : (['3SI1', '4SI2'].includes(classe) ? [classe] : []);
+}
+function cahierQuarterLabel(tri) {
+  return tri === 1 ? '1er trimestre' : tri + 'e trimestre';
+}
+function cahierTypeLabel(kind) {
+  return ({ cours: 'Cours', dc: 'Devoir de contrôle', ds: 'Devoir de synthèse', corr: 'Correction' })[kind] || kind || 'Séance';
+}
+function cahierPlainLabel(value) {
+  return String(value == null ? '' : value).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function cahierClassLabel(className) {
+  const ref = root.DATA && root.DATA.reference || {};
+  const label = ref.CLASSES && ref.CLASSES[className] && ref.CLASSES[className].long;
+  return cahierPlainLabel(label || className);
+}
+function cahierPlanRows(className, tri) {
+  return cahierPlanForClass(className).filter(function (entry) {
+    return Number(entry.tri) === Number(tri);
+  }).sort(function (a, b) {
+    return String(a.iso || '').localeCompare(String(b.iso || '')) || Number(a.num || 0) - Number(b.num || 0);
+  });
+}
+function cahierPlanDomain(entry) {
+  return cahierPlainLabel(entry && entry.d || '').replace(/\s*[—–-]\s*p\..*$/i, '').trim();
+}
+function cahierTableRows(entries, includeDomain) {
+  if (!entries.length) return '<tr><td colspan="4" class="cp-no-data">Aucune séance programmée.</td></tr>';
+  return entries.map(function (entry, index) {
+    const number = Number(entry.num) || index + 1;
+    const date = entry.iso ? fmtShort(entry.iso) : '—';
+    const title = entry.t || entry.title || 'Séance à planifier';
+    const detail = cahierPlanDomain(entry);
+    const kind = includeDomain === false ? ({ cours: 'Cours', dc: 'DC', ds: 'DS', corr: 'Corr.' })[entry.k] || entry.k || 'Séance' : cahierTypeLabel(entry.k);
+    return `<tr><td class="cp-no">${number}</td><td class="cp-date">${esc(date)}</td><td class="cp-topic"><strong>${esc(title)}</strong>${includeDomain !== false && detail && detail.toLowerCase() !== 'évaluation' ? `<small>${esc(detail)}</small>` : ''}</td><td class="cp-kind">${esc(kind)}</td></tr>`;
+  }).join('');
+}
+function cahierAnnualPage(classes) {
+  const reference = root.DATA && root.DATA.reference || {};
+  const year = (root.SCHOOL || reference.SCHOOL || {}).annee || '2026 - 2027';
+  const totals = classes.map(function (className) {
+    const entries = cahierPlanForClass(className);
+    return `<span><b>${esc(className)}</b> : ${entries.length} séances · ${entries.length * 2} h par groupe</span>`;
+  }).join('');
+  const tables = classes.map(function (className) {
+    const entries = cahierPlanForClass(className).slice().sort(function (a, b) {
+      return String(a.iso || '').localeCompare(String(b.iso || '')) || Number(a.num || 0) - Number(b.num || 0);
+    });
+    return `<section class="cp-annual-class cp-${className.toLowerCase()}"><header><h2>${esc(className)}</h2><span>${entries.length} séances prévues</span></header>
+      <table class="cp-plan-table cp-annual-table"><thead><tr><th>N°</th><th>Date</th><th>Contenu de la séance</th><th>Nature</th></tr></thead><tbody>${cahierTableRows(entries, false)}</tbody></table>
+    </section>`;
+  }).join('');
+  return `<section class="cp-page cp-annual-page"><header class="cp-page-heading"><span class="cp-page-index">PAGE 3 · PROGRAMMATION</span><h1>Répartition annuelle</h1><p>Année scolaire ${esc(year)} · déroulement prévisionnel des séances par classe.</p></header>
+    <div class="cp-annual-totals">${totals}</div><div class="cp-annual-grid ${classes.length === 1 ? 'cp-single-class' : ''}">${tables}</div>
+    <p class="cp-page-note">Le détail du 1er trimestre pour chaque classe figure à la page suivante. Les répartitions des trimestres suivants sont insérées à leur place chronologique dans le cahier.</p>
+  </section>`;
+}
+function cahierQuarterPage(tri, classes) {
+  const heading = cahierQuarterLabel(tri);
+  const note = tri === 2
+    ? 'Insérée immédiatement après la dernière séance du 1er trimestre.'
+    : (tri === 3 ? 'Insérée après la dernière séance du 2e trimestre.' : 'Répartition du trimestre.');
+  const tables = classes.map(function (className) {
+    const entries = cahierPlanRows(className, tri);
+    const hours = entries.length * 2;
+    return `<section class="cp-quarter-class cp-${className.toLowerCase()}"><header><div><h2>${esc(className)}</h2><p>${esc(cahierClassLabel(className))}</p></div><span>${entries.length} séances · ${hours} h/groupe</span></header>
+      <table class="cp-plan-table cp-term-table"><thead><tr><th>N°</th><th>Date</th><th>Contenu / domaine</th><th>Nature</th></tr></thead><tbody>${cahierTableRows(entries)}</tbody></table>
+    </section>`;
+  }).join('');
+  const index = tri === 1 ? 'PAGE 4 · PROGRAMMATION TRIMESTRIELLE' : 'PROGRAMMATION TRIMESTRIELLE';
+  return `<section class="cp-page cp-quarter-page cp-quarter-${tri}"><header class="cp-page-heading"><span class="cp-page-index">${index}</span><h1>Répartition trimestrielle</h1><h2>${heading}</h2><p>${esc(note)}</p></header><div class="cp-quarter-grid ${classes.length === 1 ? 'cp-single-class' : ''}">${tables}</div></section>`;
+}
+function cahierTimetablePage() {
+  const reference = root.DATA && root.DATA.reference || {};
+  const school = root.SCHOOL || reference.SCHOOL || {};
+  const schedule = root.store && root.store.times || reference.HORAIRES_DEFAUT || {};
+  const days = [1, 2, 3, 4, 5];
+  const dayNames = reference.JOURS || ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const slotsFor = function (className, day) {
+    const slots = schedule[className] && schedule[className][day] || [];
+    if (!slots.length) return '<span class="cp-no-slot">—</span>';
+    return slots.map(function (slot) {
+      return `<div class="cp-time-slot"><b>${esc(slot.g || 'Groupe')}</b><span>${esc(slot.s || '')}–${esc(slot.e || '')}</span></div>`;
+    }).join('');
+  };
+  const rows = days.map(function (day) {
+    return `<tr><th>${esc(dayNames[day] || 'Jour')}</th><td>${slotsFor('3SI1', day)}</td><td>${slotsFor('4SI2', day)}</td></tr>`;
+  }).join('');
+  return `<section class="cp-page cp-timetable-page"><header class="cp-page-heading"><span class="cp-page-index">PAGE 2 · ORGANISATION HEBDOMADAIRE</span><h1>Emploi du temps du professeur</h1><p>${esc(school.prof || 'Aymen Essouyah')} · horaires enregistrés dans votre espace.</p></header>
+    <table class="cp-timetable"><thead><tr><th>Jour</th><th>3SI1</th><th>4SI2</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="cp-timetable-legend"><span class="cp-class-chip cp-3si1">3SI1</span> Deux groupes par classe, selon les créneaux enregistrés. Les modifications d’horaires sont reprises dans cette page.</div>
+  </section>`;
+}
+function cahierCoverPage(classes, selectedCount, contextCount, trimestre, statut) {
+  const reference = root.DATA && root.DATA.reference || {};
+  const school = root.SCHOOL || reference.SCHOOL || {};
+  const year = school.annee || '2026 - 2027';
+  const classesHtml = classes.map(function (className) {
+    return `<div class="cp-cover-class"><b>${esc(className)}</b><span>${esc(cahierClassLabel(className))}</span></div>`;
+  }).join('');
+  const period = Number(trimestre) ? cahierQuarterLabel(Number(trimestre)) : 'Tous les trimestres';
+  const statusLabels = { all: 'Tous les états', pending: 'À confirmer', done: 'Assurées', reported: 'Reportées', future: 'À venir' };
+  return `<section class="cp-page cp-cover-page"><div class="cp-cover-mark">LYCÉE RAFÈHA</div><div class="cp-cover-rule"></div>
+    <div class="cp-cover-content"><p class="cp-cover-kicker">ESPACE PÉDAGOGIQUE · STI</p><h1>Cahier de textes</h1><p class="cp-cover-subtitle">Sciences et technologies de l’informatique</p>
+      <div class="cp-cover-school">${esc(school.lycee || 'Lycée Rafèha')}</div>
+      <div class="cp-cover-classes"><span class="cp-cover-label">CLASSE${classes.length > 1 ? 'S' : ''} CONCERNÉE${classes.length > 1 ? 'S' : ''}</span>${classesHtml}</div>
+      <div class="cp-cover-meta"><div><span>ENSEIGNANT</span><b>${esc(school.prof || 'Aymen Essouyah')}</b></div><div><span>ANNÉE SCOLAIRE</span><b>${esc(year)}</b></div></div>
+    </div><footer class="cp-cover-footer"><span>${selectedCount} séance${selectedCount === 1 ? '' : 's'} sélectionnée${selectedCount === 1 ? '' : 's'}</span><span>${esc(period)} · ${esc(statusLabels[statut] || 'Tous les états')}</span>${contextCount ? `<small>${contextCount} repère${contextCount === 1 ? '' : 's'} de transition inclus hors filtre pour positionner la répartition suivante.</small>` : ''}</footer>
+  </section>`;
+}
+function cahierPrintStateLabel(currentState) {
+  return ({ done: 'Séance assurée', reported: 'Séance reportée', pending: 'À confirmer', today: 'Aujourd’hui — à confirmer', future: 'À venir' })[currentState] || 'À confirmer';
+}
+function cahierSessionHtml(session) {
+  const records = root.store && root.store.seances ? root.store.seances : {};
+  const record = records[session.cls + '|' + session.n] || {};
+  const currentState = cahierPrintState(session);
+  const title = record.title || (session.blk && session.blk.t) || 'Séance à planifier';
+  const date = session.iso ? fmtLong(session.iso) : 'Date non renseignée';
+  if (session.contextOnly) {
+    return `<article class="cp-context-session cp-${session.cls.toLowerCase()}"><div><span>REPÈRE DE TRANSITION · FIN DU ${cahierQuarterLabel(Number(session.tri) || 1).toUpperCase()}</span><h2>${esc(session.cls)} · ${esc(title)}</h2><p>${esc(date)} · ${esc(cahierPrintStateLabel(currentState))}</p></div><small>Repère placé hors du filtre de période/état pour que la répartition suivante suive bien la dernière séance du trimestre.</small></article>`;
+  }
+  const preparation = record.preparation || (session.blk && session.blk.det) || '';
+  const text = function (value) {
+    const content = String(value == null ? '' : value).trim();
+    return content ? esc(content).replace(/\r\n?/g, '\n').replace(/\n/g, '<br>') : '<span class="cp-empty">Non renseigné.</span>';
+  };
+  return `<article class="cp-session cp-${session.cls.toLowerCase()}"><header class="cp-session-head"><div><span class="cp-kicker">${esc(session.cls)} · SÉANCE N° ${Number(session.n) || ''}</span><h2>${esc(title)}</h2><p>${esc(date)}${session.blk && session.blk.d ? ' · ' + esc(session.blk.d) : ''}</p></div><span class="cp-state cp-state-${currentState}">${esc(cahierPrintStateLabel(currentState))}</span></header>
+    <div class="cp-fields"><section><h3>Préparation pédagogique</h3><p>${text(preparation)}</p></section><section><h3>Déroulement réellement effectué</h3><p>${text(record.contenu)}</p></section><section><h3>Travail donné à la maison</h3><p>${text(record.devoirs)}</p></section><section><h3>Observations / bilan</h3><p>${text(record.obs)}</p></section></div></article>`;
+}
+function cahierPrintCss() {
+  return `
+    @page{size:A4 portrait;margin:0}
+    html,body{margin:0!important;padding:0!important;color:#203029!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .cp-page{box-sizing:border-box;width:210mm;min-height:297mm;padding:13mm 12mm;break-before:page;page-break-before:always;background:#fff;position:relative}
+    .cp-page:first-child{break-before:auto;page-break-before:auto}
+    .cp-cover-page{display:flex;flex-direction:column;justify-content:space-between;padding:20mm 18mm 15mm;background:linear-gradient(150deg,#f6f5ee 0%,#fff 54%,#eaf2ed 100%);border-top:7mm solid #174c39}
+    .cp-cover-mark{font-size:10pt;letter-spacing:2.2pt;color:#184d3b;font-weight:800;text-align:center}
+    .cp-cover-rule{width:38mm;height:1.2mm;margin:10mm auto 0;background:#c89d49}
+    .cp-cover-content{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:8mm 0}
+    .cp-cover-kicker,.cp-page-index{font-size:8pt;letter-spacing:1.5pt;color:#7a846f;font-weight:800}
+    .cp-cover-content h1{font-family:Georgia,serif;font-size:35pt;line-height:1.08;color:#143b2d;margin:5mm 0 2mm}
+    .cp-cover-subtitle{font-size:12pt;color:#607066;margin:0}
+    .cp-cover-school{margin-top:10mm;font-family:Georgia,serif;font-size:19pt;color:#1e6048;font-weight:700}
+    .cp-cover-classes{width:100%;max-width:140mm;margin-top:15mm;text-align:left}
+    .cp-cover-label{display:block;margin-bottom:3mm;color:#7d826f;font-size:8pt;letter-spacing:1pt;font-weight:800}
+    .cp-cover-class{display:flex;align-items:baseline;gap:5mm;padding:3mm 0;border-bottom:.4mm solid #d7ded5}
+    .cp-cover-class b{min-width:20mm;color:#174c39;font-size:14pt}.cp-cover-class span{font-size:10pt;color:#566257}
+    .cp-cover-meta{display:flex;justify-content:center;gap:20mm;margin-top:13mm;text-align:left}
+    .cp-cover-meta div{display:flex;flex-direction:column;gap:2mm}.cp-cover-meta span{font-size:7pt;letter-spacing:1pt;color:#7a846f;font-weight:800}.cp-cover-meta b{font-size:11pt;color:#263b2e}
+    .cp-cover-footer{display:flex;justify-content:space-between;gap:4mm;flex-wrap:wrap;border-top:.5mm solid #d8ded6;padding-top:4mm;color:#657166;font-size:8pt}
+    .cp-cover-footer small{flex-basis:100%;font-size:7pt;color:#8b7660}
+    .cp-page-heading{margin:0 0 7mm;padding-bottom:5mm;border-bottom:1.2mm solid #1d674a}
+    .cp-page-heading h1{font-family:Georgia,serif;font-size:24pt;line-height:1.12;color:#173e31;margin:2mm 0 1.5mm}
+    .cp-page-heading h2{font-size:15pt;color:#1d674a;margin:0 0 1mm}
+    .cp-page-heading p{font-size:9pt;color:#65736a;margin:0}
+    .cp-timetable{width:100%;border-collapse:collapse;margin:9mm 0 0;font-size:10pt}
+    .cp-timetable th{padding:4mm;background:#174c39;color:#fff;text-align:left}
+    .cp-timetable td{width:36%;vertical-align:top;padding:5mm;border-bottom:.4mm solid #d8e1d9}
+    .cp-timetable tbody th{width:18%;background:#edf3ed;color:#244c38;border-bottom:.4mm solid #d8e1d9;text-transform:capitalize}
+    .cp-time-slot{display:flex;justify-content:space-between;gap:3mm;padding:2mm 0;border-bottom:.3mm dashed #d7ded7;color:#314337}
+    .cp-time-slot:last-child{border-bottom:0}.cp-time-slot b{font-size:8.5pt}.cp-time-slot span{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:9pt}
+    .cp-no-slot{color:#a0a69e}.cp-timetable-legend{margin-top:12mm;padding:5mm;border:1px solid #d9e2d9;border-radius:3mm;color:#667267;font-size:8pt;line-height:1.5}
+    .cp-class-chip{display:inline-block;border:1px solid #bfd0c1;border-radius:20px;padding:1mm 2.5mm;color:#225941;font-size:7pt;font-weight:800;white-space:nowrap}
+    .cp-class-chip.cp-3si1{color:#17649e;border-color:#b9d5e7}.cp-class-chip.cp-4si2{color:#1d674a;border-color:#b8d9c5}
+    .cp-annual-totals{display:flex;gap:4mm;flex-wrap:wrap;margin:-1mm 0 5mm;color:#536457;font-size:8pt}
+    .cp-annual-totals span{padding:2mm 3mm;background:#f0f4ef;border-radius:2mm}
+    .cp-annual-grid{display:grid;grid-template-columns:1fr 1fr;gap:5mm;align-items:start}
+    .cp-annual-grid.cp-single-class{grid-template-columns:1fr}
+    .cp-annual-class{min-width:0}.cp-annual-class>header{display:flex;justify-content:space-between;align-items:baseline;gap:2mm;margin:0 0 1.5mm}
+    .cp-annual-class>header h2{font-size:10pt;margin:0;color:#1d674a}.cp-annual-class.cp-3si1>header h2{color:#17649e}
+    .cp-annual-class>header span{font-size:5.8pt;color:#6d796f;white-space:nowrap}
+    .cp-annual-table{font-size:5pt}
+    .cp-plan-table{width:100%;border-collapse:collapse;table-layout:fixed;color:#26342b}
+    .cp-plan-table thead th{padding:2.2mm 1.5mm;background:#174c39;color:white;text-align:left;font-size:7pt;line-height:1.2}
+    .cp-plan-table tbody td{padding:1.8mm 1.5mm;border-bottom:.3mm solid #dce4dc;vertical-align:top;line-height:1.3;overflow-wrap:anywhere}
+    .cp-annual-table thead th{padding:.8mm .6mm;font-size:4.9pt;line-height:1.05}
+    .cp-annual-table tbody td{padding:.45mm .6mm;line-height:1.05}
+    .cp-annual-table th:nth-child(1){width:8%}.cp-annual-table th:nth-child(2){width:20%}.cp-annual-table th:nth-child(3){width:54%}.cp-annual-table th:nth-child(4){width:18%}
+    .cp-annual-table .cp-topic strong{font-size:5pt;font-weight:600}
+    .cp-annual-table .cp-date{font-size:4.8pt;white-space:nowrap}
+    .cp-annual-table .cp-kind{font-size:4.6pt}.cp-annual-table tbody tr:nth-child(even),.cp-term-table tbody tr:nth-child(even){background:#f7f9f6}
+    .cp-annual-table small{color:#718074;font-size:6.6pt}
+    .cp-page-note{margin:5mm 0 0;padding:3mm;border-left:1mm solid #c89d49;background:#faf7ee;color:#666b5d;font-size:7.5pt;line-height:1.45}
+    .cp-quarter-page .cp-page-heading{margin-bottom:5mm}
+    .cp-quarter-grid{display:grid;grid-template-columns:1fr 1fr;gap:6mm;align-items:start}
+    .cp-quarter-grid.cp-single-class{grid-template-columns:1fr}
+    .cp-quarter-class{min-width:0}.cp-quarter-class header{display:flex;justify-content:space-between;gap:2mm;align-items:flex-start;margin:0 0 2mm}
+    .cp-quarter-class header h2{margin:0;color:#1d674a;font-size:13pt}.cp-quarter-class.cp-3si1 header h2{color:#17649e}
+    .cp-quarter-class header p{margin:1mm 0 0;color:#7b847a;font-size:6.5pt;line-height:1.25}
+    .cp-quarter-class header>span{padding-top:1mm;white-space:nowrap;color:#67756a;font-size:6.5pt}
+    .cp-term-table{font-size:6.3pt}.cp-term-table thead th{padding:1.5mm 1mm;font-size:6pt}.cp-term-table tbody td{padding:1.25mm 1mm;line-height:1.2}
+    .cp-term-table th:nth-child(1){width:8%}.cp-term-table th:nth-child(2){width:20%}.cp-term-table th:nth-child(3){width:53%}.cp-term-table th:nth-child(4){width:19%}
+    .cp-term-table .cp-no{text-align:center;color:#68766c;font-weight:700}.cp-term-table .cp-date{white-space:nowrap;color:#45584a;font-variant-numeric:tabular-nums}
+    .cp-term-table .cp-topic strong{font-size:6.2pt;font-weight:700}.cp-term-table .cp-topic small{display:block;margin-top:.5mm;color:#738177;font-size:5.7pt;line-height:1.15}
+    .cp-term-table .cp-kind{color:#68766c;font-size:5.6pt}.cp-no-data{color:#778177;font-style:italic}
+    .cp-session{margin:0 0 5mm;padding:4mm 4.5mm;border:1px solid #d6e0d7;border-left:1.2mm solid #1d674a;border-radius:2mm;break-inside:avoid-page;page-break-inside:avoid}
+    .cp-session.cp-3si1,.cp-context-session.cp-3si1{border-left-color:#17649e}
+    .cp-session-head{display:flex;justify-content:space-between;gap:5mm;align-items:flex-start;border-bottom:.3mm solid #e2e8e2;padding-bottom:2.5mm;margin-bottom:2.5mm}
+    .cp-kicker{font-size:7pt;letter-spacing:.7pt;color:#778479;font-weight:800}.cp-session h2{font-family:Georgia,serif;font-size:13pt;line-height:1.25;margin:1mm 0;color:#21382b}.cp-session-head p{margin:0;color:#68756b;font-size:8pt}
+    .cp-state{font-size:7pt;white-space:nowrap;padding:1mm 2mm;border:1px solid #b7c7ba;border-radius:20px;color:#526058}
+    .cp-state-done{background:#e8f4eb;color:#216342;border-color:#badac2}.cp-state-reported{background:#fff0ed;color:#a9433b;border-color:#edc9c2}.cp-state-pending{background:#fff6df;color:#8a6318;border-color:#ead69e}
+    .cp-fields{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}.cp-fields section{min-width:0}.cp-fields h3{font-size:7pt;text-transform:uppercase;letter-spacing:.5pt;color:#52665a;margin:0 0 1mm}.cp-fields p{font-size:8.3pt;line-height:1.4;margin:0;white-space:normal;overflow-wrap:anywhere}.cp-empty{color:#889189;font-style:italic}
+    .cp-context-session{margin:0 0 4mm;padding:3mm 4mm;border:1px dashed #b9c9bb;border-left:1.2mm solid #1d674a;border-radius:2mm;background:#f8faf7;break-inside:avoid-page}
+    .cp-context-session span{font-size:6.5pt;letter-spacing:.7pt;color:#7c6b47;font-weight:800}.cp-context-session h2{font-size:10pt;margin:1mm 0;color:#2c4032}.cp-context-session p{font-size:7.5pt;color:#66756a;margin:0}.cp-context-session small{display:block;margin-top:1.5mm;color:#877b67;font-size:6.5pt}
+    @media print{.cp-session,.cp-context-session,.cp-plan-table tr{break-inside:avoid-page;page-break-inside:avoid}}
+  `;
 }
 function updateCahierPrintSummary() {
   const modal = document.getElementById('prm-modal');
@@ -1095,9 +1341,15 @@ function updateCahierPrintSummary() {
   const trimestre = Number(modal.querySelector('#prm-cahier-tri').value) || 0;
   const statut = modal.querySelector('#prm-cahier-status').value;
   const sessions = selectCahierPrintSessions(classe, trimestre, statut);
+  const selectedClasses = cahierSelectedClasses(classe);
+  const source = cahierPrintSessions();
+  const timeline = root.STI_CAHIER_PRINT_DATA
+    ? root.STI_CAHIER_PRINT_DATA.chronology(sessions, source, { classe: classe, trimestre: trimestre, statut: statut })
+    : sessions;
+  const contextCount = timeline.filter(session => session.contextOnly).length;
   const summary = modal.querySelector('#prm-cahier-summary');
   const button = modal.querySelector('#prm-cahier-print');
-  if (summary) summary.innerHTML = `<strong>${sessions.length} séance${sessions.length > 1 ? 's' : ''}</strong><span>${classe === 'both' ? '3SI1 + 4SI2' : classe} · ${trimestre ? trimestre + (trimestre === 1 ? 'er' : 'e') + ' trimestre' : 'tous les trimestres'} · ${esc(({ all: 'tous les états', pending: 'à confirmer', done: 'assurées', reported: 'reportées', future: 'à venir' })[statut] || 'tous les états')}</span>`;
+  if (summary) summary.innerHTML = `<strong>${sessions.length} séance${sessions.length > 1 ? 's' : ''}${contextCount ? ` + ${contextCount} repère${contextCount > 1 ? 's' : ''}` : ''}</strong><span>${classe === 'both' ? '3SI1 + 4SI2' : classe} · ${trimestre ? cahierQuarterLabel(trimestre) : 'tous les trimestres'} · ${esc(({ all: 'tous les états', pending: 'à confirmer', done: 'assurées', reported: 'reportées', future: 'à venir' })[statut] || 'tous les états')}${selectedClasses.length ? ' · répartitions incluses' : ''}</span>`;
   if (button) button.disabled = sessions.length === 0;
 }
 function printCahier() {
@@ -1108,69 +1360,35 @@ function printCahier() {
   const statut = modal.querySelector('#prm-cahier-status').value;
   const sessions = selectCahierPrintSessions(classe, trimestre, statut);
   if (!sessions.length) { if (root.toast) root.toast('Aucune séance ne correspond à ces filtres.'); return; }
-  const classes = classe === 'both' ? ['3SI1', '4SI2'] : [classe];
-  const records = root.store && root.store.seances ? root.store.seances : {};
-  const statusLabels = { all: 'Tous les états', pending: 'À confirmer', done: 'Assurées', reported: 'Reportées', future: 'À venir' };
-  const triLabel = trimestre ? trimestre + (trimestre === 1 ? 'er' : 'e') + ' trimestre' : 'Tous les trimestres';
-  const sheets = classes.map(function (c) {
-    const items = sessions.filter(s => s.cls === c);
-    if (!items.length) return '';
-    const counts = { done: 0, reported: 0, pending: 0, today: 0, future: 0 };
-    items.forEach(s => { counts[cahierPrintState(s)]++; });
-    const firstDate = fmtShort(items[0].iso), lastDate = fmtShort(items[items.length - 1].iso);
-    const entries = items.map(function (s) {
-      const record = records[s.cls + '|' + s.n] || {};
-      const state = cahierPrintState(s);
-      const title = record.title || (s.blk && s.blk.t) || 'Séance à planifier';
-      const preparation = record.preparation || (s.blk && s.blk.det) || '';
-      const txt = function (value) {
-        const content = String(value == null ? '' : value).trim();
-        return content ? esc(content).replace(/\r\n?/g, '\n').replace(/\n/g, '<br>') : '<span class="cp-empty">Non renseigné.</span>';
-      };
-      return `<article class="cp-session cp-session-${c.toLowerCase()}">
-        <header class="cp-session-head"><div><span class="cp-kicker">SÉANCE N° ${s.n}</span><h3>${esc(title)}</h3><p>${esc(fmtLong(s.iso))}</p></div><span class="cp-state cp-state-${state}">${esc(cahierPrintStateLabel(state))}</span></header>
-        <div class="cp-fields">
-          <section><h4>Préparation pédagogique</h4><p>${txt(preparation)}</p></section>
-          <section><h4>Déroulement réellement effectué</h4><p>${txt(record.contenu)}</p></section>
-          <section><h4>Travail donné à la maison</h4><p>${txt(record.devoirs)}</p></section>
-          <section><h4>Observations / bilan</h4><p>${txt(record.obs)}</p></section>
-        </div>
-      </article>`;
-    }).join('');
-    return `<section class="cp-class-sheet">
-      <header class="cp-document-head cp-${c.toLowerCase()}"><div class="cp-school">ESPACE PÉDAGOGIQUE STI · LYCÉE RAFÈHA ARIANA</div><h1>Cahier de textes</h1><h2>Classe ${esc(c)}</h2><p>Année scolaire 2026–2027 · Aymen Essouyah</p></header>
-      <div class="cp-filter-line"><span><strong>Période :</strong> ${esc(triLabel)}</span><span><strong>État :</strong> ${esc(statusLabels[statut] || 'Tous les états')}</span><span><strong>Séances :</strong> ${esc(firstDate)} — ${esc(lastDate)}</span></div>
-      <div class="cp-summary"><div><strong>${items.length}</strong><span>séances imprimées</span></div><div><strong>${counts.done}</strong><span>assurées</span></div><div><strong>${counts.reported}</strong><span>reportées</span></div><div><strong>${counts.pending}</strong><span>à confirmer</span></div><div><strong>${counts.today + counts.future}</strong><span>aujourd'hui / à venir</span></div></div>
-      <div class="cp-entries">${entries}</div>
-      <footer class="cp-footer">Document généré le ${esc(fmtLong(todayISO()))} · Classe ${esc(c)} · ${items.length} séance${items.length > 1 ? 's' : ''}</footer>
-    </section>`;
-  }).filter(Boolean).join('');
-  const css = `
-    @page{size:A4 portrait;margin:12mm 11mm 14mm}
-    .cp-class-sheet{font-family:Arial,Helvetica,sans-serif;color:#1e2a27;font-size:9pt;line-height:1.45}
-    .cp-class-sheet+.cp-class-sheet{break-before:page;page-break-before:always}
-    .cp-document-head{padding:0 0 8mm;border-bottom:2px solid #23664b;margin-bottom:6mm}
-    .cp-document-head.cp-3si1{border-color:#1668b3}.cp-document-head.cp-4si2{border-color:#267555}
-    .cp-school{font-size:8pt;letter-spacing:1.2pt;color:#6b776e;font-weight:700}
-    .cp-document-head h1{font-size:25pt;line-height:1.15;margin:4mm 0 1mm;color:#173f35}
-    .cp-document-head h2{font-size:15pt;margin:0;color:#23664b}.cp-document-head p{margin:1.5mm 0 0;color:#6b776e}
-    .cp-filter-line{display:flex;justify-content:space-between;gap:5mm;flex-wrap:wrap;font-size:8pt;padding:3mm 0;border-bottom:1px solid #d9e1da}
-    .cp-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:2mm;margin:4mm 0 6mm}
-    .cp-summary>div{border:1px solid #d9e1da;border-radius:5px;padding:3mm;text-align:center;background:#f7f9f6}
-    .cp-summary strong{display:block;font-size:17pt;color:#23664b}.cp-summary span{display:block;font-size:7.5pt;color:#647067}
-    .cp-session{border:1px solid #d8e0da;border-left:3px solid #23664b;border-radius:5px;margin:0 0 4mm;padding:3.5mm;break-inside:avoid-page;page-break-inside:avoid}
-    .cp-session-3si1{border-left-color:#1668b3}.cp-session-4si2{border-left-color:#267555}
-    .cp-session-head{display:flex;justify-content:space-between;gap:5mm;align-items:flex-start;border-bottom:1px solid #e5eae5;padding-bottom:2.5mm;margin-bottom:2.5mm}
-    .cp-kicker{font-size:7pt;letter-spacing:.8pt;color:#788479;font-weight:700}.cp-session h3{font-size:12pt;margin:1mm 0;color:#1e3429}.cp-session-head p{margin:0;color:#68756b;font-size:8pt}
-    .cp-state{font-size:7pt;white-space:nowrap;padding:1mm 2mm;border:1px solid #b7c7ba;border-radius:20px;color:#526058}
-    .cp-state-done{background:#e8f4eb;color:#216342;border-color:#badac2}.cp-state-reported{background:#fff0ed;color:#a9433b;border-color:#edc9c2}.cp-state-pending{background:#fff6df;color:#8a6318;border-color:#ead69e}
-    .cp-fields{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}.cp-fields section{min-width:0}.cp-fields h4{font-size:7pt;text-transform:uppercase;letter-spacing:.5pt;color:#52665a;margin:0 0 1mm}.cp-fields p{font-size:8.5pt;margin:0;white-space:normal;overflow-wrap:anywhere}.cp-empty{color:#889189;font-style:italic}
-    .cp-footer{border-top:1px solid #d9e1da;margin-top:5mm;padding-top:2mm;font-size:7pt;color:#788479;text-align:right}
-    @media print{.cp-session{break-inside:avoid-page} .cp-class-sheet+.cp-class-sheet{break-before:page}}
-  `;
-  printDoc(sheets, false, css);
-}
 
+  const classes = cahierSelectedClasses(classe);
+  const source = cahierPrintSessions();
+  const filters = { classe: classe, trimestre: trimestre, statut: statut };
+  const timeline = root.STI_CAHIER_PRINT_DATA
+    ? root.STI_CAHIER_PRINT_DATA.chronology(sessions, source, filters)
+    : sessions;
+  const contextCount = timeline.filter(session => session.contextOnly).length;
+  const parts = [
+    cahierCoverPage(classes, sessions.length, contextCount, trimestre, statut),
+    cahierTimetablePage(),
+    cahierAnnualPage(classes),
+    cahierQuarterPage(1, classes)
+  ];
+
+  let currentQuarter = 1;
+  timeline.forEach(function (session) {
+    const sessionQuarter = Math.max(1, Number(session.tri) || 1);
+    while (currentQuarter < sessionQuarter) {
+      currentQuarter++;
+      if (currentQuarter > 1 && currentQuarter <= 3) parts.push(cahierQuarterPage(currentQuarter, classes));
+    }
+    parts.push(cahierSessionHtml(session));
+  });
+
+  /* Ferme le panneau sans supprimer les filtres avant d’ouvrir la vraie impression. */
+  closePrintMenu();
+  printDoc(parts.join(''), false, cahierPrintCss());
+}
 let printMenuReturnFocus = null;
 function closePrintMenu() {
   const d = document.getElementById('prm-modal');
@@ -1204,13 +1422,13 @@ function ensurePrintMenu(preset) {
         <div class="note tiny" style="margin-bottom:12px">Choisissez une fiche, une répartition ou le cahier de textes. Pour le cahier, affinez l'impression par classe, trimestre et état des séances.</div>
 
         <div class="prm-row prm-cahier-row">
-          <div class="prm-cahier-intro"><strong>Cahier de textes</strong><div class="tiny muted">Imprime le suivi des séances (préparation, contenu réalisé, travail et bilan), avec une sélection indépendante par classe.</div></div>
+          <div class="prm-cahier-intro"><strong>Cahier de textes</strong><div class="tiny muted">Couverture, emploi du temps du professeur, répartition annuelle, T1 par classe et séances datées. Les répartitions suivantes sont insérées après la dernière séance du trimestre précédent.</div></div>
           <div class="prm-cahier-filters">
             <label>Classe<select id="prm-cahier-cls" aria-label="Classe du cahier de textes"><option value="both" ${cahierClass === 'both' ? 'selected' : ''}>Les deux classes</option><option value="3SI1" ${cahierClass === '3SI1' ? 'selected' : ''}>3SI1</option><option value="4SI2" ${cahierClass === '4SI2' ? 'selected' : ''}>4SI2</option></select></label>
             <label>Trimestre<select id="prm-cahier-tri" aria-label="Trimestre du cahier de textes"><option value="0" ${cahierTri === 0 ? 'selected' : ''}>Tous</option><option value="1" ${cahierTri === 1 ? 'selected' : ''}>1er trimestre</option><option value="2" ${cahierTri === 2 ? 'selected' : ''}>2e trimestre</option><option value="3" ${cahierTri === 3 ? 'selected' : ''}>3e trimestre</option></select></label>
             <label>État<select id="prm-cahier-status" aria-label="État des séances à imprimer"><option value="all" ${cahierStatus === 'all' ? 'selected' : ''}>Tous</option><option value="pending" ${cahierStatus === 'pending' ? 'selected' : ''}>À confirmer</option><option value="done" ${cahierStatus === 'done' ? 'selected' : ''}>Assurées</option><option value="reported" ${cahierStatus === 'reported' ? 'selected' : ''}>Reportées</option><option value="future" ${cahierStatus === 'future' ? 'selected' : ''}>À venir</option></select></label>
           </div>
-          <div class="prm-cahier-actions"><div id="prm-cahier-summary" aria-live="polite"></div><button class="btn btn-xs btn-blue" id="prm-cahier-print" onclick="STI_FICHES.printCahier()">${ic('print')} Imprimer le cahier</button></div>
+          <div class="prm-cahier-actions"><div id="prm-cahier-summary" aria-live="polite"></div><button type="button" class="btn btn-xs btn-blue" id="prm-cahier-print" onclick="STI_FICHES.printCahier()" aria-label="Imprimer le cahier de textes avec les filtres sélectionnés">${ic('print')} Imprimer le cahier</button></div>
         </div>
 
         <div class="prm-row">
