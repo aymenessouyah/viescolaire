@@ -31,11 +31,11 @@ Réglages disponibles dans les secrets Supabase :
 | Secret | Rôle |
 |---|---|
 | `GEMINI_API_KEY` | Clé privée Gemini — obligatoire. Le projet Supabase actuel possède déjà ce secret. |
-| `GEMINI_MODEL` | Identifiant du modèle à utiliser — facultatif; par défaut `gemini-2.0-flash`. |
+| `GEMINI_MODEL` | Identifiant du modèle à utiliser — facultatif; par défaut `gemini-3.8-flash`. |
 | `GEMINI_MODELE` | Ancien nom accepté pour le réglage du modèle, afin de rester compatible avec `corriger-ia`. |
 | `GEMINI_MAX_OUTPUT_TOKENS` | Limite de réponse, de 1000 à 12000; facultatif. |
 
-Le modèle par défaut reprend celui de l’ancienne fonction `corriger-ia`. Si ce modèle n’est plus disponible sur votre compte, définissez `GEMINI_MODEL` avec un modèle Gemini vision prenant en charge la sortie JSON :
+Le modèle par défaut est `gemini-3.8-flash`. Si ce modèle n’est pas disponible sur votre compte, définissez `GEMINI_MODEL` avec un modèle Gemini prenant en charge les images et la sortie JSON :
 
 ```bash
 supabase secrets set GEMINI_MODEL="MODELE_GEMINI_DISPONIBLE"

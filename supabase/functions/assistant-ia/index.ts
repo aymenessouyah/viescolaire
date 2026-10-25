@@ -385,7 +385,7 @@ Deno.serve(async request => {
 
   const task = cleanText(payload?.task, 30);
   const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY") || "";
-  const model = cleanText(Deno.env.get("GEMINI_MODEL") || Deno.env.get("GEMINI_MODELE") || "gemini-2.0-flash", 100);
+  const model = cleanText(Deno.env.get("GEMINI_MODEL") || Deno.env.get("GEMINI_MODELE") || "gemini-3.8-flash", 100);
   if (task === "status") {
     return json({ ok: true, provider: "Gemini", configured: Boolean(apiKey && model), model: apiKey && model ? model : null });
   }
