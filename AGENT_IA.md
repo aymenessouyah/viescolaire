@@ -1,26 +1,31 @@
-# Agent STI — installation et activation
+# Agent Vie Scolaire AI — installation et activation
 
-L'**Agent STI** est un véritable agent pédagogique intégré à Vie Scolaire. Il récupère le contexte nécessaire, appelle un modèle d'IA par une fonction serveur et produit des documents structurés que l'enseignant peut vérifier, exporter ou appliquer.
+L’**Agent Vie Scolaire AI** est l’assistant pédagogique intégré à Vie Scolaire. Il s’ouvre dans une grande fenêtre de travail, récupère le contexte nécessaire, appelle Gemini par une fonction serveur et produit des documents que l’enseignant peut vérifier, remplacer, exporter ou appliquer.
+
+Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Classe**. Le nom du professeur et le lycée sont ajoutés dans le navigateur; ces champs d’en-tête ne sont pas envoyés à Gemini.
 
 ## Outils inclus
 
-- **Fiche pédagogique** : objectifs, prérequis, phases de 2 h, notions, évaluation, travail et remédiation ; insertion possible dans la préparation d'une séance.
-- **Séries d'exercices** : énoncés théoriques ou pratiques, questions, corrigés et barème ; export HTML et impression.
+- **Fiche pédagogique** : objectifs, prérequis, phases de 2 h, notions, évaluation, travail et remédiation ; insertion ou remplacement de la préparation d’une séance après confirmation.
+- **Séries d’exercices** : énoncés théoriques ou pratiques, questions, corrigés et barème ; export HTML et impression. Une série récente de l’historique local peut être remplacée après relecture et confirmation; une série externe peut être collée comme référence.
 - **Correction de copies** : choix explicite entre devoir **théorique** et **pratique** ; texte, photos, captures et fichiers HTML/CSS/JS/PHP/SQL/TXT/JSON pour le pratique. Pour les copies théoriques photographiées, l'agent transcrit d'abord les réponses sans les noter. La transcription est éditable; les passages incertains sont signalés et l'enseignant doit confirmer explicitement s'il poursuit malgré l'avertissement. La correction utilise ensuite le texte relu, sans renvoyer les photos lors du second appel. Barème fourni par l'enseignant ou proposé d'abord par l'agent puis modifiable avant correction. Justification question par question, limites de l'analyse, note proposée et remédiation. Le code n'est jamais prétendu exécuté et aucune note n'est saisie automatiquement.
-- **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; la séance n'est jamais confirmée automatiquement.
+- **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; une entrée déjà remplie peut être remplacée après confirmation, sans confirmer automatiquement la séance.
 - **Répartition** : proposition séance par séance avec dates et numéros inchangés ; seules les séances futures peuvent recevoir la proposition.
 
 ## Architecture
 
 ```text
-Navigateur / GitHub Pages
-  → Supabase Auth (session du professeur)
-  → Edge Function assistant-ia
+Professeur connecté
+  → formulaire Agent Vie Scolaire AI (outil, classe, demande et pièces choisies)
+  → Edge Function assistant-ia (Bearer + session Supabase Auth vérifiés)
   → Google Gemini API `generateContent`
-  → JSON validé et affiché dans l'Agent STI
+  → JSON contrôlé, aperçu relu par l’enseignant
+  → remplacement, insertion, impression ou export après décision explicite
 ```
 
-La clé de l'IA est un **secret Supabase**. Elle n'apparaît ni dans GitHub, ni dans le JavaScript, ni dans les réponses de la fonction.
+![Schéma du parcours de l’Agent Vie Scolaire AI](assets/agent-vie-scolaire-flux.svg)
+
+La clé de l’IA est un **secret Supabase**. Elle n’apparaît ni dans GitHub, ni dans le JavaScript, ni dans les réponses de la fonction. Le nom complet de l’enseignant et le lycée sont ajoutés à l’en-tête côté navigateur; ils ne sont pas transmis au modèle pour cette mise en forme.
 
 ## 1. Choisir le modèle
 
@@ -68,6 +73,7 @@ Ajouter au dépôt les fichiers modifiés, notamment :
 ```text
 assets/agent-sti.js
 assets/agent-sti.css
+assets/agent-vie-scolaire-flux.svg
 supabase/functions/assistant-ia/index.ts
 supabase/config.toml
 index.html
@@ -82,7 +88,7 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 ## 4. Vérifier le fonctionnement
 
 1. Ouvrir Vie Scolaire et se connecter avec le compte professeur.
-2. Ouvrir **Agent STI · IA** dans le menu principal.
+2. Ouvrir **Agent Vie Scolaire AI** dans le menu principal.
 3. Cliquer sur **Tester la connexion**. Le modèle configuré doit apparaître.
 4. Générer d'abord une courte série théorique, puis une courte série pratique pour vérifier l'adaptation au type de devoir.
 5. Tester une correction théorique avec une copie fictive et un barème fourni.
@@ -97,8 +103,9 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 - Les images sont réduites dans le navigateur, limitées à six par demande, puis transmises à la fonction pour l'analyse. Pour une copie manuscrite théorique, elles servent d'abord à la transcription; après relecture, le second appel de correction reçoit le texte et non les photos.
 - Les fichiers de code sont limités à huit fichiers de 200 Ko chacun ; ils sont lus localement et ne sont pas enregistrés dans l'historique.
 - Les corrections et les propositions de barème ne sont pas ajoutées à l'historique local des générations.
-- Les autres documents récents sont conservés dans le navigateur pour être rouverts ; ils peuvent être effacés depuis l'agent.
-- Aucune correction n'est enregistrée dans les notes et aucune séance n'est marquée assurée sans action de l'enseignant.
+- Les autres documents récents sont conservés dans l’historique du navigateur, associé au professeur connecté; seules ses entrées sont proposées. Les anciennes entrées sans identité de compte restent stockées mais sont masquées. Une série sélectionnée n’est remplacée qu’après relecture et confirmation; la source externe collée dans le formulaire reste intacte.
+- Le remplacement d’une fiche ou d’une entrée du cahier ouvre une confirmation dédiée; Annuler laisse les données existantes intactes. L’enregistrement final reste à la main du professeur.
+- Aucune correction n’est enregistrée dans les notes et aucune séance n’est marquée assurée sans action de l’enseignant.
 
 ## Dépannage
 

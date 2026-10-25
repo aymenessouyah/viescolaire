@@ -120,7 +120,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.18.1-gemini-agent";
+  var ATTENDU = "v1.19.0-agent-vie-scolaire-ai";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -174,7 +174,6 @@
 <section id="v-fiche" class="view ref-ui"></section>
 <section id="v-avancement" class="view ref-ui"></section>
 <section id="v-devoirs" class="view ref-ui"></section>
-<section id="v-agent" class="view ref-ui"></section>
 
   <section id="v-suivi" class="view"></section>
   <section id="v-edt" class="view"></section>
@@ -211,6 +210,25 @@
     </div>
   </section>
 </main>
+
+<dialog id="agent-dialog" class="agent-dialog" aria-labelledby="agent-dialog-title">
+  <div class="agent-dialog-frame">
+    <header class="agent-dialog-bar">
+      <div class="agent-dialog-brand"><span class="agent-dialog-mark" aria-hidden="true">AI</span><div><h2 id="agent-dialog-title">Agent Vie Scolaire AI</h2><p>Studio pédagogique · créez, révisez et remplacez vos documents</p></div></div>
+      <button class="agent-dialog-close" type="button" onclick="go('v-dash')" aria-label="Fermer l’Agent Vie Scolaire AI"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg><span>Fermer</span></button>
+    </header>
+    <section id="v-agent" class="view ref-ui"></section>
+  </div>
+</dialog>
+
+<dialog id="agent-replace-confirm" class="agent-replace-confirm" aria-labelledby="agent-replace-title" aria-describedby="agent-replace-description">
+  <form method="dialog" class="agent-confirm-card">
+    <span class="agent-confirm-kicker">CONFIRMATION DU REMPLACEMENT</span>
+    <h2 id="agent-replace-title">Remplacer le document ?</h2>
+    <p id="agent-replace-description">Le document existant sera remplacé après confirmation.</p>
+    <div class="agent-confirm-actions"><button class="agent-confirm-cancel" type="submit" value="cancel">Annuler</button><button id="agent-replace-accept" class="agent-confirm-accept" type="submit" value="confirm">Remplacer le document</button></div>
+  </form>
+</dialog>
 
 <footer>
   <div class="wrap">

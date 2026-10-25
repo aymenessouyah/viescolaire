@@ -1,5 +1,5 @@
 /* =========================================================================
-   AGENT STI — assistant pédagogique personnel
+   Agent Vie Scolaire AI — assistant pédagogique personnel
    Interface connectée à une Supabase Edge Function. Aucune clé IA dans le
    navigateur. Les résultats sont des propositions : toute écriture dans les
    fiches ou le planning nécessite une action explicite de l'enseignant.
@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '1.4.0-gemini-api';
+const VERSION = '2.0.0-vie-scolaire-ai';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -46,13 +46,18 @@ let transcriptionAcknowledged = false;
 let results = {};
 let resultMeta = {};
 let history = readHistory();
-const forms = {
-  fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '', notions: [], competences: [] },
-  exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '', notions: [], competences: [] },
-  correction: { type_devoir: 'théorique', mode_bareme: 'fourni', identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
-  cahier: { session: '', realise: '', devoirs: '', observations: '' },
-  repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' }
-};
+let workspaceOwnerKey = '';
+let generationToken = 0;
+function defaultForms() {
+  return {
+    fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '', notions: [], competences: [], remplacer: false },
+    exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '', notions: [], competences: [], remplacement_id: '', document_existant: '' },
+    correction: { type_devoir: 'théorique', mode_bareme: 'fourni', identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
+    cahier: { session: '', realise: '', devoirs: '', observations: '', remplacer: false },
+    repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' }
+  };
+}
+const forms = defaultForms();
 
 const el = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -93,11 +98,24 @@ const today = () => root.todayISO ? root.todayISO() : new Date().toISOString().s
 function readHistory() {
   try {
     const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    return Array.isArray(value) ? value.filter(x => x && TASKS[x.task] && x.result).slice(0, 8) : [];
+    return Array.isArray(value) ? value.filter(x => x && TASKS[x.task] && x.result) : [];
   } catch (e) { return []; }
 }
 function writeHistory() {
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 8))); } catch (e) { /* Le résultat reste disponible à l'écran. */ }
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (e) { /* Le résultat reste disponible à l'écran. */ }
+}
+function currentHistory() {
+  const owner = activeTeacherKey();
+  return owner ? history.filter(item => item.owner_key === owner).slice(0, 8) : [];
+}
+function saveCurrentHistory(entries) {
+  const owner = activeTeacherKey();
+  if (!owner) return false;
+  const mine = entries.filter(item => item && item.owner_key === owner).slice(0, 8);
+  const others = history.filter(item => item.owner_key !== owner);
+  history = [...mine, ...others];
+  writeHistory();
+  return true;
 }
 function findSession(key, cls = classe) {
   return (ctx?.sessions?.[cls] || []).find(s => keyOf(s) === key) || null;
@@ -204,9 +222,49 @@ function curriculumPicker(kind, title, selectedIds, help) {
     <p class="agent-curriculum-no-match" data-agent-no-match="${kind}" hidden>Aucune entrée ne correspond à cette recherche.</p>
   </details>`;
 }
+function activeTeacherProfile() {
+  try {
+    if (typeof root.activeProfessorProfile === 'function') return root.activeProfessorProfile() || null;
+  } catch (_) { return null; }
+  return ctx?.store?.profil && typeof ctx.store.profil === 'object' ? ctx.store.profil : null;
+}
+function activeTeacherKey() {
+  const profile = activeTeacherProfile();
+  if (!profile) return '';
+  const id = String(profile.prof_id || '').trim();
+  if (id) return `id:${id}`;
+  const email = String(profile.email || '').trim().toLocaleLowerCase('en');
+  return email ? `email:${email}` : '';
+}
+function resetTeacherWorkspace() {
+  generationToken++;
+  tool = 'fiche';
+  classe = '3SI1';
+  busy = false;
+  error = '';
+  notice = '';
+  attachments = [];
+  codeFiles = [];
+  transcriptionReview = null;
+  transcriptionAcknowledged = false;
+  results = {};
+  resultMeta = {};
+  Object.assign(forms, defaultForms());
+}
+function documentIdentity(meta = {}) {
+  const profile = activeTeacherProfile();
+  const referenceSchool = root.STI_DATA?.reference?.SCHOOL || root.SCHOOL || {};
+  const school = String(profile?.lycee || referenceSchool.lycee || 'Lycée à renseigner').trim();
+  const teacher = String(profile?.nom || [profile?.prenom, profile?.nom_famille].filter(Boolean).join(' ') || 'Nom et prénom à compléter').trim();
+  return { school, teacher, classe: String(meta.classe || classe || '—').trim() };
+}
+function documentIdentityHtml(meta) {
+  const identity = documentIdentity(meta);
+  return `<div class="agent-doc-identity" aria-label="Identification du document"><div><span>Lycée</span><strong>${esc(identity.school)}</strong></div><div><span>Enseignant</span><strong>${esc(identity.teacher)}</strong></div><div><span>Classe</span><strong>${esc(identity.classe)}</strong></div></div>`;
+}
 function commonContext() {
   return {
-    agent: 'Agent STI',
+    agent: 'Agent Vie Scolaire AI',
     matiere: 'Sciences et technologies de l’informatique (STI)',
     programme: 'Programme tunisien — enseignement secondaire',
     annee_scolaire: '2026-2027',
@@ -247,18 +305,27 @@ function generateButton(label = 'Générer avec mon agent') {
 }
 function formHtml() {
   const f = forms[tool];
-  if (tool === 'fiche') return `
+  if (tool === 'fiche') {
+    const selectedSession = findSession(f.session);
+    const existingPreparation = selectedSession ? String(record(selectedSession).preparation || '').trim() : '';
+    return `
     <div class="agent-form-grid">
       <label class="agent-field full"><span>Séance du planning</span><select data-agent-field="session">${sessionOptions()}</select></label>
+      ${existingPreparation ? `<label class="agent-replace-option full"><input type="checkbox" data-agent-field="remplacer" ${f.remplacer ? 'checked' : ''}><span><strong>Préparer une nouvelle version de la fiche existante</strong><small>Une fiche est déjà enregistrée pour cette séance. Le contenu actuel sera fourni comme référence, puis vous pourrez confirmer son remplacement.</small></span></label>` : ''}
       ${curriculumPicker('notions', 'Notions du référentiel', f.notions, 'Les notions déjà renseignées pour cette séance sont présélectionnées. Vous pouvez en choisir plusieurs ou laisser la sélection vide.')}
       ${curriculumPicker('competences', 'Compétences ciblées', f.competences, 'Choisissez les compétences de Sciences et technologies de l’informatique à travailler dans cette fiche.')}
       <label class="agent-field"><span>Méthode pédagogique</span><select data-agent-field="methode">${['Cours dialogué et TP guidé', 'TP principalement pratique', 'Apprentissage par projet', 'Révision et remédiation', 'Correction d’évaluation'].map(x => `<option ${f.methode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Objectif prioritaire <em>facultatif</em></span><input data-agent-field="objectif" value="${esc(f.objectif)}" placeholder="Ex. : savoir contrôler un formulaire"></label>
       <label class="agent-field full"><span>Vos consignes <em>facultatif</em></span><textarea data-agent-field="consignes" rows="4" placeholder="Matériel disponible, difficultés des groupes, activité à privilégier…">${esc(f.consignes)}</textarea></label>
     </div>${generateButton('Générer la fiche pédagogique')}`;
-  if (tool === 'exercices') return `
+  }
+  if (tool === 'exercices') {
+    const exerciseHistory = currentHistory().filter(item => item.task === 'exercices' && item.result && item.classe === classe);
+    return `
     <div class="agent-form-grid">
       <label class="agent-field full"><span>Notion ou thème</span><input data-agent-field="sujet" value="${esc(f.sujet)}" required placeholder="Ex. : JavaScript — événements et contrôle de saisie"></label>
+      <label class="agent-field full"><span>Série de l’historique à remplacer <em>facultatif</em></span><select data-agent-field="remplacement_id"><option value="">Créer une nouvelle série</option>${exerciseHistory.map(item => `<option value="${esc(item.id)}" ${f.remplacement_id === item.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.classe)} · ${esc(new Date(item.created).toLocaleDateString('fr-FR'))}</option>`).join('')}</select><small>Choisissez une série récente de l’historique local pour produire une nouvelle version. Le remplacement ne sera fait qu’après votre confirmation.</small></label>
+      <label class="agent-field full"><span>Contenu existant à réviser <em>facultatif, si la série ne figure pas dans l’historique</em></span><textarea data-agent-field="document_existant" rows="4" placeholder="Collez ici la série actuelle pour que l’agent prépare une version de remplacement…">${esc(f.document_existant)}</textarea><small>Le contenu sera utilisé comme référence; l’original ne sera jamais modifié sans votre action.</small></label>
       ${curriculumPicker('notions', 'Notions du référentiel', f.notions, 'Sélection facultative. Sans sélection, l’agent proposera des notions correspondant au thème saisi.')}
       ${curriculumPicker('competences', 'Compétences ciblées', f.competences, 'Sélection facultative des compétences que les exercices doivent évaluer.')}
       <label class="agent-field"><span>Type de devoir</span><select data-agent-field="type_devoir">${assignmentTypeOptions(f.type_devoir)}</select></label>
@@ -267,12 +334,15 @@ function formHtml() {
       <label class="agent-field"><span>Nombre d’exercices</span><input type="number" min="1" max="10" data-agent-field="nombre" value="${esc(f.nombre)}"></label>
       <label class="agent-field"><span>Durée estimée (minutes)</span><input type="number" min="15" max="300" step="15" data-agent-field="duree" value="${esc(f.duree)}"></label>
       <label class="agent-field full"><span>Contraintes <em>facultatif</em></span><textarea data-agent-field="contraintes" rows="3" placeholder="Ex. : utiliser un formulaire HTML, interdire les attributs d’événement inline, prévoir un exercice de remédiation…">${esc(f.contraintes)}</textarea></label>
-    </div>${generateButton('Générer les exercices et le corrigé')}`;
+    </div>${generateButton(f.remplacement_id ? 'Générer la version de remplacement' : 'Générer les exercices et le corrigé')}`;
+  }
   if (tool === 'cahier') {
     const s = findSession(f.session);
+    const existingEntry = s ? String(record(s).contenu || '').trim() : '';
     return `<div class="agent-truth-note">${icon('shield')}<div><strong>Le cahier décrit le réellement effectué.</strong><span>L’agent reformule vos informations ; il ne doit pas déduire qu’un cours a été assuré à partir de sa seule date.</span></div></div>
     <div class="agent-form-grid">
       <label class="agent-field full"><span>Séance concernée</span><select data-agent-field="session">${sessionOptions()}</select></label>
+      ${existingEntry ? `<label class="agent-replace-option full"><input type="checkbox" data-agent-field="remplacer" ${f.remplacer ? 'checked' : ''}><span><strong>Préparer une nouvelle version de l’entrée existante</strong><small>Une entrée de cahier est déjà enregistrée pour cette séance. Le texte actuel servira de référence; le remplacement demandera votre confirmation.</small></span></label>` : ''}
       <label class="agent-field full"><span>Ce qui a réellement été fait ${record(s).contenu ? '· contenu existant déjà disponible' : ''}</span><textarea data-agent-field="realise" rows="5" placeholder="Ex. : rappel de 10 min, démonstration de getElementById, TP2 commencé, exercices 1 et 2 terminés…">${esc(f.realise)}</textarea></label>
       <label class="agent-field"><span>Travail donné <em>facultatif</em></span><input data-agent-field="devoirs" value="${esc(f.devoirs)}" placeholder="Ex. : terminer l’exercice 3"></label>
       <label class="agent-field"><span>Observations <em>facultatif</em></span><input data-agent-field="observations" value="${esc(f.observations)}" placeholder="Ex. : reprendre les événements"></label>
@@ -315,7 +385,10 @@ function bulletList(items) {
 }
 function renderFiche(r, meta) {
   const phases = asArray(r.deroulement);
-  return `${resultHeader(r.titre || 'Fiche pédagogique', `${meta.classe} · ${dateLong(meta.date)}`, 'Utiliser dans la fiche')}<div id="agent-result" class="agent-document">
+  const session = findSession(meta.session, meta.classe);
+  const hasExisting = Boolean(session && String(record(session).preparation || '').trim());
+  return `${resultHeader(r.titre || 'Fiche pédagogique', `${meta.classe} · ${dateLong(meta.date)}`, hasExisting ? 'Remplacer la fiche existante' : 'Utiliser dans la fiche')}<div id="agent-result" class="agent-document">
+    ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>FICHE PÉDAGOGIQUE · ${esc(meta.classe)}</span><h2>${esc(r.titre || 'Séance STI')}</h2><p>${esc(dateLong(meta.date))}</p></div>
     <div class="agent-doc-grid"><section><h3>Objectifs</h3>${bulletList(r.objectifs)}</section><section><h3>Prérequis</h3>${bulletList(r.prerequis)}</section></div>
     <section><h3>Déroulement proposé</h3><div class="agent-phases">${phases.map((p, i) => `<div><span>${String(i + 1).padStart(2, '0')}</span><div><strong>${esc(p.phase || `Phase ${i + 1}`)} <em>${esc(p.duree || '')}</em></strong><p><b>Enseignant :</b> ${nl(p.activite_enseignant || p.enseignant)}</p><p><b>Élèves :</b> ${nl(p.activite_eleve || p.eleves)}</p>${p.trace ? `<p><b>Trace / évaluation :</b> ${nl(p.trace)}</p>` : ''}</div></div>`).join('') || '<p>Déroulement non renseigné.</p>'}</div></section>
@@ -327,7 +400,10 @@ function renderFiche(r, meta) {
 }
 function renderExercices(r, meta) {
   const exos = asArray(r.exercices);
-  return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`)}<div id="agent-result" class="agent-document">
+  const replacementTarget = currentHistory().find(item => item.id === meta.remplacement_id && item.task === 'exercices' && item.classe === meta.classe);
+  const replaceLabel = replacementTarget ? 'Remplacer la série sélectionnée' : '';
+  return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`, replaceLabel)}<div id="agent-result" class="agent-document">
+    ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>${esc(r.format || 'SÉRIE D’EXERCICES')} · ${esc(meta.classe)} · ${esc((meta.type_devoir || 'théorique').toUpperCase())}</span><h2>${esc(r.titre || 'Exercices STI')}</h2><p>${esc(r.duree || forms.exercices.duree + ' min')}${r.bareme_total ? ` · Barème : ${esc(r.bareme_total)}` : ''}</p></div>
     ${r.introduction ? `<p class="agent-intro">${nl(r.introduction)}</p>` : ''}
     ${asArray(r.notions).length ? `<section><h3>Notions ciblées</h3>${chipList(r.notions)}</section>` : ''}
@@ -336,7 +412,10 @@ function renderExercices(r, meta) {
   </div>`;
 }
 function renderCahier(r, meta) {
-  return `${resultHeader(`Cahier de textes · S${meta.numero}`, `${meta.classe} · ${dateLong(meta.date)}`, 'Insérer dans la fiche')}<div id="agent-result" class="agent-document">
+  const session = findSession(meta.session, meta.classe);
+  const hasExisting = Boolean(session && String(record(session).contenu || '').trim());
+  return `${resultHeader(`Cahier de textes · S${meta.numero}`, `${meta.classe} · ${dateLong(meta.date)}`, hasExisting ? 'Remplacer l’entrée du cahier' : 'Insérer dans le cahier')}<div id="agent-result" class="agent-document">
+    ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>CAHIER DE TEXTES · ${esc(meta.classe)} · SÉANCE ${esc(meta.numero)}</span><h2>${esc(r.titre || meta.titre)}</h2><p>${esc(dateLong(meta.date))}</p></div>
     <section><h3>Contenu réellement effectué · formulation à valider</h3><p>${nl(r.contenu)}</p></section>
     <section><h3>Notions abordées</h3>${chipList(r.notions)}</section>
@@ -347,6 +426,7 @@ function renderCahier(r, meta) {
 function renderRepartition(r, meta) {
   const rows = asArray(r.seances);
   return `${resultHeader(r.titre || `Répartition ${meta.classe} · T${meta.trimestre}`, `${rows.length} séance(s) proposée(s) · dates inchangées`, 'Appliquer aux séances à venir')}<div id="agent-result" class="agent-document">
+    ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>RÉPARTITION PÉDAGOGIQUE · ${esc(meta.classe)} · TRIMESTRE ${esc(meta.trimestre)}</span><h2>${esc(r.titre || 'Progression proposée')}</h2></div>
     ${asArray(r.avertissements).length ? `<div class="agent-uncertainties"><strong>Points de vigilance</strong>${bulletList(r.avertissements)}</div>` : ''}
     <div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>N° / date</th><th>Séance proposée</th><th>Objectif et travail</th></tr></thead><tbody>${rows.map(s => `<tr><td><strong>S${esc(s.numero ?? s.n)}</strong><br>${esc(s.date || '')}</td><td><strong>${esc(s.titre)}</strong><br><small>${esc(s.domaine || '')}${s.type ? ` · ${esc(s.type)}` : ''}</small></td><td>${nl(s.objectif)}${s.travail_maison ? `<p><b>Devoir :</b> ${nl(s.travail_maison)}</p>` : ''}</td></tr>`).join('')}</tbody></table></div>
@@ -373,6 +453,7 @@ function renderCorrection(r, meta) {
   const uncertain = asArray(r.transcription_incertaine);
   const limitations = asArray(r.limites_analyse);
   return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · ${meta.type_devoir || 'théorique'} · note proposée à contrôler`)}<div id="agent-result" class="agent-document">
+    ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>CORRECTION ${esc((meta.type_devoir || 'théorique').toUpperCase())} · ${esc(meta.classe)} · ${esc(meta.identifiant)}</span><h2>Proposition d’évaluation</h2></div>
     <div class="agent-grade"><div><strong>${esc(r.note ?? '—')}</strong><span>/ ${esc(r.sur ?? meta.sur)}</span></div><p><b>Confiance de lecture :</b> ${esc(r.confiance || 'à vérifier')}<br>Cette note n’est pas enregistrée automatiquement.</p></div>
     ${uncertain.length ? `<div class="agent-uncertainties"><strong>Passages à relire sur la copie</strong>${bulletList(uncertain)}</div>` : ''}
@@ -392,36 +473,46 @@ function renderResult() {
     if (tool === 'repartition') return renderRepartition(r, meta);
     return renderCorrection(r, meta);
   } catch (e) {
-    return `${resultHeader('Résultat de l’agent', 'Affichage brut')}<pre id="agent-result" class="agent-raw">${esc(JSON.stringify(r, null, 2))}</pre>`;
+    return `${resultHeader('Résultat de l’agent', 'Affichage brut')}<div id="agent-result" class="agent-document">${documentIdentityHtml(meta)}<pre class="agent-raw">${esc(JSON.stringify(r, null, 2))}</pre></div>`;
   }
 }
 function historyHtml() {
-  if (!history.length) return '';
-  return `<section class="agent-history agent-no-print"><div class="agent-history-head"><div><span>VOS DOCUMENTS</span><h2>Générations récentes</h2></div><button class="btn btn-ghost" data-agent-clear-history>${icon('trash', 15)} Effacer l’historique</button></div><div class="agent-history-list">${history.map(h => `<button data-agent-history="${esc(h.id)}"><span>${icon(TASKS[h.task].icon)}</span><div><strong>${esc(h.title)}</strong><small>${esc(TASKS[h.task].short)} · ${esc(h.classe)} · ${esc(new Date(h.created).toLocaleDateString('fr-FR'))}</small></div>${icon('arrow', 15)}</button>`).join('')}</div><p>Les corrections de copies ne sont pas ajoutées à cet historique.</p></section>`;
+  const entries = currentHistory();
+  if (!entries.length) return '';
+  return `<section class="agent-history agent-no-print"><div class="agent-history-head"><div><span>VOS DOCUMENTS</span><h2>Générations récentes</h2></div><button class="btn btn-ghost" data-agent-clear-history>${icon('trash', 15)} Effacer mon historique</button></div><div class="agent-history-list">${entries.map(h => `<button data-agent-history="${esc(h.id)}"><span>${icon(TASKS[h.task].icon)}</span><div><strong>${esc(h.title)}</strong><small>${esc(TASKS[h.task].short)} · ${esc(h.classe)} · ${esc(new Date(h.created).toLocaleDateString('fr-FR'))}</small></div>${icon('arrow', 15)}</button>`).join('')}</div><p>Historique local à ce navigateur, associé au professeur connecté. Les corrections de copies ne sont pas ajoutées.</p></section>`;
+}
+function flowHtml() {
+  return `<details class="agent-flow agent-no-print" id="agent-flow"><summary><span><small>COMPRENDRE LE PARCOURS</small><strong>Comment l’Agent Vie Scolaire AI produit un document</strong></span><span class="agent-flow-toggle">Afficher le schéma</span></summary><div class="agent-flow-content"><img src="assets/agent-vie-scolaire-flux.svg" alt="Schéma du parcours : professeur connecté, formulaire de l’agent, vérification Supabase, génération Gemini, réponse structurée, relecture et validation par l’enseignant, puis remplacement, insertion, impression ou export." loading="lazy" width="1600" height="950"><a href="assets/agent-vie-scolaire-flux.svg" download="schema-agent-vie-scolaire-ai.svg">Télécharger l’image du schéma (SVG)</a></div></details>`;
 }
 function draw() {
   const zone = el('v-agent');
   if (!zone || !ctx) return;
   ensureSessions();
+  const identity = documentIdentity({ classe });
+  const needsProfile = !identity.teacher || identity.teacher === 'Nom et prénom à compléter';
   zone.innerHTML = `<div class="agent-shell">
-    <header class="agent-hero agent-no-print"><div><span class="agent-eyebrow">${icon('spark', 16)} VOTRE AGENT PÉDAGOGIQUE PERSONNEL</span><h1>Agent <em>STI</em></h1><p>Il connaît votre contexte, prépare vos documents et vous laisse la décision finale.</p><div class="agent-hero-status">${statusHtml()}<span>Version ${VERSION}</span></div></div><div class="agent-hero-actions"><label>Classe de travail<select data-agent-class><option ${classe === '3SI1' ? 'selected' : ''}>3SI1</option><option ${classe === '4SI2' ? 'selected' : ''}>4SI2</option></select></label><button class="btn btn-ghost" data-agent-test>${icon('shield')} Tester la connexion</button></div></header>
+    <header class="agent-hero agent-no-print"><div class="agent-hero-copy"><span class="agent-eyebrow">${icon('spark', 16)} VOTRE STUDIO PÉDAGOGIQUE PERSONNEL</span><h1>Agent Vie Scolaire <em>AI</em></h1><p>Préparez, adaptez et vérifiez vos documents pédagogiques. Rien n’est appliqué sans votre décision.</p><div class="agent-identity-strip" aria-label="Informations du professeur"><span><small>LYCÉE</small><strong>${esc(identity.school)}</strong></span><span><small>ENSEIGNANT</small><strong>${esc(identity.teacher)}</strong></span>${needsProfile ? '<button type="button" class="agent-profile-link" data-agent-profile>Compléter mon profil</button>' : '<span class="agent-doc-promise">Lycée · Enseignant · Classe sur chaque document</span>'}</div><div class="agent-hero-status">${statusHtml()}<span>Version ${VERSION}</span></div></div><div class="agent-hero-actions"><label>Classe de travail<select data-agent-class aria-label="Classe de travail"><option ${classe === '3SI1' ? 'selected' : ''}>3SI1</option><option ${classe === '4SI2' ? 'selected' : ''}>4SI2</option></select></label><button class="btn btn-ghost" data-agent-test>${icon('shield')} Tester la connexion</button><a class="agent-flow-link" href="#agent-flow">Voir le schéma du parcours ↓</a></div></header>
     <div class="agent-workspace">
-      <aside class="agent-sidebar agent-no-print"><span class="agent-menu-label">OUTILS DE L’AGENT</span>${Object.entries(TASKS).map(([id, t]) => `<button class="agent-tool ${tool === id ? 'active' : ''}" data-agent-tool="${id}"><span>${icon(t.icon)}</span><div><strong>${t.label}</strong><small>${t.desc}</small></div></button>`).join('')}${contextCard()}<div class="agent-security">${icon('shield', 16)}<p>La clé IA reste dans Supabase. Les élèves et les notes ne sont jamais envoyés en bloc.</p></div></aside>
-      <main class="agent-main"><section class="agent-request agent-no-print"><div class="agent-request-title"><span>${icon(TASKS[tool].icon, 21)}</span><div><small>DEMANDE À L’AGENT</small><h2>${TASKS[tool].label}</h2></div></div>${formHtml()}</section>
+      <aside class="agent-sidebar agent-no-print"><span class="agent-menu-label">CHOISIR UN OUTIL</span>${Object.entries(TASKS).map(([id, t]) => `<button class="agent-tool ${tool === id ? 'active' : ''}" data-agent-tool="${id}" aria-pressed="${tool === id}"><span>${icon(t.icon)}</span><div><strong>${t.label}</strong><small>${t.desc}</small></div></button>`).join('')}${contextCard()}<div class="agent-security">${icon('shield', 16)}<p>La clé IA reste dans Supabase. Les élèves et les notes ne sont jamais envoyés en bloc.</p></div></aside>
+      <main class="agent-main"><section class="agent-request agent-no-print"><div class="agent-request-title"><span>${icon(TASKS[tool].icon, 21)}</span><div><small>CONFIGURER VOTRE DOCUMENT</small><h2>${TASKS[tool].label}</h2><p>${esc(TASKS[tool].desc)}</p></div></div>${formHtml()}</section>
       ${busy ? `<div class="agent-loading" role="status"><span></span><div><strong>L’agent analyse votre demande…</strong><p>La génération peut prendre une à deux minutes pour une répartition ou une copie avec photos.</p></div></div>` : ''}
       ${error ? `<div class="agent-message error agent-no-print" role="alert"><strong>La demande n’a pas abouti</strong><p>${nl(error)}</p></div>` : ''}
       ${notice ? `<div class="agent-message success agent-no-print"><p>${nl(notice)}</p></div>` : ''}
       ${transcriptionReview ? renderTranscriptionReview() : ''}
-      ${renderResult() || (!busy && !error && !transcriptionReview ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez vérifier, exporter ou appliquer le résultat.</p></div>` : '')}</main>
-    </div>${historyHtml()}</div>`;
+      ${renderResult() || (!busy && !error && !transcriptionReview ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez relire, remplacer, exporter ou appliquer le résultat.</p></div>` : '')}</main>
+    </div>${historyHtml()}${flowHtml()}</div>`;
 }
 
 function validate() {
   const f = forms[tool];
+  const identity = documentIdentity({ classe });
+  if (!activeTeacherKey()) return 'Connectez-vous à votre compte professeur pour produire un document dans votre espace personnel.';
+  if (!identity.teacher || identity.teacher === 'Nom et prénom à compléter') return 'Complétez d’abord votre nom et prénom dans « Mon profil » pour identifier les documents produits.';
+  if (!identity.school || identity.school === 'Lycée à renseigner') return 'Le nom du lycée doit être renseigné avant de produire un document.';
   if (['fiche', 'cahier'].includes(tool) && !findSession(f.session)) return 'Sélectionnez une séance du planning.';
   if (tool === 'cahier') {
     const s = findSession(f.session);
-    if (!f.realise.trim() && !record(s).contenu.trim()) return 'Décrivez ce qui a réellement été fait, ou renseignez d’abord le contenu de la fiche. L’agent ne doit pas inventer le déroulement d’une séance.';
+    if (!f.realise.trim() && !String(record(s).contenu || '').trim()) return 'Décrivez ce qui a réellement été fait, ou renseignez d’abord le contenu de la fiche. L’agent ne doit pas inventer le déroulement d’une séance.';
   }
   if (tool === 'exercices' && !f.sujet.trim()) return 'Indiquez la notion ou le thème des exercices.';
   if (tool === 'correction') {
@@ -437,11 +528,11 @@ function makeMeta() {
   const base = { classe, task: tool };
   if (['fiche', 'cahier'].includes(tool)) {
     const s = findSession(forms[tool].session);
-    return { ...base, session: keyOf(s), numero: s.n, date: s.iso, titre: titleOf(s) };
+    return s ? { ...base, session: keyOf(s), numero: s.n, date: s.iso, titre: titleOf(s) } : { ...base, session: '', numero: '', date: today(), titre: '' };
   }
   if (tool === 'repartition') return { ...base, trimestre: Number(forms.repartition.trimestre) };
   if (tool === 'correction') return { ...base, type_devoir: forms.correction.type_devoir, mode_bareme: forms.correction.mode_bareme, identifiant: forms.correction.identifiant.trim() || 'Copie anonyme', sur: Number(forms.correction.sur) || 20 };
-  if (tool === 'exercices') return { ...base, type_devoir: forms.exercices.type_devoir };
+  if (tool === 'exercices') return { ...base, type_devoir: forms.exercices.type_devoir, remplacement_id: forms.exercices.remplacement_id || '' };
   return base;
 }
 function buildPayload(meta) {
@@ -450,9 +541,13 @@ function buildPayload(meta) {
   if (tool === 'fiche') {
     const notionsSelectionnees = curriculumSelection('notions', f.notions);
     const competencesSelectionnees = curriculumSelection('competences', f.competences);
-    const seance = sessionData(findSession(f.session));
+    const selectedSession = findSession(f.session);
+    const seance = sessionData(selectedSession);
+    const existingPreparation = selectedSession ? String(record(selectedSession).preparation || '') : '';
     base.input = {
       seance, methode: f.methode, objectif_prioritaire: f.objectif, consignes: f.consignes,
+      mode_document: f.remplacer && existingPreparation.trim() ? 'remplacement' : 'nouveau',
+      document_a_remplacer: f.remplacer ? existingPreparation : '',
       notions_selectionnees: notionsSelectionnees,
       competences_selectionnees: competencesSelectionnees,
       competences: competencesSelectionnees.length ? competencesSelectionnees : programmeContext()
@@ -463,15 +558,33 @@ function buildPayload(meta) {
     const parametresExercices = { ...f };
     delete parametresExercices.notions;
     delete parametresExercices.competences;
+    delete parametresExercices.remplacement_id;
+    delete parametresExercices.document_existant;
+    const replacementEntry = currentHistory().find(item => item.id === f.remplacement_id && item.task === 'exercices' && item.classe === classe);
+    const replacementDocument = replacementEntry
+      ? { titre: replacementEntry.title, resultat: replacementEntry.result }
+      : String(f.document_existant || '').trim();
     base.input = {
       ...parametresExercices,
+      mode_document: replacementDocument ? 'remplacement' : 'nouveau',
+      document_a_remplacer: replacementDocument,
       notions_du_referentiel: notionsSelectionnees.length ? notionsSelectionnees : relatedNotions(f.sujet),
       notions_selectionnees: notionsSelectionnees,
       competences_selectionnees: competencesSelectionnees,
       competences: competencesSelectionnees.length ? competencesSelectionnees : programmeContext()
     };
   } else if (tool === 'cahier') {
-    base.input = { seance: sessionData(findSession(f.session)), realise_precise_par_enseignant: f.realise, travail_donne_precise: f.devoirs, observations_precisees: f.observations };
+    const selectedSession = findSession(f.session);
+    const existingRecord = selectedSession ? record(selectedSession) : {};
+    const existingEntry = String(existingRecord.contenu || '');
+    base.input = {
+      seance: sessionData(selectedSession),
+      mode_document: f.remplacer && existingEntry.trim() ? 'remplacement' : 'nouveau',
+      document_a_remplacer: f.remplacer ? { contenu: existingEntry, travail_maison: existingRecord.devoirs || '', observations: existingRecord.obs || '' } : '',
+      realise_precise_par_enseignant: f.realise,
+      travail_donne_precise: f.devoirs,
+      observations_precisees: f.observations
+    };
   } else if (tool === 'repartition') {
     base.input = {
       trimestre: Number(f.trimestre), consignes: f.consignes,
@@ -548,6 +661,19 @@ async function callAgent(task, payload = {}) {
 function resultTitle(task, r, meta) {
   return String(r.titre || (task === 'correction' ? `Correction ${meta.identifiant}` : TASKS[task].label)).slice(0, 140);
 }
+function confirmReplacement(title, message, acceptLabel = 'Remplacer le document') {
+  const dialog = el('agent-replace-confirm');
+  if (!dialog || typeof dialog.showModal !== 'function') return Promise.resolve(root.confirm ? root.confirm(message) : true);
+  const heading = el('agent-replace-title'), description = el('agent-replace-description'), accept = el('agent-replace-accept');
+  if (heading) heading.textContent = title;
+  if (description) description.textContent = message;
+  if (accept) accept.textContent = acceptLabel;
+  dialog.returnValue = '';
+  return new Promise(resolve => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+    dialog.showModal();
+  });
+}
 async function generate() {
   if (busy) return;
   error = validate();
@@ -558,11 +684,14 @@ async function generate() {
   const task = rubricFirst ? 'bareme' : handwritingFirst ? 'transcription' : tool;
   const meta = makeMeta();
   const payload = rubricFirst ? buildRubricPayload(meta) : handwritingFirst ? buildTranscriptionPayload() : buildPayload(meta);
+  const requestOwner = activeTeacherKey();
+  const requestToken = generationToken;
   busy = true;
   results[tool] = null;
   draw();
   try {
     const data = await callAgent(task, payload);
+    if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
     if (!data.result || typeof data.result !== 'object') throw new Error('La réponse de l’agent ne contient pas de document exploitable.');
     status = { configured: true, model: data.meta?.model || status?.model };
     if (rubricFirst) {
@@ -587,9 +716,15 @@ async function generate() {
     results[tool] = data.result;
     resultMeta[tool] = meta;
     if (task !== 'correction') {
-      history.unshift({ id: root.crypto?.randomUUID?.() || `agent-${Date.now()}`, created: new Date().toISOString(), task, classe: meta.classe, title: resultTitle(task, data.result, meta), result: data.result, meta });
-      history = history.slice(0, 8);
-      writeHistory();
+      const teacherHistory = currentHistory();
+      const replacementPending = task === 'exercices' && meta.remplacement_id && teacherHistory.some(item => item.id === meta.remplacement_id && item.task === 'exercices' && item.classe === meta.classe);
+      if (replacementPending) {
+        notice = 'La version de remplacement est prête. Vérifiez-la, puis utilisez « Remplacer la série sélectionnée » pour confirmer.';
+      } else {
+        const ownerKey = activeTeacherKey();
+        const newEntry = { id: root.crypto?.randomUUID?.() || `agent-${Date.now()}`, owner_key: ownerKey, created: new Date().toISOString(), task, classe: meta.classe, title: resultTitle(task, data.result, meta), result: data.result, meta };
+        saveCurrentHistory([newEntry, ...teacherHistory]);
+      }
     } else {
       attachments = [];
       codeFiles = [];
@@ -597,10 +732,12 @@ async function generate() {
       transcriptionAcknowledged = false;
     }
   } catch (e) {
-    error = e.message || String(e);
+    if (requestToken === generationToken && requestOwner === activeTeacherKey()) error = e.message || String(e);
   } finally {
-    busy = false;
-    draw();
+    if (requestToken === generationToken && requestOwner === activeTeacherKey()) {
+      busy = false;
+      draw();
+    }
   }
 }
 function continueFromTranscription() {
@@ -626,14 +763,20 @@ function restartTranscription() {
 }
 async function testConnection() {
   if (busy) return;
+  const requestOwner = activeTeacherKey();
+  const requestToken = generationToken;
   busy = true; error = ''; notice = '';
   draw();
   try {
     const data = await callAgent('status');
+    if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
     status = data;
     notice = data.configured ? `Fonction Supabase accessible et configuration détectée pour « ${data.model} ». Lancez une courte génération pour valider aussi l’accès à Gemini.` : 'La fonction Supabase répond, mais le secret GEMINI_API_KEY manque ou le modèle Gemini doit être vérifié. Suivez le guide AGENT_IA.md.';
-  } catch (e) { error = e.message || String(e); }
-  finally { busy = false; draw(); }
+  } catch (e) {
+    if (requestToken === generationToken && requestOwner === activeTeacherKey()) error = e.message || String(e);
+  } finally {
+    if (requestToken === generationToken && requestOwner === activeTeacherKey()) { busy = false; draw(); }
+  }
 }
 function ficheText(r) {
   const lines = ['OBJECTIFS', ...asArray(r.objectifs).map(x => `• ${x}`), '', 'PRÉREQUIS', ...asArray(r.prerequis).map(x => `• ${x}`), '', 'DÉROULEMENT PROPOSÉ'];
@@ -649,25 +792,59 @@ function ficheText(r) {
   if (r.remediation) lines.push('', `REMÉDIATION : ${r.remediation}`);
   return lines.join('\n');
 }
-function applyResult() {
+async function applyResult() {
+  const requestOwner = activeTeacherKey();
+  const requestToken = generationToken;
   const r = results[tool];
   const meta = resultMeta[tool];
-  if (!r || !meta) return;
+  if (!r || !meta || !requestOwner) return;
   if (['fiche', 'cahier'].includes(tool)) {
     const s = findSession(meta.session, meta.classe);
     if (!s) { error = 'La séance liée à ce résultat est introuvable.'; draw(); return; }
+    const existing = record(s);
+    const hasExisting = tool === 'fiche'
+      ? Boolean(String(existing.preparation || '').trim())
+      : Boolean(String(existing.contenu || '').trim());
+    if (hasExisting) {
+      const documentName = tool === 'fiche' ? 'la fiche pédagogique' : 'l’entrée du cahier de textes';
+      const accepted = await confirmReplacement(
+        tool === 'fiche' ? 'Remplacer la fiche existante ?' : 'Remplacer l’entrée du cahier ?',
+        `Cette action remplacera ${documentName} de ${meta.classe}, séance ${s.n}. Les autres séances et les statuts assurée/reportée resteront inchangés. Vous pourrez encore vérifier le brouillon avant de l’enregistrer.`,
+        tool === 'fiche' ? 'Remplacer la fiche' : 'Remplacer l’entrée'
+      );
+      if (!accepted || requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+    }
     root.openModal(meta.classe, s.n);
     if (tool === 'fiche') {
       el('m-titre').value = r.titre || meta.titre;
       el('m-preparation').value = ficheText(r);
       el('m-devoirs').value = r.travail_maison || '';
-      root.toast('Préparation insérée. Vérifiez puis cliquez sur Enregistrer.');
+      root.toast(hasExisting ? 'Nouvelle fiche chargée dans le formulaire. Vérifiez puis cliquez sur Enregistrer.' : 'Préparation insérée. Vérifiez puis cliquez sur Enregistrer.');
     } else {
       el('m-contenu').value = r.contenu || '';
       el('m-devoirs').value = r.travail_maison || '';
       el('m-obs').value = [r.observations, r.points_a_reprendre ? `À reprendre : ${r.points_a_reprendre}` : ''].filter(Boolean).join(' | ');
-      root.toast('Brouillon inséré sans confirmer la séance. Vérifiez puis enregistrez.');
+      root.toast(hasExisting ? 'Nouvelle entrée chargée dans le formulaire. Vérifiez puis enregistrez.' : 'Brouillon inséré sans confirmer la séance. Vérifiez puis enregistrez.');
     }
+    return;
+  }
+  if (tool === 'exercices' && meta.remplacement_id) {
+    const target = currentHistory().find(item => item.id === meta.remplacement_id && item.task === 'exercices' && item.classe === meta.classe);
+    if (!target) { error = 'La série choisie n’est plus présente dans votre historique local pour cette classe. Sélectionnez-en une autre.'; draw(); return; }
+    const accepted = await confirmReplacement(
+      'Remplacer la série d’exercices ?',
+      `La nouvelle version remplacera « ${target.title} » dans l’historique local de cet appareil. Vous pourrez ensuite la télécharger ou l’imprimer; aucun fichier externe ne sera modifié.`,
+      'Remplacer la série'
+    );
+    if (!accepted || requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+    const updatedMeta = { ...meta, remplacement_id: '' };
+    const updated = { ...target, created: new Date().toISOString(), title: resultTitle(tool, r, meta), result: r, meta: updatedMeta };
+    saveCurrentHistory(currentHistory().map(item => item.id === target.id ? updated : item));
+    resultMeta[tool] = updatedMeta;
+    forms.exercices.remplacement_id = '';
+    notice = 'La série a été remplacée dans l’historique local. Vous pouvez maintenant l’exporter ou l’imprimer.';
+    error = '';
+    draw();
     return;
   }
   if (tool === 'repartition') {
@@ -830,9 +1007,9 @@ document.addEventListener('change', e => {
   }
   if (e.target.matches('[data-agent-class]')) {
     classe = e.target.value === '4SI2' ? '4SI2' : '3SI1';
-    forms.fiche.session = ''; forms.fiche.notions = []; forms.fiche.competences = [];
-    forms.exercices.notions = []; forms.exercices.competences = [];
-    forms.cahier.session = '';
+    forms.fiche.session = ''; forms.fiche.notions = []; forms.fiche.competences = []; forms.fiche.remplacer = false;
+    forms.exercices.notions = []; forms.exercices.competences = []; forms.exercices.remplacement_id = '';
+    forms.cahier.session = ''; forms.cahier.remplacer = false;
     error = ''; notice = '';
     draw(); return;
   }
@@ -847,7 +1024,8 @@ document.addEventListener('change', e => {
   const field = e.target.closest('[data-agent-field]');
   if (field && field.tagName === 'SELECT') {
     forms[tool][field.dataset.agentField] = fieldValue(field);
-    if (tool === 'fiche' && field.dataset.agentField === 'session') forms.fiche.notions = storedNotionsForSession(forms.fiche.session);
+    if (tool === 'fiche' && field.dataset.agentField === 'session') { forms.fiche.notions = storedNotionsForSession(forms.fiche.session); forms.fiche.remplacer = false; }
+    if (tool === 'cahier' && field.dataset.agentField === 'session') forms.cahier.remplacer = false;
     if (tool === 'correction' && ['type_devoir', 'mode_bareme'].includes(field.dataset.agentField)) results.correction = null;
     if (tool === 'correction' && field.dataset.agentField === 'type_devoir') {
       transcriptionReview = null;
@@ -857,28 +1035,46 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
   if (button.hasAttribute('data-agent-transcription-proceed')) continueFromTranscription();
   if (button.hasAttribute('data-agent-transcription-reset')) restartTranscription();
   if (button.hasAttribute('data-agent-test')) testConnection();
+  if (button.hasAttribute('data-agent-profile')) root.openProfil?.();
   if (button.hasAttribute('data-agent-apply')) applyResult();
   if (button.hasAttribute('data-agent-download')) downloadResult();
   if (button.hasAttribute('data-agent-print')) printResult();
   if (button.dataset.agentRemove !== undefined) { attachments.splice(Number(button.dataset.agentRemove), 1); draw(); }
   if (button.dataset.agentRemoveCode !== undefined) { codeFiles.splice(Number(button.dataset.agentRemoveCode), 1); draw(); }
   if (button.dataset.agentHistory) {
-    const item = history.find(x => x.id === button.dataset.agentHistory);
+    const item = currentHistory().find(x => x.id === button.dataset.agentHistory);
     if (item) { tool = item.task; classe = item.classe; results[tool] = item.result; resultMeta[tool] = item.meta; error = ''; notice = ''; draw(); }
   }
-  if (button.hasAttribute('data-agent-clear-history') && confirm('Effacer l’historique local des documents générés ?')) { history = []; writeHistory(); draw(); }
+  if (button.hasAttribute('data-agent-clear-history') && confirm('Effacer vos documents récents enregistrés localement sur cet appareil ?')) { saveCurrentHistory([]); draw(); }
 });
 
 root.STI_AGENT = {
   version: VERSION,
-  render(context) { ctx = context; draw(); },
-  _test: { ficheText, relatedNotions, curriculumCatalog, curriculumSelection, validate, shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings, buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload }
+  render(context) {
+    ctx = context;
+    const owner = activeTeacherKey();
+    if (owner !== workspaceOwnerKey) {
+      workspaceOwnerKey = owner;
+      resetTeacherWorkspace();
+    }
+    draw();
+  },
+  _test: {
+    ficheText, relatedNotions, curriculumCatalog, curriculumSelection, validate,
+    shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings,
+    documentIdentity, documentIdentityHtml, rubricToText,
+    currentHistory, activeTeacherKey, saveCurrentHistory,
+    renderers: { fiche: renderFiche, exercices: renderExercices, cahier: renderCahier, repartition: renderRepartition, correction: renderCorrection },
+    formFor: task => { const previous = tool; tool = task; try { return formHtml(); } finally { tool = previous; } },
+    buildPayloadFor: task => { const previous = tool; tool = task; try { return buildPayload(makeMeta()); } finally { tool = previous; } },
+    buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload
+  }
 };
 })(window);

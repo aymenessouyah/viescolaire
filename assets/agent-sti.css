@@ -1,4 +1,4 @@
-/* Agent STI — interface autonome, sans ressource externe */
+/* Agent Vie Scolaire AI — interface autonome, sans ressource externe */
 #v-agent{--agent-ink:#17251f;--agent-muted:#647168;--agent-line:#dfe5df;--agent-soft:#f4f6f2;--agent-card:#fff;--agent-green:#164d3b;--agent-green-2:#237054;--agent-blue:#276fa7;--agent-gold:#a66b16;--agent-red:#a43a43;color:var(--agent-ink)}
 #v-agent *{box-sizing:border-box}
 #v-agent button,#v-agent input,#v-agent select,#v-agent textarea{font:inherit}
@@ -247,4 +247,176 @@
   body.agent-printing #agent-result .agent-correction summary{display:none}
   body.agent-printing #agent-result section{break-inside:avoid}
   body.agent-printing #agent-result .agent-document,body.agent-printing #agent-result.agent-document{visibility:visible!important}
+}
+
+/* Studio Agent Vie Scolaire AI — formulaire recentré dans une grande fenêtre */
+dialog.agent-dialog{width:min(1680px,calc(100vw - 36px));max-width:none;height:min(95dvh,1180px);max-height:calc(100dvh - 28px);margin:auto;padding:0;overflow:hidden;border:1px solid rgba(255,255,255,.7);border-radius:24px;color:#17251f;background:transparent;box-shadow:0 34px 100px rgba(7,22,15,.36)}
+dialog.agent-dialog::backdrop{background:rgba(11,23,17,.62);backdrop-filter:blur(7px)}
+.agent-dialog-frame{display:flex;flex-direction:column;width:100%;height:100%;min-height:0;overflow:hidden;border-radius:inherit;background:var(--paper,#f5f2e8)}
+.agent-dialog-bar{z-index:2;display:flex;align-items:center;justify-content:space-between;gap:18px;flex:none;padding:14px 22px;border-bottom:1px solid rgba(20,64,47,.12);background:rgba(255,253,246,.96);box-shadow:0 6px 20px rgba(20,44,31,.05)}
+.agent-dialog-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.agent-dialog-mark{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:14px;color:#fff;background:linear-gradient(145deg,#164d3b,#338565);font-size:14px;font-weight:900;letter-spacing:.04em;box-shadow:0 8px 20px rgba(22,77,59,.22)}
+.agent-dialog-brand h2{margin:0;color:#183a2d;font-size:16px;line-height:1.25;letter-spacing:-.02em}
+.agent-dialog-brand p{margin:3px 0 0;color:#69766d;font-size:11px;line-height:1.4}
+.agent-dialog-close{display:inline-flex;align-items:center;gap:8px;flex:none;padding:9px 13px;border:1px solid #d7e2d9;border-radius:11px;color:#254b39;background:#fff;font:650 12px/1.2 system-ui,sans-serif;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.agent-dialog-close:hover{transform:translateY(-1px);border-color:#a8c6b1;background:#f1f7f2}
+.agent-dialog-close svg{width:16px;height:16px}
+#v-agent.view.on{display:block;flex:1;min-height:0;overflow:auto;padding:24px 28px 34px;background:var(--paper,#f5f2e8);scrollbar-gutter:stable}
+dialog.agent-dialog-fallback[open]{position:fixed;inset:14px;width:calc(100vw - 28px);height:calc(100dvh - 28px);margin:0;z-index:1000}
+#v-agent .agent-shell{width:100%;max-width:1510px;margin:0 auto;gap:24px}
+#v-agent .agent-hero{align-items:stretch;gap:30px;padding:32px 36px;border:1px solid rgba(255,255,255,.11);border-radius:23px;background:radial-gradient(circle at 79% 20%,rgba(219,193,123,.18),transparent 24%),linear-gradient(125deg,#102f26 0%,#18513e 55%,#236851 100%);box-shadow:0 22px 50px -34px rgba(17,57,44,.82)}
+#v-agent .agent-hero-copy{flex:1;min-width:0}
+#v-agent .agent-hero h1{font-size:clamp(30px,3vw,42px);letter-spacing:-.045em}
+#v-agent .agent-hero p{max-width:720px;font-size:14px}
+#v-agent .agent-identity-strip{display:flex;align-items:stretch;flex-wrap:wrap;gap:9px;margin-top:19px}
+#v-agent .agent-identity-strip>span{display:grid;align-content:center;gap:3px;min-width:145px;max-width:280px;padding:9px 12px;border:1px solid rgba(255,255,255,.15);border-radius:11px;background:rgba(255,255,255,.075)}
+#v-agent .agent-identity-strip>span small{color:#b7d5c4;font-size:8px;font-weight:850;letter-spacing:.13em}
+#v-agent .agent-identity-strip>span strong{overflow:hidden;color:#fff;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+#v-agent .agent-identity-strip .agent-doc-promise{min-width:0;max-width:none;align-self:center;border:0;color:#d5e8dc;background:transparent;font-size:10px;font-weight:650}
+#v-agent .agent-profile-link{align-self:center;padding:8px 11px;border:1px solid rgba(255,255,255,.22);border-radius:10px;color:#fff;background:rgba(255,255,255,.1);font-size:10px;font-weight:700}
+#v-agent .agent-profile-link:hover{background:rgba(255,255,255,.18)}
+#v-agent .agent-hero-status{margin-top:13px}
+#v-agent .agent-hero-actions{align-content:start;min-width:226px;padding:15px;border:1px solid rgba(255,255,255,.14);border-radius:16px;background:rgba(8,37,27,.22);backdrop-filter:blur(7px)}
+#v-agent .agent-hero-actions label{font-size:9px;letter-spacing:.1em}
+#v-agent .agent-hero-actions select{height:44px;border-radius:11px;font-size:13px}
+#v-agent .agent-hero-actions .btn{min-height:42px;border-radius:11px}
+#v-agent .agent-flow-link{display:inline-flex;align-items:center;justify-content:center;min-height:34px;color:#d5e8dc;font-size:10px;font-weight:650;text-align:center;text-decoration:none}
+#v-agent .agent-flow-link:hover{color:#fff;text-decoration:underline}
+#v-agent .agent-workspace{grid-template-columns:260px minmax(0,1fr);gap:22px}
+#v-agent .agent-sidebar{position:sticky;top:0;gap:7px;padding:11px;border:1px solid var(--agent-line);border-radius:18px;background:color-mix(in srgb,var(--agent-card) 88%,var(--agent-soft));box-shadow:0 12px 30px -25px rgba(30,48,39,.65)}
+#v-agent .agent-menu-label{padding:8px 9px 5px;font-size:9px;letter-spacing:.14em}
+#v-agent .agent-tool{align-items:center;gap:10px;padding:11px 10px;border:1px solid transparent;border-radius:12px}
+#v-agent .agent-tool:hover{transform:translateY(-1px)}
+#v-agent .agent-tool.active{border-color:#bdd6c8;box-shadow:inset 3px 0 0 var(--agent-green-2),0 5px 14px rgba(25,71,49,.06)}
+#v-agent .agent-tool>span{flex-basis:36px;width:36px;height:36px;border-radius:11px}
+#v-agent .agent-tool strong{font-size:12px;letter-spacing:-.01em}
+#v-agent .agent-tool small{font-size:9px;line-height:1.4}
+#v-agent .agent-context-card{margin:8px 0 0;padding:13px;border-radius:12px}
+#v-agent .agent-main{gap:18px}
+#v-agent .agent-request{border-radius:20px;box-shadow:0 17px 42px -32px rgba(30,48,39,.62)}
+#v-agent .agent-request-title{gap:14px;padding:21px 25px;background:linear-gradient(110deg,var(--agent-soft),var(--agent-card))}
+#v-agent .agent-request-title>span{width:46px;height:46px;border-radius:14px;box-shadow:0 8px 18px rgba(22,77,59,.18)}
+#v-agent .agent-request-title small{font-size:8px;letter-spacing:.15em}
+#v-agent .agent-request-title h2{font-size:19px}
+#v-agent .agent-request-title p{margin:4px 0 0;color:var(--agent-muted);font-size:11px;line-height:1.5}
+#v-agent .agent-form-grid{gap:19px;padding:24px 25px 7px}
+#v-agent .agent-field{gap:8px}
+#v-agent .agent-field>span{font-size:11.5px;letter-spacing:.005em}
+#v-agent .agent-field>span em{font-size:10px}
+#v-agent .agent-field input,#v-agent .agent-field select{height:46px;padding:0 13px;border-radius:11px;font-size:12px}
+#v-agent .agent-field textarea{min-height:94px;padding:12px 13px;border-radius:11px;font-size:12px}
+#v-agent .agent-field input:hover,#v-agent .agent-field select:hover,#v-agent .agent-field textarea:hover{border-color:#b7c8bc}
+#v-agent .agent-field input:focus-visible,#v-agent .agent-field select:focus-visible,#v-agent .agent-field textarea:focus-visible{border-color:#398363;box-shadow:0 0 0 4px rgba(57,131,99,.12)}
+#v-agent .agent-field>small{font-size:10px;line-height:1.55}
+#v-agent .agent-replace-option{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:start;gap:10px;padding:14px 15px;border:1px solid #d8c79e;border-radius:13px;color:var(--agent-ink);background:linear-gradient(120deg,#fff9e9,#fffdf5);cursor:pointer}
+#v-agent .agent-replace-option>input{width:18px;height:18px;margin:1px 0 0;accent-color:var(--agent-green-2)}
+#v-agent .agent-replace-option>span{display:grid;gap:4px}
+#v-agent .agent-replace-option strong{font-size:11px}
+#v-agent .agent-replace-option small{color:var(--agent-muted);font-size:10px;line-height:1.5}
+#v-agent .agent-form-footer{gap:14px;padding:19px 25px 24px}
+#v-agent .agent-generate{min-height:46px;padding:0 18px;border-radius:12px;font-size:12px;font-weight:750;letter-spacing:.005em}
+#v-agent .agent-truth-note{margin:18px 25px 0;border-radius:12px}
+#v-agent .agent-document{padding:32px;border-radius:0 0 19px 19px;box-shadow:0 17px 42px -34px rgba(24,44,33,.72)}
+#v-agent .agent-doc-identity{display:grid;grid-template-columns:1.05fr 1.25fr .65fr;gap:10px;margin:0 0 22px;padding:12px;border:1px solid #dce5dc;border-radius:12px;background:linear-gradient(110deg,#f5f8f4,#fff)}
+#v-agent .agent-doc-identity>div{display:grid;align-content:center;gap:4px;min-width:0;padding:4px 9px}
+#v-agent .agent-doc-identity>div+div{border-left:1px solid #dfe6df}
+#v-agent .agent-doc-identity span{color:#748078;font-size:8px;font-weight:850;letter-spacing:.13em;text-transform:uppercase}
+#v-agent .agent-doc-identity strong{overflow-wrap:anywhere;color:#183d2e;font-size:11px;line-height:1.4}
+#v-agent .agent-doc-heading{padding-bottom:20px}
+#v-agent .agent-doc-heading h2{font-size:26px}
+#v-agent .agent-history,#v-agent .agent-flow{border-radius:18px;box-shadow:0 12px 32px -28px rgba(30,48,39,.55)}
+#v-agent .agent-flow{overflow:hidden;border:1px solid var(--agent-line);background:var(--agent-card)}
+#v-agent .agent-flow>summary{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:17px 20px;cursor:pointer;list-style:none}
+#v-agent .agent-flow>summary::-webkit-details-marker{display:none}
+#v-agent .agent-flow>summary>span:first-child{display:grid;gap:4px}
+#v-agent .agent-flow>summary small{color:var(--agent-muted);font-size:8px;font-weight:850;letter-spacing:.14em}
+#v-agent .agent-flow>summary strong{font-size:13px}
+#v-agent .agent-flow-toggle{flex:none;padding:7px 10px;border:1px solid var(--agent-line);border-radius:9px;color:var(--agent-green);background:var(--agent-soft);font-size:10px;font-weight:700}
+#v-agent .agent-flow[open] .agent-flow-toggle{color:#fff;background:var(--agent-green)}
+#v-agent .agent-flow-content{padding:0 18px 18px;border-top:1px solid var(--agent-line)}
+#v-agent .agent-flow-content img{display:block;width:100%;height:auto;margin:16px auto 10px;border:1px solid var(--agent-line);border-radius:13px;background:#f7f8f4}
+#v-agent .agent-flow-content>a{display:inline-flex;align-items:center;gap:7px;color:var(--agent-blue);font-size:11px;font-weight:700;text-decoration:none}
+#v-agent .agent-flow-content>a:hover{text-decoration:underline}
+:root[data-color-mode="dark"] .agent-dialog-frame,:root[data-color-mode="dark"] #v-agent.view.on{background:#101a14}
+:root[data-color-mode="dark"] .agent-dialog-bar{border-color:#34463c;background:rgba(21,34,27,.97)}
+:root[data-color-mode="dark"] .agent-dialog-brand h2{color:#e6eee8}
+:root[data-color-mode="dark"] .agent-dialog-brand p{color:#a1aea6}
+:root[data-color-mode="dark"] .agent-dialog-close{border-color:#405348;color:#d5eadc;background:#1d2a23}
+:root[data-color-mode="dark"] #v-agent .agent-replace-option{border-color:#705a32;background:#332b1c}
+:root[data-color-mode="dark"] #v-agent .agent-doc-identity{border-color:#34463c;background:#1a2820}
+:root[data-color-mode="dark"] #v-agent .agent-doc-identity>div+div{border-color:#34463c}
+:root[data-color-mode="dark"] #v-agent .agent-doc-identity span{color:#a1aea6}
+:root[data-color-mode="dark"] #v-agent .agent-doc-identity strong{color:#c5e2cf}
+:root[data-color-mode="dark"] #v-agent .agent-flow-content img{border-color:#34463c;background:#fff}
+.agent-replace-confirm{width:min(500px,calc(100vw - 28px));max-width:none;margin:auto;padding:0;overflow:hidden;border:1px solid rgba(255,255,255,.8);border-radius:22px;color:#17251f;background:transparent;box-shadow:0 28px 90px rgba(4,18,11,.38)}
+.agent-replace-confirm::backdrop{background:rgba(9,20,14,.52);backdrop-filter:blur(5px)}
+.agent-confirm-card{display:grid;gap:12px;padding:26px;background:var(--card,#fffdf6);font-family:system-ui,sans-serif}
+.agent-confirm-kicker{color:#967023;font-size:9px;font-weight:850;letter-spacing:.13em}
+.agent-confirm-card h2{margin:0;color:#183a2d;font-size:21px;line-height:1.25;letter-spacing:-.025em}
+.agent-confirm-card p{margin:0;color:#5d6a61;font-size:13px;line-height:1.6}
+.agent-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:9px}
+.agent-confirm-actions button{min-height:40px;padding:0 15px;border:1px solid #d4ddd5;border-radius:10px;background:#fff;color:#34453b;font:700 12px system-ui,sans-serif;cursor:pointer}
+.agent-confirm-actions .agent-confirm-accept{border-color:#164d3b;color:#fff;background:#164d3b}
+.agent-confirm-actions .agent-confirm-accept:hover{background:#237054}
+:root[data-color-mode="dark"] .agent-replace-confirm,:root[data-color-mode="dark"] .agent-confirm-card{color:#e6eee8;background:#15221b}
+:root[data-color-mode="dark"] .agent-confirm-card h2{color:#e6eee8}
+:root[data-color-mode="dark"] .agent-confirm-card p{color:#a1aea6}
+:root[data-color-mode="dark"] .agent-confirm-actions button{border-color:#405348;color:#e6eee8;background:#1d2a23}
+@media(max-width:1100px){
+  dialog.agent-dialog{width:calc(100vw - 24px)}
+  #v-agent.view.on{padding:19px}
+  #v-agent .agent-workspace{grid-template-columns:232px minmax(0,1fr);gap:16px}
+  #v-agent .agent-hero{padding:26px}
+}
+@media(max-width:820px){
+  dialog.agent-dialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:calc(100dvh - 16px);border-radius:19px}
+  .agent-dialog-bar{padding:11px 14px}
+  .agent-dialog-brand h2{font-size:14px}
+  .agent-dialog-brand p{font-size:10px}
+  .agent-dialog-mark{width:36px;height:36px;border-radius:11px}
+  #v-agent.view.on{padding:15px}
+  #v-agent .agent-workspace{grid-template-columns:1fr}
+  #v-agent .agent-sidebar{position:static;grid-template-columns:repeat(5,minmax(150px,1fr));overflow-x:auto}
+  #v-agent .agent-hero{gap:18px}
+  #v-agent .agent-hero-actions{grid-template-columns:1fr 1fr;width:100%}
+  #v-agent .agent-hero-actions .agent-flow-link{grid-column:1/-1}
+}
+@media(max-width:560px){
+  dialog.agent-dialog{width:calc(100vw - 8px);height:calc(100dvh - 8px);max-height:calc(100dvh - 8px);border-radius:15px}
+  .agent-dialog-bar{gap:8px;padding:9px 10px}
+  .agent-dialog-brand{gap:8px}
+  .agent-dialog-brand h2{font-size:12px}
+  .agent-dialog-brand p{max-width:220px;font-size:9px}
+  .agent-dialog-mark{width:32px;height:32px;font-size:11px}
+  .agent-dialog-close{gap:4px;padding:8px;font-size:10px}
+  .agent-dialog-close svg{width:14px;height:14px}
+  #v-agent.view.on{padding:10px}
+  #v-agent .agent-shell{gap:14px}
+  #v-agent .agent-hero{padding:20px 16px}
+  #v-agent .agent-identity-strip>span{min-width:calc(50% - 5px);max-width:none}
+  #v-agent .agent-identity-strip .agent-doc-promise{width:100%;justify-content:center}
+  #v-agent .agent-hero-actions{padding:11px}
+  #v-agent .agent-sidebar{grid-template-columns:repeat(5,minmax(132px,1fr));padding:7px}
+  #v-agent .agent-form-grid{gap:14px;padding:16px 14px 5px}
+  #v-agent .agent-request-title{padding:15px}
+  #v-agent .agent-form-footer{padding:15px}
+  #v-agent .agent-truth-note{margin:13px 14px 0}
+  #v-agent .agent-document{padding:20px 14px}
+  #v-agent .agent-doc-identity{grid-template-columns:1fr;gap:0;padding:6px 10px}
+  #v-agent .agent-doc-identity>div{padding:8px 3px}
+  #v-agent .agent-doc-identity>div+div{border-top:1px solid #dfe6df;border-left:0}
+  :root[data-color-mode="dark"] #v-agent .agent-doc-identity>div+div{border-color:#34463c}
+  #v-agent .agent-flow>summary{align-items:flex-start;flex-direction:column;padding:14px}
+  #v-agent .agent-flow-toggle{align-self:flex-start}
+  #v-agent .agent-flow-content{padding:0 10px 12px}
+  .agent-confirm-card{padding:20px}
+  .agent-confirm-actions{display:grid;grid-template-columns:1fr 1fr}
+}
+@media print{
+  body.agent-printing dialog.agent-dialog,body.agent-printing dialog.agent-dialog[open]{position:static!important;inset:auto!important;display:block!important;width:100%!important;height:auto!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;overflow:visible!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
+  body.agent-printing .agent-dialog-frame{display:block!important;height:auto!important;overflow:visible!important;background:#fff!important}
+  body.agent-printing .agent-dialog-bar{display:none!important}
+  body.agent-printing #v-agent.view.on{display:block!important;width:100%!important;height:auto!important;min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;overflow:visible!important;background:#fff!important}
+  body.agent-printing #v-agent .agent-doc-identity{border-color:#cdd8ce;background:#f6f8f5!important}
+  body.agent-printing #v-agent .agent-doc-identity>div{background:transparent!important}
 }

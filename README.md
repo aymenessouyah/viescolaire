@@ -312,11 +312,13 @@ Après modification : `git add . && git commit -m "…" && git push`.
 
 ---
 
-## 8. Agent STI — assistant pédagogique IA
+## 8. Agent Vie Scolaire AI — assistant pédagogique
 
-Le menu **Agent STI · IA** propose des fiches pédagogiques, des séries d'exercices théoriques ou pratiques avec corrigés, la correction de copies texte, photos ou fichiers de code, le cahier de textes et des propositions de répartition. Le barème peut être fourni par l'enseignant ou proposé puis validé avant correction. Pour une copie théorique photographiée, l'agent propose d'abord une transcription éditable; les incertitudes sont signalées et doivent être confirmées explicitement avant de poursuivre malgré l'avertissement.
+Le menu **Agent Vie Scolaire AI** ouvre un grand espace de travail. Il propose des fiches pédagogiques, des séries d’exercices théoriques ou pratiques avec corrigés, la correction de copies texte, photos ou fichiers de code, le cahier de textes et des propositions de répartition. Le barème peut être fourni par l’enseignant ou proposé puis validé avant correction. Pour une copie théorique photographiée, l’agent propose d’abord une transcription éditable; les incertitudes sont signalées et doivent être confirmées explicitement avant de poursuivre malgré l’avertissement.
 
-L'interface appelle la fonction sécurisée `supabase/functions/assistant-ia`, qui utilise l'API Google Gemini. La clé privée reste dans les secrets Supabase et n'est jamais publiée sur GitHub Pages. Chaque résultat est affiché pour vérification ; l'agent ne confirme pas une séance et n'enregistre pas une note automatiquement.
+Chaque document affiche le nom du lycée, le nom complet de l’enseignant connecté et la classe. Ces éléments d’en-tête sont ajoutés dans le navigateur et ne sont pas transmis à Gemini. Une fiche et une entrée du cahier déjà enregistrées peuvent être remplacées après confirmation; une série d’exercices de l’historique local peut aussi être remplacée après relecture et confirmation. L’historique est local à l’appareil et isolé par compte professeur; les anciennes entrées sans identité de compte restent stockées mais sont masquées.
+
+L’interface appelle la fonction sécurisée `supabase/functions/assistant-ia`, qui utilise l’API Google Gemini. La clé privée reste dans les secrets Supabase et n’est jamais publiée sur GitHub Pages. Chaque résultat est affiché pour vérification ; l’agent ne confirme pas une séance et n’enregistre pas une note automatiquement. [Voir le schéma visuel du parcours](assets/agent-vie-scolaire-flux.svg).
 
 **Installation, choix du modèle, déploiement et vérifications : consultez [`AGENT_IA.md`](AGENT_IA.md).**
 

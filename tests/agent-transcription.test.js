@@ -82,7 +82,7 @@ test('la fonction IA valide une transcription sans note et exige au moins une im
   assert.match(edgeSource, /task === "transcription" && attachments\.length === 0/);
 });
 
-test('la fonction Agent STI appelle Gemini avec les images inline et une sortie JSON', () => {
+test('la fonction Agent Vie Scolaire AI appelle Gemini avec les images inline et une sortie JSON', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.match(edgeSource, /if \(request\.method === "OPTIONS"\)[\s\S]*?const authError = await authenticatedUser\(request\)/);
   assert.match(edgeSource, /if \(!authorization\?\.startsWith\("Bearer "\)\) return json/);

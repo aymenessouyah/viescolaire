@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Politique de confidentialité de l’Espace pédagogique STI : données de compte et de classe, synchronisation Supabase, sauvegarde Google Drive et traitement facultatif par l’Agent STI.">
+  <meta name="description" content="Politique de confidentialité de l’Espace pédagogique STI : données de compte et de classe, synchronisation Supabase, sauvegarde Google Drive et traitement facultatif par l’Agent Vie Scolaire AI.">
   <meta name="robots" content="index,follow">
   <link rel="canonical" href="https://aymenessouyah.github.io/viescolaire/politique-confidentialite.html">
   <title>Politique de confidentialité — Espace pédagogique STI</title>
@@ -52,7 +52,7 @@
       <h1>Politique de confidentialité</h1>
       <p class="updated">Dernière mise à jour : 25 octobre 2026</p>
 
-      <p class="intro">Cette politique décrit les données utilisées par l’Espace pédagogique STI, les services auxquels elles peuvent être transmises et les moyens de les gérer. Les fonctions de synchronisation, de sauvegarde Google Drive et d’intelligence artificielle sont distinctes : Google Drive et l’Agent STI ne traitent des données que lorsque le professeur choisit d’utiliser ces fonctions.</p>
+      <p class="intro">Cette politique décrit les données utilisées par l’Espace pédagogique STI, les services auxquels elles peuvent être transmises et les moyens de les gérer. Les fonctions de synchronisation, de sauvegarde Google Drive et d’intelligence artificielle sont distinctes : Google Drive et l’Agent Vie Scolaire AI ne traitent des données que lorsque le professeur choisit d’utiliser ces fonctions.</p>
 
       <h2>1. Responsable et contact</h2>
       <div class="contact">
@@ -67,13 +67,13 @@
         <li><strong>Compte et profil professeur :</strong> adresse électronique de connexion, nom, fonction, matière, établissement, portrait, signature manuscrite et code de badge.</li>
         <li><strong>Données pédagogiques :</strong> emploi du temps, séances, cahier de textes, classes, noms ou identifiants d’élèves, présences, évaluations, notes et observations saisies par le professeur.</li>
         <li><strong>Données techniques et préférences :</strong> nom de l’appareil, réglages de l’application, état de synchronisation et préférences de sauvegarde. Le navigateur conserve aussi les données nécessaires au travail hors ligne et à la session de connexion.</li>
-        <li><strong>Contenu transmis à l’Agent STI :</strong> demandes, contexte de séance, textes, extraits de code et, si le professeur les joint, images de copies ou autres pièces utiles à la demande.</li>
+        <li><strong>Contenu transmis à l’Agent Vie Scolaire AI :</strong> demandes, classe et contexte de séance utiles, textes, extraits de code et, si le professeur les joint, images de copies ou autres pièces utiles à la demande. Le nom complet du professeur et le nom du lycée sont ajoutés localement à l’en-tête des documents; ils ne sont pas envoyés à Gemini pour cet en-tête.</li>
         <li><strong>Google Drive, si la sauvegarde est activée :</strong> l’application recherche son dossier de sauvegarde et crée des copies JSON datées dans le compte Drive choisi par le professeur.</li>
       </ul>
-      <p>Le mot de passe est utilisé pour l’authentification gérée par Supabase. Il n’est pas inclus dans les sauvegardes pédagogiques, les copies Google Drive ou les demandes à l’Agent STI.</p>
+      <p>Le mot de passe est utilisé pour l’authentification gérée par Supabase. Il n’est pas inclus dans les sauvegardes pédagogiques, les copies Google Drive ou les demandes à l’Agent Vie Scolaire AI.</p>
 
       <h2>3. Utilisation des données</h2>
-      <p>Les données servent uniquement à fournir les fonctions pédagogiques de la plateforme : authentifier le professeur, afficher son profil, enregistrer et synchroniser son espace, permettre son export ou sa sauvegarde, et répondre aux demandes qu’il adresse volontairement à l’Agent STI.</p>
+      <p>Les données servent uniquement à fournir les fonctions pédagogiques de la plateforme : authentifier le professeur, afficher son profil, enregistrer et synchroniser son espace, permettre son export ou sa sauvegarde, et répondre aux demandes qu’il adresse volontairement à l’Agent Vie Scolaire AI.</p>
       <p>La plateforme ne vend pas les données et ne les utilise pas pour la publicité ciblée. Aucun outil publicitaire ou de mesure d’audience n’est intégré au code du site.</p>
 
       <h2>4. Stockage local et synchronisation Supabase</h2>
@@ -84,16 +84,16 @@
       <h2>5. Sauvegarde facultative dans Google Drive</h2>
       <p>La sauvegarde Drive est facultative et n’est activée qu’après l’accord explicite du professeur. L’autorisation Google demandée est limitée au scope <code>drive.file</code>, utilisé pour les fichiers créés par l’application. Le navigateur échange directement avec Google Drive pour repérer le dossier de sauvegarde et y envoyer les données du professeur connecté; l’application ne transmet pas le jeton Google à Supabase.</p>
       <p>Une copie JSON datée peut contenir l’espace pédagogique du professeur : profil, emploi du temps, séances, classes, élèves, évaluations, notes et présences. Les mots de passe et jetons de session n’y sont pas inclus. Les copies sont conservées dans le Drive choisi, y compris les anciennes versions; l’application ne les supprime pas automatiquement. Désactiver les envois arrête les prochaines sauvegardes sur cet appareil, mais ne supprime pas les fichiers déjà créés et ne révoque pas l’autorisation Google.</p>
-      <p>Le professeur peut supprimer ses copies depuis Google Drive et retirer l’accès de l’application depuis <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">les autorisations de son compte Google</a>. Les données de sauvegarde Drive ne sont pas utilisées par l’Agent STI.</p>
+      <p>Le professeur peut supprimer ses copies depuis Google Drive et retirer l’accès de l’application depuis <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">les autorisations de son compte Google</a>. Les données de sauvegarde Drive ne sont pas utilisées par l’Agent Vie Scolaire AI.</p>
 
-      <h2>6. Agent STI et services d’intelligence artificielle</h2>
-      <p>L’Agent STI ne reçoit des données que lorsque le professeur lance une génération, une transcription ou une correction. La demande peut contenir les textes et éléments choisis dans le formulaire, ainsi que les images ou fichiers joints. Pour une copie manuscrite théorique, les photos sont utilisées pour la prélecture; après relecture, la correction suivante utilise le texte relu plutôt que les photos.</p>
-      <p>La demande passe par une fonction Supabase sécurisée, puis est transmise à l’API Google Gemini configurée pour l’Agent STI. Les textes, images ou fichiers utiles à la demande peuvent ainsi être traités par Google. Le traitement et la durée de conservation éventuelle dépendent des conditions du service Gemini, du compte utilisé et de ses paramètres. La fonction de l’application n’écrit pas intentionnellement le contenu des demandes dans ses journaux techniques.</p>
-      <p>Les copies et corrections ne sont pas ajoutées à l’historique local des documents générés et aucune note n’est enregistrée automatiquement. D’autres documents générés peuvent être gardés dans l’historique du navigateur. L’Agent STI peut se tromper : le professeur doit vérifier ses résultats avant toute utilisation.</p>
+      <h2>6. Agent Vie Scolaire AI et services d’intelligence artificielle</h2>
+      <p>L’Agent Vie Scolaire AI ne reçoit des données que lorsque le professeur lance une génération, une transcription ou une correction. La demande peut contenir les textes et éléments choisis dans le formulaire, ainsi que les images ou fichiers joints. Pour une copie manuscrite théorique, les photos sont utilisées pour la prélecture; après relecture, la correction suivante utilise le texte relu plutôt que les photos.</p>
+      <p>La demande passe par une fonction Supabase sécurisée, puis est transmise à l’API Google Gemini configurée pour l’Agent Vie Scolaire AI. Les textes, images ou fichiers utiles à la demande peuvent ainsi être traités par Google. Le traitement et la durée de conservation éventuelle dépendent des conditions du service Gemini, du compte utilisé et de ses paramètres. La fonction de l’application n’écrit pas intentionnellement le contenu des demandes dans ses journaux techniques.</p>
+      <p>Les copies et corrections ne sont pas ajoutées à l’historique local des documents générés et aucune note n’est enregistrée automatiquement. Les autres documents générés peuvent être gardés dans l’historique de ce navigateur, associés au professeur connecté; un compte ne voit que son propre historique. Les anciennes entrées sans identité de compte sont masquées et restent inchangées dans le navigateur. Les aperçus, impressions et exports des documents pédagogiques reçoivent dans le navigateur un en-tête avec le nom du lycée, le nom complet de l’enseignant connecté et la classe. L’Agent Vie Scolaire AI peut se tromper : le professeur doit vérifier ses résultats avant toute utilisation.</p>
       <div class="callout"><strong>Conseil de confidentialité :</strong> évitez d’inclure le nom complet, l’adresse ou d’autres identifiants directs d’un élève dans une demande à l’IA. Utilisez de préférence un identifiant de copie neutre. L’enseignant reste responsable de s’assurer que le traitement des données d’élèves respecte les règles de son établissement et la législation applicable.</div>
 
       <h2>7. Services tiers</h2>
-      <p>La version actuelle peut faire appel à GitHub Pages pour afficher le site, à Supabase pour l’authentification et la synchronisation, à Google lorsque le professeur choisit Drive, et à Google Gemini lorsque l’Agent STI est utilisé. Ces services traitent les données nécessaires à leurs fonctions selon leurs propres conditions et politiques :</p>
+      <p>La version actuelle peut faire appel à GitHub Pages pour afficher le site, à Supabase pour l’authentification et la synchronisation, à Google lorsque le professeur choisit Drive, et à Google Gemini lorsque l’Agent Vie Scolaire AI est utilisé. Ces services traitent les données nécessaires à leurs fonctions selon leurs propres conditions et politiques :</p>
       <ul>
         <li><a href="https://supabase.com/privacy" target="_blank" rel="noopener noreferrer">Politique de confidentialité de Supabase</a></li>
         <li><a href="https://policies.google.com/privacy?hl=fr" target="_blank" rel="noopener noreferrer">Politique de confidentialité de Google</a></li>
@@ -108,7 +108,7 @@
         <li><strong>Dans Google Drive :</strong> chaque copie datée reste disponible jusqu’à ce que le professeur la supprime dans son Drive.</li>
         <li><strong>Chez Google Gemini :</strong> les délais dépendent des conditions et paramètres du service Gemini applicable au compte utilisé.</li>
       </ul>
-      <p>Le professeur peut exporter ses données depuis l’application, corriger les informations qu’il gère, choisir de ne pas activer Google Drive ou l’Agent STI, et demander l’accès, la rectification ou la suppression des données associées à son compte en écrivant au contact ci-dessus. Les copies présentes dans un compte Google Drive doivent aussi être supprimées par leur propriétaire.</p>
+      <p>Le professeur peut exporter ses données depuis l’application, corriger les informations qu’il gère, choisir de ne pas activer Google Drive ou l’Agent Vie Scolaire AI, et demander l’accès, la rectification ou la suppression des données associées à son compte en écrivant au contact ci-dessus. Les copies présentes dans un compte Google Drive doivent aussi être supprimées par leur propriétaire.</p>
 
       <h2>9. Sécurité et responsabilités</h2>
       <p>Les échanges avec les services en ligne sont réalisés en HTTPS. L’accès à la synchronisation est protégé par un compte professeur et les règles de la base distinguent les espaces des professeurs. Cela ne remplace pas la protection du terminal : le stockage local et les copies Drive ne sont pas chiffrés une seconde fois par l’application. Protégez votre appareil, votre compte Google et vos identifiants; ne partagez pas votre mot de passe.</p>
