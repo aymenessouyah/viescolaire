@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.8.7-class-dashboard-cahier";
+const APP_VER = "v1.8.8-private-data-gate";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -209,9 +209,12 @@ let repCls = "3SI1", repTri = 1;
 
 /* ---------------- rendu global ---------------- */
 function renderAll(silent){
+  const connected=isProfessorConnected();
+  document.body.classList.toggle("vs-guest-mode",!connected);
+  document.body.dataset.professorConnected=String(connected);
   document.getElementById("tabs").innerHTML = TABS.map(t =>
     '<button class="tab '+(currentTab===t.id?"on":"")+'" onclick="go(\''+t.id+'\')">'+ic(t.ico)+t.t+
-    (t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].concat(SESSIONS["4SI2"]).filter(s => s.iso >= todayISO()).length) +'</span>' : '') +
+    (connected&&t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].concat(SESSIONS["4SI2"]).filter(s => s.iso >= todayISO()).length) +'</span>' : '') +
     '</button>').join("");
   document.getElementById("tb-today").innerHTML = "Nous sommes le <strong>"+fmtLong(todayISO())+"</strong>";
   document.getElementById("ft-year").textContent = "Mise à jour : " + (typeof store.saved === "string" ? fmtShort(store.saved.slice(0,10)) + " " + store.saved.slice(11,16) : "session en cours");
@@ -231,6 +234,30 @@ function renderAll(silent){
   renderLoginInvite();
   if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
+  if(connected)restorePrivateWorkspace();else renderPrivateWorkspace();
+}
+function privateEmptyState(){return `<section class="private-empty-state" role="status"><span class="private-empty-icon">${ic("lock")}</span><span class="private-empty-kicker">ESPACE PERSONNEL</span><h2>Connexion requise</h2><p>Aucune donnée personnelle n’est affichée. Connectez-vous pour retrouver vos classes et votre suivi.</p><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></section>`;}
+function renderPrivateWorkspace(){
+  const dashboard=document.getElementById("v-dash");
+  if(dashboard)dashboard.innerHTML=`<div class="view-head"><div><h1 class="page-title">Bonjour professeur, veuillez entrer vos données de connexion.</h1><p class="page-sub">Connectez-vous pour consulter votre espace personnel.</p></div><div class="head-actions"><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></div></div><div class="stats-grid auth-zero-grid">${[["users","green","0","Élèves suivis"],["target","gold","0 %","Couverture moyenne"],["pen","terra","0","Notes saisies"],["calendar","violet","—","Prochain devoir prévu"]].map(x=>`<div class="stat-card"><div class="stat-icon ${x[1]}">${ic(x[0])}</div><div><div class="stat-value">${x[2]}</div><div class="stat-label">${x[3]}</div><div class="stat-foot">Aucune donnée à afficher</div></div></div>`).join("")}</div><section class="class-dashboard-section auth-no-classes" aria-labelledby="auth-no-classes-title"><div class="class-dashboard-section-head"><div><h2 id="auth-no-classes-title">Aucune classe à afficher</h2><p>Les classes et leurs données apparaîtront après connexion au compte professeur.</p></div></div><div class="auth-no-classes-card"><span>${ic("users")}</span><strong>Aucun dossier de classe disponible</strong><small>Connectez-vous pour afficher vos classes.</small></div></section>`;
+  const privateViews=["v-cours","v-fiche","v-avancement","v-devoirs","v-agent","v-suivi","v-edt","v-cal","v-rep","v-prog","v-eleves","v-cahier","v-ref"];
+  privateViews.forEach(id=>{const view=document.getElementById(id);if(view)view.innerHTML=privateEmptyState();});
+  const year=document.getElementById("ref-year");if(year)year.replaceChildren();
+  const bell=document.getElementById("ref-bell"),count=document.getElementById("ref-bell-count"),panel=document.getElementById("ref-notifications");
+  if(bell){bell.disabled=true;bell.setAttribute("aria-label","Notifications disponibles après connexion");bell.setAttribute("aria-expanded","false");bell.classList.remove("has-unconfirmed","motion-paused");}
+  if(count){count.hidden=true;count.textContent="";}
+  if(panel){panel.classList.remove("open");panel.innerHTML='<div class="ref-notif-section"><strong>Connexion requise</strong><p>Les notifications du planning seront affichées après connexion.</p></div>';}
+  document.querySelectorAll('[data-ref="new"]').forEach(button=>{button.hidden=true;});
+  const search=document.getElementById("ref-search");if(search){if(!search.dataset.connectedPlaceholder)search.dataset.connectedPlaceholder=search.placeholder;search.disabled=true;search.placeholder="Connectez-vous pour rechercher dans vos données";}
+  const foot=document.getElementById("ft-year");if(foot)foot.textContent="Connexion requise";
+  document.querySelectorAll("dialog[open]").forEach(dialog=>{try{dialog.close();}catch(e){}});
+  ["modal","profil-modal","cloud-modal"].forEach(id=>document.getElementById(id)?.classList.remove("on"));
+  document.getElementById("menu-compte")?.classList.add("hidden");
+}
+function restorePrivateWorkspace(){
+  document.querySelectorAll('[data-ref="new"]').forEach(button=>{button.hidden=false;});
+  const bell=document.getElementById("ref-bell");if(bell)bell.disabled=false;
+  const search=document.getElementById("ref-search");if(search){search.disabled=false;if(search.dataset.connectedPlaceholder)search.placeholder=search.dataset.connectedPlaceholder;}
 }
 function go(id){
   currentTab = id;
@@ -1813,7 +1840,7 @@ function cloudTime(){
 function renderCompte(){
   const txt = document.getElementById("compte-txt");
   if (!txt) return;
-  if (!cloudReady() || !authNeeded() || !authSession()){ txt.textContent = "Connexion"; return; }
+  if (!cloudReady() || !isProfessorConnected()){ txt.textContent = "Connexion"; return; }
   const p = (store.profil && store.profil.nom) ? store.profil.nom.split(" ")[0] : "";
   txt.textContent = (typeof estAdmin === "function" && estAdmin()) ? (p || "Admin") : (p || "Connecté");
 }
@@ -1825,19 +1852,18 @@ function toggleCompte(ev){
   const ouvrir = m.classList.contains("hidden");
   m.classList.toggle("hidden", !ouvrir);
   if (ouvrir){
-    const u = authUser();
-    const p = (store.profil && store.profil.nom) ? store.profil.nom + " — " + (store.profil.matiere || "") : "";
+    const estConnecte=isProfessorConnected(),u=estConnecte?authUser():"";
+    const p = estConnecte&&store.profil&&store.profil.nom ? store.profil.nom + " — " + (store.profil.matiere || "") : "";
     document.getElementById("mc-id").innerHTML =
-      (authSession() && u ? '<strong>' + escapeHtml(u) + '</strong>' + (p ? '<br>' + escapeHtml(p) : "")
-                          : '<strong>Non connecté</strong><br>Connectez-vous pour retrouver vos données');
+      (estConnecte && u ? '<strong>' + escapeHtml(u) + '</strong>' + (p ? '<br>' + escapeHtml(p) : "")
+                        : '<strong>Non connecté</strong><br>Connectez-vous pour retrouver vos données');
     const mv = document.getElementById("mc-ver");
     if (mv) mv.textContent = "Version " + APP_VER + " — lecteur de feuilles intégré";
-    const estConnecte = !!(authSession() && u);
     const btns = m.querySelectorAll("button");
     /* Se connecter / profil / déconnexion : visibilité selon l'état */
     btns[0].style.display = estConnecte ? "" : "";            /* connexion (toujours : changer de compte) */
     btns[1].style.display = estConnecte ? "" : "none";        /* profil */
-    btns[2].style.display = (typeof estAdmin === "function" && estAdmin()) ? "" : "none";  /* gérer les profs */
+    btns[2].style.display = (estConnecte && typeof estAdmin === "function" && estAdmin()) ? "" : "none";  /* gérer les profs */
     btns[3].style.display = estConnecte ? "" : "none";        /* déconnexion */
     const mi = document.getElementById("mc-installer");
     if (mi) mi.style.display = standaloneMode() ? "none" : "";  /* installer (inutile si déjà installée) */
@@ -1868,17 +1894,17 @@ function renderVerChip(){
 function renderLoginInvite(){
   const b = document.getElementById("login-invite");
   if (!b) return;
-  b.classList.toggle("hidden", !(cloudReady() && authNeeded() && !authSession() && currentTab === "v-dash"));
+  b.classList.toggle("hidden", !(cloudReady() && authNeeded() && !isProfessorConnected() && currentTab === "v-dash"));
 }
 function cloudBadge(){
   if(window.STI_SYNC) return window.STI_SYNC.badge();
   if (!cloudReady()) return '<span class="badge b-amber">Sauvegarde locale seulement</span>';
-  if (authNeeded() && !authSession()) return '<span class="badge b-amber">Déconnecté — connexion requise pour le cloud</span>';
+  if (authNeeded() && !isProfessorConnected()) return '<span class="badge b-amber">Déconnecté — connexion requise pour le cloud</span>';
   return store.cloud && store.cloud.ok ? '<span class="badge b-green">Synchronisé le ' + cloudTime() + '</span>' : '<span class="badge b-rose">Configuration à vérifier</span>';
 }
 function cloudWho(){
   const u = authUser();
-  if (authNeeded()) return u ? "connecté : " + escapeHtml(u) : "non connecté";
+  if (authNeeded()) return isProfessorConnected() ? "connecté : " + escapeHtml(u) : "non connecté";
   return "accès sans mot de passe";
 }
 function payLoad(){
@@ -1907,7 +1933,7 @@ function cloudAutoPush(){ if(window.STI_SYNC) window.STI_SYNC.localChanged(); }
 /* bouton « Cloud » de l'en-tête : ouvre la connexion quand elle est attendue,
    sinon la fenêtre de configuration (URL, clé, table, nom de l'appareil) */
 function openCloud(){
-  if (cloudReady() && authNeeded() && !authSession()) openAuth();
+  if (cloudReady() && authNeeded() && !isProfessorConnected()) openAuth();
   else openCloudSettings();
 }
 function openCloudSettings(){
@@ -2082,6 +2108,7 @@ function renderRef(){
 /* ---------------- MODALE ---------------- */
 let mCtx = null;
 function openModal(cls, n){
+  if(!isProfessorConnected()){openAuth();return;}
   if (cls === 0 || cls === undefined){                       // raccourci « séance du jour »
     const t = todayISO();
     const s = ["3SI1","4SI2"].map(c => SESSIONS[c].find(x => x.iso===t)).find(Boolean);
@@ -2430,4 +2457,8 @@ window.printCahier = printCahier; window.cahierCSV = cahierCSV; window.cahierPDF
 window.store = store; window.SESSIONS = SESSIONS; window.clsChip = clsChip; window.renderCompte = renderCompte; window.renderLoginInvite = renderLoginInvite;
 window.toggleCompte = toggleCompte; window.menuAction = menuAction; window.fermerMenuCompte = fermerMenuCompte;
 window.APP_VER = APP_VER; window.forceMaj = forceMaj; window.clsCoul = clsCoul; window.KEY = KEY;
+/* Le second rendu démarre après l’exposition des fonctions d’auth utilisées
+   par les modules UI chargés avant app.js. Il applique le bon état dès le premier affichage. */
+renderAll(true);renderCloudBar();renderCompte();renderLoginInvite();
+if(typeof applyProfil==="function")applyProfil();
 })();
