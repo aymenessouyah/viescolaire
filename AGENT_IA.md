@@ -11,6 +11,7 @@ Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Cla
 - **Correction de copies** : choix explicite entre devoir **théorique** et **pratique** ; texte, photos, captures et fichiers HTML/CSS/JS/PHP/SQL/TXT/JSON pour le pratique. Pour les copies théoriques photographiées, l'agent transcrit d'abord les réponses sans les noter. La transcription est éditable; les passages incertains sont signalés et l'enseignant doit confirmer explicitement s'il poursuit malgré l'avertissement. La correction utilise ensuite le texte relu, sans renvoyer les photos lors du second appel. Barème fourni par l'enseignant ou proposé d'abord par l'agent puis modifiable avant correction. Justification question par question, limites de l'analyse, note proposée et remédiation. Le code n'est jamais prétendu exécuté et aucune note n'est saisie automatiquement.
 - **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; une entrée déjà remplie peut être remplacée après confirmation, sans confirmer automatiquement la séance.
 - **Répartition** : proposition séance par séance avec dates et numéros inchangés ; seules les séances futures peuvent recevoir la proposition.
+- **Autres documents** : texte collé ou import TXT, Markdown et HTML (PDF/DOCX non extraits). La source et la version complète proposée sont comparées côte à côte. Une confirmation explicite enregistre le résultat et la source dans l’historique local; chaque version précédente reste restaurable. L’agent ne modifie pas le fichier externe : exportez le résultat pour le remplacer vous-même.
 
 ## Architecture
 
@@ -20,7 +21,7 @@ Professeur connecté
   → Edge Function assistant-ia (Bearer + session Supabase Auth vérifiés)
   → Google Gemini API `generateContent`
   → JSON contrôlé, aperçu relu par l’enseignant
-  → remplacement, insertion, impression ou export après décision explicite
+  → comparaison avant/après, confirmation, restauration locale, insertion, impression ou export
 ```
 
 ![Schéma du parcours de l’Agent Vie Scolaire AI](assets/agent-vie-scolaire-flux.svg)
@@ -94,7 +95,8 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 5. Tester une correction théorique avec une copie fictive et un barème fourni.
 6. Tester une copie manuscrite fictive en photo : relire et modifier la transcription; si un passage est signalé, vérifier l'avertissement et la confirmation avant de poursuivre.
 7. Tester une correction pratique avec de petits fichiers de code anonymisés : choisir **L’agent propose le barème**, relire et modifier la proposition, puis lancer la correction. Vérifier que le rapport distingue bien l'analyse du code du fonctionnement à tester.
-8. Vérifier les points et les faits avant toute application ou export.
+8. Tester un document libre court collé ou importé en TXT, Markdown ou HTML; comparer l’avant/après, annuler une première confirmation, puis enregistrer et restaurer une version. Un PDF ou DOCX doit être copié en texte; aucun extracteur binaire n’est utilisé.
+9. Vérifier les points et les faits avant toute application ou export.
 
 ## Protection des données
 
@@ -103,7 +105,8 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 - Les images sont réduites dans le navigateur, limitées à six par demande, puis transmises à la fonction pour l'analyse. Pour une copie manuscrite théorique, elles servent d'abord à la transcription; après relecture, le second appel de correction reçoit le texte et non les photos.
 - Les fichiers de code sont limités à huit fichiers de 200 Ko chacun ; ils sont lus localement et ne sont pas enregistrés dans l'historique.
 - Les corrections et les propositions de barème ne sont pas ajoutées à l'historique local des générations.
-- Les autres documents récents sont conservés dans l’historique du navigateur, associé au professeur connecté; seules ses entrées sont proposées. Les anciennes entrées sans identité de compte restent stockées mais sont masquées. Une série sélectionnée n’est remplacée qu’après relecture et confirmation; la source externe collée dans le formulaire reste intacte.
+- Les autres documents récents sont conservés dans l’historique du navigateur, associé au professeur connecté; seules ses entrées sont proposées. Les anciennes entrées sans identité de compte restent stockées mais sont masquées. Une série sélectionnée n’est remplacée qu’après relecture et confirmation; pour un document libre, la source et la proposition ne sont enregistrées qu’après confirmation. Les versions locales précédentes sont conservées et peuvent être restaurées; aucun fichier externe n’est modifié.
+- Pour les documents libres, le texte source est transmis à Gemini uniquement lorsque l’enseignant lance la révision. L’import est limité au texte TXT, Markdown et HTML; les PDF/DOCX binaires ne sont pas extraits. L’import ou l’édition du champ ne modifie pas le fichier choisi.
 - Le remplacement d’une fiche ou d’une entrée du cahier ouvre une confirmation dédiée; Annuler laisse les données existantes intactes. L’enregistrement final reste à la main du professeur.
 - Aucune correction n’est enregistrée dans les notes et aucune séance n’est marquée assurée sans action de l’enseignant.
 

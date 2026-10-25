@@ -25,20 +25,20 @@ function loadAgent(options = {}) {
     STI_DATA: options.data || { reference: { SCHOOL: { lycee: 'Lycée de démonstration' } } },
     activeProfessorProfile: () => options.profile === undefined ? { nom: 'Ada Lovelace' } : options.profile,
     todayISO: () => '2026-10-25',
-    confirm: () => true
+    confirm: () => options.confirm === undefined ? true : options.confirm
   };
   const sandbox = {
     window,
     document,
     localStorage: {
       getItem(key) { return local.has(key) ? local.get(key) : null; },
-      setItem(key, value) { local.set(key, String(value)); }
+      setItem(key, value) { if (options.failWrites) throw new Error('Storage quota exceeded'); local.set(key, String(value)); }
     },
     console, Date, Intl, Math, JSON, Array, String, Number, Object, Boolean,
     Promise, URL, Blob, AbortController, setTimeout, clearTimeout
   };
   vm.runInNewContext(agentSource, sandbox, { filename: 'agent-sti.js' });
-  return { agent: window.STI_AGENT, listeners, zone, local, setProfile(profile) { options.profile = profile; } };
+  return { agent: window.STI_AGENT, listeners, zone, local, setProfile(profile) { options.profile = profile; }, setConfirm(value) { options.confirm = value; } };
 }
 
 test('tous les documents de l’agent portent le lycée, le nom complet de l’enseignant et la classe', () => {
@@ -133,6 +133,131 @@ test('une série de l’historique de la même classe peut servir de source à u
   assert.equal(payload.input.document_a_remplacer.resultat.exercices[0].enonce, 'Question ancienne');
   assert.match(agentSource, /Remplacer la série sélectionnée/);
   assert.match(agentSource, /historique local de cet appareil/);
+});
+
+test('le document libre expose titre, type, texte source et consignes dans le formulaire et le payload, sans envoyer d’identifiant local', () => {
+  const { agent, listeners, zone } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada' } });
+  agent.render({ sessions: { '3SI1': [] }, store: { seances: {} } });
+  const toolButton = { dataset: { agentTool: 'document' }, hasAttribute() { return false; } };
+  listeners.click({ target: { closest() { return toolButton; } } });
+  assert.match(zone.innerHTML, /Autres documents/);
+  assert.match(zone.innerHTML, /agent-document-file/);
+  assert.match(zone.innerHTML, /TXT, Markdown ou HTML/);
+  assert.match(zone.innerHTML, /PDF ou Word, copiez le texte/);
+
+  const input = (name, value, type = 'text') => ({
+    type, value, dataset: { agentField: name },
+    closest(selector) { return selector === '[data-agent-field]' ? this : null; }
+  });
+  for (const [name, value, type] of [
+    ['titre', 'Note aux parents', 'text'],
+    ['type_document', 'Note aux parents', 'select-one'],
+    ['document_existant', 'La réunion aura lieu le 12 mai.', 'textarea'],
+    ['consignes', 'Clarifier la date et corriger la langue.', 'textarea']
+  ]) listeners.input({ target: input(name, value, type) });
+
+  const payload = JSON.parse(JSON.stringify(agent._test.buildPayload()));
+  assert.deepEqual(payload.input, {
+    titre: 'Note aux parents', type_document: 'Note aux parents', mode_document: 'remplacement',
+    document_a_remplacer: 'La réunion aura lieu le 12 mai.', consignes: 'Clarifier la date et corriger la langue.'
+  });
+  assert.equal(Object.hasOwn(payload.context, 'document_replacement_id'), false);
+  assert.equal(agent._test.validate(), '');
+});
+
+test('l’import lit uniquement les fichiers texte admis et ne tente pas d’extraire un PDF', async () => {
+  const { agent, listeners, zone } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada' } });
+  agent.render({ sessions: { '3SI1': [] }, store: { seances: {} } });
+  const toolButton = { dataset: { agentTool: 'document' }, hasAttribute() { return false; } };
+  listeners.click({ target: { closest() { return toolButton; } } });
+
+  await agent._test.readDocumentFile([{ name: 'note.html', size: 32, text: async () => '<p>Réunion le 12 mai.</p>' }]);
+  const payload = JSON.parse(JSON.stringify(agent._test.buildPayload()));
+  assert.equal(payload.input.document_a_remplacer, '<p>Réunion le 12 mai.</p>');
+  assert.equal(payload.context.titre, 'note');
+  assert.match(zone.innerHTML, /note\.html/);
+  assert.match(zone.innerHTML, /fichier reste inchangé/);
+
+  await agent._test.readDocumentFile([{ name: 'note.pdf', size: 32, text: async () => 'texte qui ne doit pas être extrait' }]);
+  assert.match(zone.innerHTML, /Importez uniquement un fichier TXT, Markdown ou HTML/);
+  const unchanged = JSON.parse(JSON.stringify(agent._test.buildPayload()));
+  assert.equal(unchanged.input.document_a_remplacer, '<p>Réunion le 12 mai.</p>');
+});
+
+test('les versions d’un document libre sont gardées localement et la version antérieure reste restaurable', () => {
+  const { agent, local } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada' } });
+  agent.render({ sessions: { '3SI1': [] }, store: { seances: {} } });
+  const owner = agent._test.activeTeacherKey();
+  const meta = { classe: '3SI1', titre: 'Note', type_document: 'Note aux parents', document_source_content: 'Réunion le 12 mai.', document_saved: false };
+  const firstResult = { titre: 'Note aux parents', type_document: 'Note aux parents', contenu: 'La réunion aura lieu le 12 mai.', changements: ['Correction de la langue.'], points_a_verifier: [] };
+  const first = agent._test.newDocumentHistoryEntry(owner, meta, firstResult, 'Réunion le 12 mai.');
+  assert.equal(first.versions.length, 2);
+  assert.equal(first.versions[0].result.contenu, 'Réunion le 12 mai.');
+  assert.equal(first.versions[first.current_version].result.contenu, firstResult.contenu);
+  assert.equal(agent._test.saveCurrentHistory([first]), true);
+
+  const secondResult = { ...firstResult, contenu: 'La réunion est fixée au 12 mai.' };
+  const second = agent._test.appendDocumentHistoryVersion(first, { ...first.meta, document_source_content: firstResult.contenu }, secondResult, firstResult.contenu);
+  assert.equal(second.versions.length, 3);
+  assert.equal(second.current_version, 2);
+  assert.equal(agent._test.saveCurrentHistory([second]), true);
+  const rendered = agent._test.renderers.document(second.result, second.meta);
+  assert.match(rendered, /data-agent-restore-document/);
+  assert.match(rendered, /La réunion aura lieu le 12 mai\./);
+  assert.match(rendered, /La réunion est fixée au 12 mai\./);
+
+  const restored = agent._test.restoreDocumentHistoryVersion(second);
+  assert.equal(restored.result.contenu, firstResult.contenu);
+  assert.equal(restored.versions.length, 4);
+  assert.equal(restored.current_version, 3);
+  assert.equal(restored.versions[2].result.contenu, secondResult.contenu);
+  assert.equal(Object.hasOwn(restored.meta, 'document_target_content'), false);
+  assert.equal(agent._test.saveCurrentHistory([restored]), true);
+  const stored = JSON.parse(local.get('sti_agent_history_v1'));
+  assert.equal(stored[0].versions.length, 4);
+  assert.equal(stored[0].result.contenu, firstResult.contenu);
+});
+
+test('l’enregistrement et la restauration d’un document exigent la confirmation du professeur', async () => {
+  const { agent, setConfirm } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada' }, confirm: false });
+  agent.render({ sessions: { '3SI1': [] }, store: { seances: {} } });
+  const result = { titre: 'Note', type_document: 'Document libre', contenu: 'Texte corrigé.', changements: [], points_a_verifier: [] };
+  const meta = {
+    classe: '3SI1', titre: 'Note', type_document: 'Document libre', document_replacement_id: '',
+    document_history_id: '', document_source_content: 'Texte source.', document_target_content: '', document_saved: false
+  };
+  agent._test.setResult('document', result, meta);
+  await agent._test.applyResult();
+  assert.equal(agent._test.currentHistory().length, 0, 'Annuler ne doit rien sauvegarder.');
+
+  setConfirm(true);
+  await agent._test.applyResult();
+  const saved = agent._test.currentHistory()[0];
+  assert.equal(saved.result.contenu, 'Texte corrigé.');
+  assert.equal(saved.versions[0].result.contenu, 'Texte source.');
+  assert.equal(saved.meta.document_saved, true);
+
+  setConfirm(false);
+  await agent._test.restoreDocumentVersion();
+  assert.equal(agent._test.currentHistory()[0].result.contenu, 'Texte corrigé.', 'Annuler la restauration conserve la version active.');
+  setConfirm(true);
+  await agent._test.restoreDocumentVersion();
+  const restored = agent._test.currentHistory()[0];
+  assert.equal(restored.result.contenu, 'Texte source.');
+  assert.equal(restored.versions[1].result.contenu, 'Texte corrigé.');
+});
+
+test('un échec de stockage local ne confirme pas à tort la sauvegarde d’une version', () => {
+  const { agent } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada' }, failWrites: true });
+  agent.render({ sessions: { '3SI1': [] }, store: { seances: {} } });
+  const entry = agent._test.newDocumentHistoryEntry(
+    agent._test.activeTeacherKey(),
+    { classe: '3SI1', titre: 'Note', type_document: 'Document libre' },
+    { titre: 'Note', type_document: 'Document libre', contenu: 'Texte révisé', changements: [], points_a_verifier: [] },
+    'Texte source'
+  );
+  assert.equal(agent._test.saveCurrentHistory([entry]), false);
+  assert.equal(agent._test.currentHistory().length, 0);
 });
 
 test('l’historique de l’agent ne montre que les documents du professeur connecté', () => {

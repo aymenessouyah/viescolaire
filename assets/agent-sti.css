@@ -412,6 +412,22 @@ dialog.agent-dialog-fallback[open]{position:fixed;inset:14px;width:calc(100vw - 
   .agent-confirm-card{padding:20px}
   .agent-confirm-actions{display:grid;grid-template-columns:1fr 1fr}
 }
+#v-agent .agent-document-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+#v-agent .agent-comparison-panel{min-width:0;overflow:hidden;border:1px solid var(--agent-line);border-radius:14px;background:var(--agent-card);box-shadow:0 10px 25px -24px rgba(24,44,33,.7)}
+#v-agent .agent-comparison-panel.proposed{border-color:#9dcab0}
+#v-agent .agent-comparison-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 14px;border-bottom:1px solid var(--agent-line);background:var(--agent-soft)}
+#v-agent .agent-comparison-heading span{color:var(--agent-muted);font-size:9px;font-weight:850;letter-spacing:.13em}
+#v-agent .agent-comparison-panel.proposed .agent-comparison-heading span{color:var(--agent-green-2)}
+#v-agent .agent-comparison-heading strong{overflow:hidden;color:var(--agent-ink);font-size:11px;text-overflow:ellipsis;white-space:nowrap}
+#v-agent .agent-comparison-panel pre,#v-agent .agent-document-content pre{overflow:auto;max-height:420px;margin:0;padding:15px;color:var(--agent-ink);background:transparent;font:11px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2}
+#v-agent .agent-document-content pre{max-height:none;padding:15px;border:1px solid var(--agent-line);border-radius:10px;background:var(--agent-soft)}
+:root[data-color-mode="dark"] #v-agent .agent-comparison-panel{border-color:#34463c;background:#15221b}
+:root[data-color-mode="dark"] #v-agent .agent-comparison-panel.proposed{border-color:#3d7954}
+:root[data-color-mode="dark"] #v-agent .agent-comparison-heading{border-color:#34463c;background:#1d3023}
+:root[data-color-mode="dark"] #v-agent .agent-comparison-heading strong{color:#e6eee8}
+:root[data-color-mode="dark"] #v-agent .agent-comparison-panel pre,:root[data-color-mode="dark"] #v-agent .agent-document-content pre{color:#e6eee8}
+:root[data-color-mode="dark"] #v-agent .agent-document-content pre{border-color:#34463c;background:#1d3023}
+@media(max-width:820px){#v-agent .agent-document-comparison{grid-template-columns:1fr}}
 @media print{
   body.agent-printing dialog.agent-dialog,body.agent-printing dialog.agent-dialog[open]{position:static!important;inset:auto!important;display:block!important;width:100%!important;height:auto!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;overflow:visible!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
   body.agent-printing .agent-dialog-frame{display:block!important;height:auto!important;overflow:visible!important;background:#fff!important}
