@@ -505,7 +505,10 @@ function applyProfil(){
   const h = document.getElementById("hero-prof");
   if (h) h.textContent = "Prof. " + nom;
   const w = document.getElementById("bienvenue-prof");
-  if (w) w.textContent = "Bienvenue, M. " + nom;
+  const connected = typeof window.isProfessorConnected === "function" && window.isProfessorConnected();
+  if (w) w.textContent = connected
+    ? "Bonjour, " + ((nom.trim().split(/\s+/)[0]) || "professeur")
+    : "Bonjour professeur, veuillez entrer vos données de connexion.";
   const f = document.getElementById("ft-prof");
   if (f) f.textContent = "Matière " + mat;
 }

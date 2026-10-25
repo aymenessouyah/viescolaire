@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.8.5-print-center";
+const APP_VER = "v1.8.6-auth-greeting";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -269,6 +269,10 @@ function cloudInvite(){
 }
 function renderDash(){
   const t = todayISO();
+  const connected = isProfessorConnected();
+  const email = connected ? authUser() : "";
+  const name = connected ? ((store.profil && store.profil.nom) || email.split("@")[0] || "professeur").trim() : "";
+  const welcome = connected ? "Bonjour, " + escapeHtml(name.split(/\s+/)[0]) : "Bonjour professeur, veuillez entrer vos données de connexion.";
   const todaySessions = [];
   ["3SI1","4SI2"].forEach(c => SESSIONS[c].filter(s => s.iso === t).forEach(s => todaySessions.push(s)));
 
@@ -290,7 +294,7 @@ function renderDash(){
       <div class="spread">
         <div style="min-width:260px">
           <div class="badge b-navy" style="background:rgba(255,255,255,.16);color:#dff1ff;border-color:rgba(255,255,255,.25)">Année scolaire ${SCHOOL.annee}</div>
-          <h2 style="font-size:22px;margin-top:10px" id="bienvenue-prof">Bienvenue, M. ${SCHOOL.prof}</h2>
+          <h2 style="font-size:22px;margin-top:10px" id="bienvenue-prof">${welcome}</h2>
           <p class="small" style="color:#c9def0;margin-top:4px">${SCHOOL.matiere} — ${SCHOOL.lycee}</p>
           <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.18)">
             <div class="tiny" style="text-transform:uppercase;letter-spacing:.06em;color:#9dc4e0;font-weight:800">${todaySessions.length ? "Séance(s) du jour" : "Aujourd’hui"}</div>
@@ -1643,6 +1647,10 @@ async function authToken(){
  })();return window.__stiRefresh;
 }
 function authNeeded(){ return cloudReady() && cloudCfg().auth; }
+function isProfessorConnected(){
+  try { return !!(authNeeded() && authSession() && authUser()); }
+  catch(e) { return false; }
+}
 function openAuth(){
   const b = document.getElementById("auth-modal");
   if (!b) return;
@@ -2400,7 +2408,7 @@ window.cloudHasLocalData = cloudHasLocalData;
 window.cloudFirstRunRestore = cloudFirstRunRestore;
 window.cloudInvite = cloudInvite;
 window.authSession = authSession; window.authToken = authToken; window.authUser = authUser;
-window.authNeeded = authNeeded; window.openAuth = openAuth; window.closeAuth = closeAuth; window.openCloud = openCloud;
+window.authNeeded = authNeeded; window.isProfessorConnected = isProfessorConnected; window.openAuth = openAuth; window.closeAuth = closeAuth; window.openCloud = openCloud;
 window.doLogin = doLogin; window.doSignup = doSignup; window.doLogout = doLogout; window.afterLogin = afterLogin;
 window.cloudWho = cloudWho;
 window.openCloudSettings = openCloudSettings;

@@ -62,10 +62,16 @@ function covCard(mean){
 function dashboard(){
  const a=all(),students=Object.values(ctx.store.eleves||{}).reduce((n,x)=>n+(Array.isArray(x)?x.length:0),0),mean=classes.reduce((n,c)=>n+summary(c).percent,0)/2;
  const notes=Object.values(ctx.store.notes||{}).reduce((n,exam)=>n+Object.values(exam||{}).filter(v=>v&&typeof v==='object'&&!v.abs&&typeof v.n==='number'&&Number.isFinite(v.n)).length,0),up=exams().find(e=>e.iso>=today());
- const name=(ctx.store.profil?.nom||el('hero-prof')?.textContent?.replace(/^Prof\.\s*/,'')||'Aymen Essouyah').trim();const first=name.split(/\s+/)[0];
+ const connected=!!(root.isProfessorConnected&&root.isProfessorConnected());
+ const email=connected?root.authUser():'';
+ const name=connected?(ctx.store.profil?.nom||email.split('@')[0]||'professeur').trim():'';
+ const first=name.split(/\s+/)[0]||'professeur';
  const todays=a.filter(s=>s.iso===today()),recent=a.filter(s=>Object.keys(record(s)).length).sort((a,b)=>b.iso.localeCompare(a.iso)).slice(0,4);
  const kpis=[['users','green',students,'Élèves suivis',students?'Élèves présents dans vos listes':'Aucun élève enregistré dans cet espace'],['target','gold',num(mean)+'%','Couverture moyenne','Moyenne des deux livres · notions uniques'],['pen','terra',notes,'Notes saisies','Évaluations enregistrées · hors absences'],['calendar','violet',up?fmt(up.iso):'—','Prochain devoir prévu',up?esc(up.cls+' · '+up.title):'Aucune échéance renseignée']];
- el('v-dash').innerHTML=head('Bonjour,',esc(first),`${esc(full(today()))} — ${todays.length} classe${todays.length>1?'s':''} au planning aujourd’hui · STI, année 2026–2027.`,btn('today-fiche','Fiche du jour','ghost','file')+btn('new','Nouvelle séance','gold','plus'))+
+ const dateSubtitle=`${esc(full(today()))} — ${todays.length} classe${todays.length>1?'s':''} au planning aujourd’hui · STI, année 2026–2027.`;
+ const actions=btn('today-fiche','Fiche du jour','ghost','file')+btn('new','Nouvelle séance','gold','plus');
+ const welcome=connected?head('Bonjour,',esc(first),dateSubtitle,actions):head('Bonjour','professeur,',`Veuillez entrer vos données de connexion. ${dateSubtitle}`,actions);
+ el('v-dash').innerHTML=welcome+
  `<div class="stats-grid">${kpis.map((k,i)=>i===1?covCard(mean):`<div class="stat-card"><div class="stat-icon ${k[1]}">${icon(k[0],22)}</div><div><div class="stat-value ${i===3?'compact':''}" data-ref-kpi="${i}">${k[2]}</div><div class="stat-label">${k[3]}</div><div class="stat-foot">${k[4]}</div></div></div>`).join('')}</div>
  <div class="grid-12"><div class="card span-7">${cardHead('Progression des programmes','Heures enseignant cumulées · 2 groupes × 2 h',`<div class="chart-legend"><span class="legend-item"><i class="legend-dot" style="background:#C9C5B2"></i>Prévu</span><span class="legend-item"><i class="legend-dot" style="background:#14684A"></i>Effectué</span></div>`)}<div class="chart-box">${lineChart()}</div><p class="mini-note">Le réalisé s’arrête à aujourd’hui et compte uniquement les séances confirmées. Une date passée ne vaut pas une séance assurée.</p></div><div class="card span-5">${cardHead('Séances par classe','Fiches communes aux deux groupes · 2026–2027')}${donut()}</div></div>
  <div class="grid-12"><div class="card span-4">${cardHead('Aujourd’hui en classe','',navLink('v-cours','Suivi complet'))}${todays.length?todays.map(s=>`<div class="tl-item"><div><div class="tl-time">${s.cls==='3SI1'&&new Date(s.iso+'T12:00').getDay()===4?'13:00':'08:00'}</div><div class="tl-dur">2 × 2 h</div></div><div class="tl-body" style="--tc:${colors[s.cls]}"><div class="tl-title">${esc(s.cls+' · '+title(s))}</div><div class="tl-meta">S${s.n} · ${state(s)}</div><button class="card-link" data-ref="fiche" data-key="${s.key}">Voir la fiche →</button></div></div>`).join(''):'<div class="empty-info">Aucune séance au planning aujourd’hui.</div>'+a.filter(s=>s.iso>today()).sort((a,b)=>a.iso.localeCompare(b.iso)).slice(0,2).map(s=>`<div class="feed-item"><span class="feed-dot" style="background:${colors[s.cls]}"></span><div><b>${esc(s.cls)}</b> · ${esc(title(s))}<div class="feed-time">Prochaine séance · ${esc(full(s.iso))}</div></div></div>`).join('')}</div>
@@ -137,5 +143,5 @@ document.addEventListener('click',e=>{if(!e.composedPath().some(node=>node.class
 setInterval(()=>{if(ctx&&!document.hidden&&notificationDay!==today())notifications();},30000);
 window.addEventListener('focus',()=>notifications());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)notifications();});
-root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.8.5-print-center'};
+root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.8.6-auth-greeting'};
 })(window);
