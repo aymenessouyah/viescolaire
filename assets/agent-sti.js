@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '1.2.0-handwriting-review';
+const VERSION = '1.3.0-curriculum-selection';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -47,8 +47,8 @@ let results = {};
 let resultMeta = {};
 let history = readHistory();
 const forms = {
-  fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '' },
-  exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '' },
+  fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '', notions: [], competences: [] },
+  exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '', notions: [], competences: [] },
   correction: { type_devoir: 'théorique', mode_bareme: 'fourni', identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
   cahier: { session: '', realise: '', devoirs: '', observations: '' },
   repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' }
@@ -114,10 +114,19 @@ function defaultSession(mode) {
   }
   return candidate ? keyOf(candidate) : '';
 }
+function storedNotionsForSession(sessionKey) {
+  const session = findSession(sessionKey);
+  if (!session) return [];
+  const allowed = new Set(curriculumCatalog('notions').map(item => item.id));
+  const saved = asArray(record(session).notions).map(item => String(item && typeof item === 'object' ? item.id || '' : item || ''));
+  return [...new Set(saved)].filter(id => allowed.has(id));
+}
 function ensureSessions() {
-  ['fiche', 'cahier'].forEach(name => {
-    if (!findSession(forms[name].session)) forms[name].session = defaultSession(name);
-  });
+  if (!findSession(forms.fiche.session)) {
+    forms.fiche.session = defaultSession('fiche');
+    forms.fiche.notions = storedNotionsForSession(forms.fiche.session);
+  }
+  if (!findSession(forms.cahier.session)) forms.cahier.session = defaultSession('cahier');
 }
 function sessionData(s) {
   if (!s) return null;
@@ -151,10 +160,54 @@ function relatedNotions(topic) {
 function programmeContext() {
   return asArray(root.STI_DATA?.competences?.[classe]).map(x => ({ code: x.code, titre: x.t, domaine: x.domaine, attendus: x.attendu })).slice(0, 12);
 }
+function curriculumCatalog(kind) {
+  if (kind === 'notions') {
+    return asArray(root.STI_DATA?.livresSTI?.[classe]?.items).filter(item => item && item.id).map(item => {
+      const label = String(item.label || item.id);
+      return {
+        id: String(item.id),
+        label,
+        description: [item.domain, item.description].filter(Boolean).join(' · '),
+        payload: { id: String(item.id), notion: label, domaine: String(item.domain || ''), description: String(item.description || ''), detail: String(item.detail || ''), type: String(item.kind || '') }
+      };
+    });
+  }
+  if (kind === 'competences') {
+    return asArray(root.STI_DATA?.competences?.[classe]).filter(item => item && (item.code || item.t)).map(item => {
+      const code = String(item.code || ''), title = String(item.t || 'Compétence');
+      const attendu = asArray(item.attendu).map(String);
+      return {
+        id: `${code}|${title}`,
+        label: `${code ? `${code} — ` : ''}${title}`,
+        description: [item.domaine, attendu.slice(0, 2).join(' · ')].filter(Boolean).join(' — '),
+        payload: { code, competence: title, domaine: String(item.domaine || ''), attendus: attendu }
+      };
+    });
+  }
+  return [];
+}
+function curriculumSelection(kind, selectedIds) {
+  const selected = new Set(asArray(selectedIds).map(String));
+  return curriculumCatalog(kind).filter(item => selected.has(item.id)).map(item => item.payload);
+}
+function selectedCountLabel(count) {
+  return count ? `${count} sélectionnée${count > 1 ? 's' : ''}` : 'Aucune sélection';
+}
+function curriculumPicker(kind, title, selectedIds, help) {
+  const items = curriculumCatalog(kind), selected = new Set(asArray(selectedIds).map(String));
+  const searchLabel = kind === 'notions' ? 'Rechercher une notion' : 'Rechercher une compétence';
+  return `<details class="agent-curriculum-picker full">
+    <summary><strong>${esc(title)}</strong><span data-agent-selection-count="${kind}">${esc(selectedCountLabel(selected.size))}</span></summary>
+    <p class="agent-curriculum-help">${esc(help)}</p>
+    <label class="agent-curriculum-search"><span>${searchLabel}</span><input type="search" data-agent-catalog-filter="${kind}" aria-label="${searchLabel}" placeholder="${searchLabel}…" autocomplete="off"></label>
+    <div class="agent-curriculum-options" data-agent-catalog-options="${kind}">${items.map(item => `<label class="agent-curriculum-option" data-agent-option="${kind}"><input type="checkbox" data-agent-selection="${kind}" value="${esc(item.id)}" ${selected.has(item.id) ? 'checked' : ''}><span><strong>${esc(item.label)}</strong><small>${esc(item.description)}</small></span></label>`).join('') || '<p class="agent-curriculum-empty">Aucune entrée du référentiel disponible pour cette classe.</p>'}</div>
+    <p class="agent-curriculum-no-match" data-agent-no-match="${kind}" hidden>Aucune entrée ne correspond à cette recherche.</p>
+  </details>`;
+}
 function commonContext() {
   return {
     agent: 'Agent STI',
-    matiere: "Systèmes et Technologies de l'Informatique (STI)",
+    matiere: 'Sciences et technologies de l’informatique (STI)',
     programme: 'Programme tunisien — enseignement secondaire',
     annee_scolaire: '2026-2027',
     classe,
@@ -197,6 +250,8 @@ function formHtml() {
   if (tool === 'fiche') return `
     <div class="agent-form-grid">
       <label class="agent-field full"><span>Séance du planning</span><select data-agent-field="session">${sessionOptions()}</select></label>
+      ${curriculumPicker('notions', 'Notions du référentiel', f.notions, 'Les notions déjà renseignées pour cette séance sont présélectionnées. Vous pouvez en choisir plusieurs ou laisser la sélection vide.')}
+      ${curriculumPicker('competences', 'Compétences ciblées', f.competences, 'Choisissez les compétences de Sciences et technologies de l’informatique à travailler dans cette fiche.')}
       <label class="agent-field"><span>Méthode pédagogique</span><select data-agent-field="methode">${['Cours dialogué et TP guidé', 'TP principalement pratique', 'Apprentissage par projet', 'Révision et remédiation', 'Correction d’évaluation'].map(x => `<option ${f.methode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Objectif prioritaire <em>facultatif</em></span><input data-agent-field="objectif" value="${esc(f.objectif)}" placeholder="Ex. : savoir contrôler un formulaire"></label>
       <label class="agent-field full"><span>Vos consignes <em>facultatif</em></span><textarea data-agent-field="consignes" rows="4" placeholder="Matériel disponible, difficultés des groupes, activité à privilégier…">${esc(f.consignes)}</textarea></label>
@@ -204,6 +259,8 @@ function formHtml() {
   if (tool === 'exercices') return `
     <div class="agent-form-grid">
       <label class="agent-field full"><span>Notion ou thème</span><input data-agent-field="sujet" value="${esc(f.sujet)}" required placeholder="Ex. : JavaScript — événements et contrôle de saisie"></label>
+      ${curriculumPicker('notions', 'Notions du référentiel', f.notions, 'Sélection facultative. Sans sélection, l’agent proposera des notions correspondant au thème saisi.')}
+      ${curriculumPicker('competences', 'Compétences ciblées', f.competences, 'Sélection facultative des compétences que les exercices doivent évaluer.')}
       <label class="agent-field"><span>Type de devoir</span><select data-agent-field="type_devoir">${assignmentTypeOptions(f.type_devoir)}</select></label>
       <label class="agent-field"><span>Type de document</span><select data-agent-field="format">${['Série d’exercices', 'Travail pratique', 'Devoir de contrôle', 'Révision orientée bac'].map(x => `<option ${f.format === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Difficulté</span><select data-agent-field="difficulte">${['Progressive', 'Facile', 'Moyenne', 'Difficile', 'Niveau baccalauréat'].map(x => `<option ${f.difficulte === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
@@ -263,6 +320,7 @@ function renderFiche(r, meta) {
     <div class="agent-doc-grid"><section><h3>Objectifs</h3>${bulletList(r.objectifs)}</section><section><h3>Prérequis</h3>${bulletList(r.prerequis)}</section></div>
     <section><h3>Déroulement proposé</h3><div class="agent-phases">${phases.map((p, i) => `<div><span>${String(i + 1).padStart(2, '0')}</span><div><strong>${esc(p.phase || `Phase ${i + 1}`)} <em>${esc(p.duree || '')}</em></strong><p><b>Enseignant :</b> ${nl(p.activite_enseignant || p.enseignant)}</p><p><b>Élèves :</b> ${nl(p.activite_eleve || p.eleves)}</p>${p.trace ? `<p><b>Trace / évaluation :</b> ${nl(p.trace)}</p>` : ''}</div></div>`).join('') || '<p>Déroulement non renseigné.</p>'}</div></section>
     <section><h3>Notions mobilisées</h3>${chipList(r.notions)}</section>
+    ${asArray(r.competences).length ? `<section><h3>Compétences ciblées</h3>${chipList(r.competences)}</section>` : ''}
     <div class="agent-doc-grid"><section><h3>Travail à la maison</h3><p>${nl(r.travail_maison)}</p></section><section><h3>Supports</h3>${bulletList(r.supports)}</section></div>
     <div class="agent-doc-grid"><section><h3>Évaluation des acquis</h3><p>${nl(r.evaluation)}</p></section><section><h3>Remédiation</h3><p>${nl(r.remediation)}</p></section></div>
   </div>`;
@@ -272,6 +330,7 @@ function renderExercices(r, meta) {
   return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`)}<div id="agent-result" class="agent-document">
     <div class="agent-doc-heading"><span>${esc(r.format || 'SÉRIE D’EXERCICES')} · ${esc(meta.classe)} · ${esc((meta.type_devoir || 'théorique').toUpperCase())}</span><h2>${esc(r.titre || 'Exercices STI')}</h2><p>${esc(r.duree || forms.exercices.duree + ' min')}${r.bareme_total ? ` · Barème : ${esc(r.bareme_total)}` : ''}</p></div>
     ${r.introduction ? `<p class="agent-intro">${nl(r.introduction)}</p>` : ''}
+    ${asArray(r.notions).length ? `<section><h3>Notions ciblées</h3>${chipList(r.notions)}</section>` : ''}
     ${exos.map((ex, i) => `<section class="agent-exercise"><h3>Exercice ${i + 1}${ex.titre ? ` — ${esc(ex.titre)}` : ''}${ex.points ? `<span>${esc(ex.points)}</span>` : ''}</h3><p>${nl(ex.enonce)}</p>${asArray(ex.questions).length ? `<ol>${asArray(ex.questions).map(q => `<li>${nl(typeof q === 'object' ? q.enonce || q.question : q)}${typeof q === 'object' && q.bareme ? `<em class="agent-points">${esc(q.bareme)}</em>` : ''}</li>`).join('')}</ol>` : ''}<details class="agent-correction"><summary>Voir le corrigé</summary><div>${nl(ex.correction)}${asArray(ex.corrige).length ? `<ol>${asArray(ex.corrige).map(q => `<li>${nl(typeof q === 'object' ? [q.reponse, q.explication].filter(Boolean).join(' — ') : q)}</li>`).join('')}</ol>` : ''}</div></details></section>`).join('') || '<p>Aucun exercice structuré dans la réponse.</p>'}
     ${asArray(r.competences).length ? `<section><h3>Compétences travaillées</h3>${chipList(r.competences)}</section>` : ''}
   </div>`;
@@ -389,9 +448,28 @@ function buildPayload(meta) {
   const f = forms[tool];
   const base = { context: { ...commonContext(), ...meta }, input: {} };
   if (tool === 'fiche') {
-    base.input = { seance: sessionData(findSession(f.session)), methode: f.methode, objectif_prioritaire: f.objectif, consignes: f.consignes, competences: programmeContext() };
+    const notionsSelectionnees = curriculumSelection('notions', f.notions);
+    const competencesSelectionnees = curriculumSelection('competences', f.competences);
+    const seance = sessionData(findSession(f.session));
+    base.input = {
+      seance, methode: f.methode, objectif_prioritaire: f.objectif, consignes: f.consignes,
+      notions_selectionnees: notionsSelectionnees,
+      competences_selectionnees: competencesSelectionnees,
+      competences: competencesSelectionnees.length ? competencesSelectionnees : programmeContext()
+    };
   } else if (tool === 'exercices') {
-    base.input = { ...f, notions_du_referentiel: relatedNotions(f.sujet), competences: programmeContext() };
+    const notionsSelectionnees = curriculumSelection('notions', f.notions);
+    const competencesSelectionnees = curriculumSelection('competences', f.competences);
+    const parametresExercices = { ...f };
+    delete parametresExercices.notions;
+    delete parametresExercices.competences;
+    base.input = {
+      ...parametresExercices,
+      notions_du_referentiel: notionsSelectionnees.length ? notionsSelectionnees : relatedNotions(f.sujet),
+      notions_selectionnees: notionsSelectionnees,
+      competences_selectionnees: competencesSelectionnees,
+      competences: competencesSelectionnees.length ? competencesSelectionnees : programmeContext()
+    };
   } else if (tool === 'cahier') {
     base.input = { seance: sessionData(findSession(f.session)), realise_precise_par_enseignant: f.realise, travail_donne_precise: f.devoirs, observations_precisees: f.observations };
   } else if (tool === 'repartition') {
@@ -566,6 +644,7 @@ function ficheText(r) {
     if (p.trace) lines.push(`Trace / évaluation : ${p.trace}`);
   });
   if (asArray(r.notions).length) lines.push('', `NOTIONS : ${asArray(r.notions).join(' ; ')}`);
+  if (asArray(r.competences).length) lines.push('', `COMPÉTENCES CIBLÉES : ${asArray(r.competences).join(' ; ')}`);
   if (r.evaluation) lines.push('', `ÉVALUATION : ${r.evaluation}`);
   if (r.remediation) lines.push('', `REMÉDIATION : ${r.remediation}`);
   return lines.join('\n');
@@ -709,6 +788,23 @@ function fieldValue(target) {
   return target.value;
 }
 document.addEventListener('input', e => {
+  const catalogFilter = e.target.closest('[data-agent-catalog-filter]');
+  if (catalogFilter) {
+    const kind = catalogFilter.dataset.agentCatalogFilter;
+    const query = catalogFilter.value.trim().toLocaleLowerCase('fr');
+    const zone = el('v-agent');
+    if (zone) {
+      const options = zone.querySelectorAll(`[data-agent-option="${kind}"]`);
+      let visible = 0;
+      options.forEach(option => {
+        option.hidden = !option.textContent.toLocaleLowerCase('fr').includes(query);
+        if (!option.hidden) visible++;
+      });
+      const noMatch = zone.querySelector(`[data-agent-no-match="${kind}"]`);
+      if (noMatch) noMatch.hidden = options.length === 0 || visible > 0;
+    }
+    return;
+  }
   const field = e.target.closest('[data-agent-field]');
   if (!field || !forms[tool] || !(field.dataset.agentField in forms[tool])) return;
   forms[tool][field.dataset.agentField] = fieldValue(field);
@@ -721,9 +817,22 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {
+  const selection = e.target.closest('[data-agent-selection]');
+  if (selection && ['notions', 'competences'].includes(selection.dataset.agentSelection) && forms[tool]) {
+    const kind = selection.dataset.agentSelection;
+    const selected = new Set(asArray(forms[tool][kind]).map(String));
+    if (selection.checked) selected.add(String(selection.value));
+    else selected.delete(String(selection.value));
+    forms[tool][kind] = [...selected];
+    const count = document.querySelector(`[data-agent-selection-count="${kind}"]`);
+    if (count) count.textContent = selectedCountLabel(selected.size);
+    return;
+  }
   if (e.target.matches('[data-agent-class]')) {
     classe = e.target.value === '4SI2' ? '4SI2' : '3SI1';
-    forms.fiche.session = ''; forms.cahier.session = '';
+    forms.fiche.session = ''; forms.fiche.notions = []; forms.fiche.competences = [];
+    forms.exercices.notions = []; forms.exercices.competences = [];
+    forms.cahier.session = '';
     error = ''; notice = '';
     draw(); return;
   }
@@ -738,6 +847,7 @@ document.addEventListener('change', e => {
   const field = e.target.closest('[data-agent-field]');
   if (field && field.tagName === 'SELECT') {
     forms[tool][field.dataset.agentField] = fieldValue(field);
+    if (tool === 'fiche' && field.dataset.agentField === 'session') forms.fiche.notions = storedNotionsForSession(forms.fiche.session);
     if (tool === 'correction' && ['type_devoir', 'mode_bareme'].includes(field.dataset.agentField)) results.correction = null;
     if (tool === 'correction' && field.dataset.agentField === 'type_devoir') {
       transcriptionReview = null;
@@ -769,6 +879,6 @@ document.addEventListener('click', e => {
 root.STI_AGENT = {
   version: VERSION,
   render(context) { ctx = context; draw(); },
-  _test: { ficheText, relatedNotions, validate, shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings, buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload }
+  _test: { ficheText, relatedNotions, curriculumCatalog, curriculumSelection, validate, shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings, buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload }
 };
 })(window);

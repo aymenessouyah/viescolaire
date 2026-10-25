@@ -59,6 +59,27 @@
 #v-agent .agent-field input:focus,#v-agent .agent-field select:focus,#v-agent .agent-field textarea:focus{border-color:#579578;box-shadow:0 0 0 3px rgba(57,125,90,.1)}
 #v-agent .agent-field input:disabled{color:var(--agent-muted);background:var(--agent-soft)}
 #v-agent .agent-field input::placeholder,#v-agent .agent-field textarea::placeholder{color:#929d96}
+#v-agent .agent-curriculum-picker.full{grid-column:1/-1;min-width:0;padding:12px;border:1px solid var(--agent-line);border-radius:11px;background:var(--agent-soft)}
+#v-agent .agent-curriculum-picker>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;list-style:none}
+#v-agent .agent-curriculum-picker>summary::-webkit-details-marker{display:none}
+#v-agent .agent-curriculum-picker>summary:after{content:"▾";margin-left:auto;color:var(--agent-muted);font-size:13px}
+#v-agent .agent-curriculum-picker[open]>summary:after{content:"▴"}
+#v-agent .agent-curriculum-picker>summary:focus-visible,#v-agent .agent-curriculum-search input:focus-visible{outline:2px solid var(--agent-green-2);outline-offset:2px}
+#v-agent .agent-curriculum-picker>summary strong{font-size:11px}
+#v-agent .agent-curriculum-picker>summary span{color:var(--agent-muted);font-size:10px;font-weight:600}
+#v-agent .agent-curriculum-picker[open]>summary{margin-bottom:9px}
+#v-agent .agent-curriculum-help{margin:7px 0 10px;color:var(--agent-muted);font-size:10px;line-height:1.5}
+#v-agent .agent-curriculum-search{display:grid;gap:5px;margin-bottom:7px;color:var(--agent-muted);font-size:10px;font-weight:650}
+#v-agent .agent-curriculum-search input{width:100%;height:36px;padding:0 10px;border:1px solid #cfd8d1;border-radius:8px;color:var(--agent-ink);background:var(--agent-card)}
+#v-agent .agent-curriculum-options{display:grid;gap:4px;max-height:250px;overflow:auto;padding:5px;border:1px solid var(--agent-line);border-radius:9px;background:var(--agent-card)}
+#v-agent .agent-curriculum-option{display:grid;grid-template-columns:17px minmax(0,1fr);align-items:start;gap:8px;padding:7px;border:1px solid transparent;border-radius:7px;background:var(--agent-soft);cursor:pointer}
+#v-agent .agent-curriculum-option:hover{border-color:#bdd6c8}
+#v-agent .agent-curriculum-option[hidden]{display:none}
+#v-agent .agent-curriculum-option input{width:16px;height:16px;margin:2px 0 0;accent-color:var(--agent-green-2)}
+#v-agent .agent-curriculum-option span{min-width:0}
+#v-agent .agent-curriculum-option strong{display:block;color:var(--agent-ink);font-size:10px;line-height:1.4}
+#v-agent .agent-curriculum-option small{display:block;margin-top:2px;color:var(--agent-muted);font-size:9px;line-height:1.45}
+#v-agent .agent-curriculum-no-match,#v-agent .agent-curriculum-empty{margin:8px 0 0;color:var(--agent-muted);font-size:10px}
 #v-agent .agent-upload{padding:13px;border:1px dashed #b9c8bd;border-radius:11px;background:var(--agent-soft)}
 #v-agent .agent-upload input{height:auto;padding:9px;border-style:dashed;background:var(--agent-card)}
 #v-agent .agent-upload small{color:var(--agent-muted);font-size:10px;line-height:1.5}
@@ -167,7 +188,8 @@
 :root[data-color-mode="dark"] #v-agent .agent-tool.active{border-color:#3f6951;background:#20382a;box-shadow:inset 3px 0 0 #70bb90}
 :root[data-color-mode="dark"] #v-agent .agent-tool>span{background:#263a2e}
 :root[data-color-mode="dark"] #v-agent .agent-tool.active>span{color:#10251a;background:#78c499}
-:root[data-color-mode="dark"] #v-agent .agent-field input,:root[data-color-mode="dark"] #v-agent .agent-field select,:root[data-color-mode="dark"] #v-agent .agent-field textarea{border-color:#405348}
+:root[data-color-mode="dark"] #v-agent .agent-field input,:root[data-color-mode="dark"] #v-agent .agent-field select,:root[data-color-mode="dark"] #v-agent .agent-field textarea,:root[data-color-mode="dark"] #v-agent .agent-curriculum-search input{border-color:#405348}
+:root[data-color-mode="dark"] #v-agent .agent-curriculum-option:hover{border-color:#4c775d}
 :root[data-color-mode="dark"] #v-agent .agent-truth-note{border-color:#3c5544;background:#1d3023}
 :root[data-color-mode="dark"] #v-agent .agent-generate{color:#10251a;background:#79c69c}
 :root[data-color-mode="dark"] #v-agent .agent-result-actions .btn-primary{color:#10251a;background:#79c69c}
