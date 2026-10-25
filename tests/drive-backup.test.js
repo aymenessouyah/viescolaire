@@ -4,6 +4,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 
 const source = fs.readFileSync('assets/drive-backup.js', 'utf8');
+const indexHtml = fs.readFileSync('index.html', 'utf8');
+
+test('un accès Google Drive visible est présent dans la barre supérieure', () => {
+  assert.match(indexHtml, /id="btn-drive-backup-top"[^>]*onclick="window\.STI_DRIVE_BACKUP \? window\.STI_DRIVE_BACKUP\.openSettings\(\)/);
+  assert.match(indexHtml, /id="btn-drive-backup-top"[\s\S]*?<span>Exporter vers Drive<\/span>/);
+});
 
 function policy() {
   const window = {
