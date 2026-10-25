@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.16.0-current-trimester-assured-cahier";
+const APP_VER = "v1.17.0-student-reports-skills-calendar-csv";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -755,7 +755,8 @@ function renderCal(){
       <h2>${ic("calendar")} Calendrier scolaire tunisien — 2026 / 2027</h2>
       <p class="lead">Calendrier officiel du ministère de l'Éducation (année scolaire 2026-2027) croisé avec les créneaux des deux classes. Les séances tombant un jour férié, pendant les vacances ou durant une semaine bloquée sont automatiquement retirées du planning.</p>
     </div>
-    <div class="row no-print">
+    <div class="row no-print" style="gap:8px;flex-wrap:wrap">
+      <button class="btn btn-xs btn-blue" onclick="exporterCalendrierICS()" title="Télécharger les séances, évaluations et échéances au format agenda">${ic("down")} Exporter .ics</button>
       <div class="search">${ic("search")}<input type="text" placeholder="Filtrer un événement…" oninput="filterCal(this.value)"></div>
       <select style="width:auto" onchange="calCls=this.value;renderCal()">
         <option value="both" ${calCls==="both"?"selected":""}>Les deux classes</option>
@@ -834,6 +835,55 @@ function filterCal(v){
   document.querySelectorAll("#cal-jalons tr").forEach(tr => {
     tr.style.display = tr.textContent.toLowerCase().includes(q) ? "" : "none";
   });
+}
+function calTexteSimple(value){
+  return String(value||"").replace(/<[^>]*>/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<")
+    .replace(/&gt;/g,">").replace(/&nbsp;/g," ").replace(/\s+/g," ").trim();
+}
+function exporterCalendrierICS(){
+  if(!isProfessorConnected()){openAuth();return;}
+  const classes = calCls === "both" ? ["3SI1","4SI2"] : [calCls];
+  const events = [];
+  classes.forEach(cls => {
+    (SESSIONS[cls] || []).forEach(session => {
+      const slots = slotsOf(cls,session.iso).slice().sort((a,b)=>String(a.s).localeCompare(String(b.s)));
+      const title = titleOf(session,store);
+      const description = [slots.map(slot=>slot.g+" "+slot.s+"–"+slot.e).join("; "),session.blk&&session.blk.det||""].filter(Boolean).join("\n");
+      events.push({
+        uid:"seance-"+cls+"-"+session.n+"-"+session.iso+"@viescolaire.local",
+        startDate:session.iso,endDate:session.iso,startTime:slots[0]&&slots[0].s,endTime:slots[slots.length-1]&&slots[slots.length-1].e,
+        allDay:!slots.length,summary:cls+" — Séance n°"+session.n+" : "+title,description:description,
+        location:SCHOOL.lycee,categories:"Cours"
+      });
+    });
+    epreuvesDe(cls).forEach(exam => {
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(String(exam.date||"")))return;
+      const scheduledDc=(SESSIONS[cls]||[]).some(session=>session.iso===exam.date&&session.blk&&session.blk.k==="dc");
+      if(scheduledDc)return;
+      events.push({uid:"epreuve-"+exam.id+"@viescolaire.local",date:exam.date,allDay:true,
+        summary:cls+" — "+({dc:"Devoir de contrôle",ds:"Devoir de synthèse",tp:"TP",autre:"Évaluation"}[exam.type]||"Évaluation")+" : "+calTexteSimple(exam.titre),
+        description:"Barème : "+(exam.bareme||20)+" points"+(exam.tags&&exam.tags.length?"\nNotions : "+exam.tags.join(", "):""),location:SCHOOL.lycee,categories:"Évaluation"});
+    });
+  });
+  JALONS.forEach((jalon,index)=>{
+    if(!["eval","bloc","admin"].includes(jalon.type))return;
+    if(Array.isArray(jalon.classes)&&!jalon.classes.some(cls=>classes.includes(cls)))return;
+    const label=calTexteSimple(jalon.label), detail=calTexteSimple(jalon.s||"");
+    const targetedClasses=["3SI1","4SI2"].filter(cls=>(label+" "+detail).includes(cls));
+    if(targetedClasses.length&&!targetedClasses.some(cls=>classes.includes(cls)))return;
+    const startDate=jalon.date||jalon.from,endDate=jalon.date||jalon.to||startDate;
+    if(!startDate||!endDate)return;
+    events.push({uid:"jalon-"+index+"-"+startDate+"@viescolaire.local",startDate:startDate,endDate:endDate,allDay:true,
+      summary:"Échéance scolaire — "+calTexteSimple(jalon.label),description:calTexteSimple(jalon.s||""),location:SCHOOL.lycee,categories:"Échéance"});
+  });
+  try{
+    const label=calCls==="both"?"3SI1-4SI2":calCls;
+    const content=window.STI_CALENDAR_ICS.buildCalendar(events,{name:"Vie scolaire STI — "+label,now:new Date()});
+    const url=URL.createObjectURL(new Blob([content],{type:"text/calendar;charset=utf-8"}));
+    const link=document.createElement("a");link.href=url;link.download="calendrier-STI-"+label+"-2026-2027.ics";document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    toast(events.length+" événement(s) exporté(s) — importez le fichier dans votre agenda");
+  }catch(error){toast(error&&error.message?error.message:"Le calendrier n’a pas pu être exporté.");}
 }
 
 /* ---------------- 4. RÉPARTITION ---------------- */
@@ -2573,6 +2623,7 @@ window.escapeHtml = escapeHtml;
 window.renderCal = renderCal;
 window.calShift = calShift;
 window.calToday = calToday;
+window.exporterCalendrierICS = exporterCalendrierICS;
 window.filterCal = filterCal;
 window.renderRep = renderRep;
 window.setRep = setRep;

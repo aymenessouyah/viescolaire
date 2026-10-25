@@ -18,6 +18,7 @@ const CLASSES_DEFAUT = [
   { id:"4SI2", nom:"4SI2", creneaux:"lundi 8 h–12 h • vendredi 8 h–12 h", groupes:2 }
 ];
 let elVue = "roster", elClasse = null, elDate = "", elEpreuve = null, elEleve = null;
+let elTriCompetence = null, elTriBulletin = null;
 
 function mesClasses(){
   if (!Array.isArray(store.classes)) store.classes = JSON.parse(JSON.stringify(CLASSES_DEFAUT));
@@ -225,6 +226,56 @@ function rangDe(cid, eid){
   const i = cl.findIndex(x => x.e.id === eid);
   return i < 0 ? null : { rang:i + 1, sur:cl.length };
 }
+function trimestreEleve(cid, iso){
+  const sessions = window.SESSIONS && window.SESSIONS[cid];
+  const plan = window.STI_DATA && window.STI_DATA['repartition' + cid];
+  if (window.STI_CAHIER_DEFAULTS && (Array.isArray(plan) || Array.isArray(sessions))){
+    const sessionMap = Array.isArray(sessions) ? { [cid]:sessions } : {};
+    const planMap = Array.isArray(plan) ? { [cid]:plan } : {};
+    return window.STI_CAHIER_DEFAULTS.currentTrimester(sessionMap, iso, planMap);
+  }
+  return window.triOf ? window.triOf(iso) : 1;
+}
+function trimestreCourantEleve(cid){ return trimestreEleve(cid, todayISO()); }
+function competencesOfficielles(cid){
+  const data = window.STI_DATA && window.STI_DATA.competences;
+  if (data && Array.isArray(data[cid]) && data[cid].length) return data[cid];
+  const seen = new Set();
+  return epreuvesDe(cid).flatMap(exam => Array.isArray(exam.tags) ? exam.tags : [])
+    .map(tag => String(tag||'').trim()).filter(tag => {
+      const key=tag.toLowerCase();
+      if(!key||seen.has(key))return false;seen.add(key);return true;
+    }).map(tag => ({code:'notion:'+tag,domaine:'Notion évaluée',t:tag,attendu:[]}));
+}
+function etatCompetenceEleve(cid, eid, tri, code){
+  const student = elevesDe(cid).find(item => item.id === eid);
+  return student && student.competences && student.competences[String(tri)]
+    ? student.competences[String(tri)][code] || '' : '';
+}
+function setCompetenceEleve(cid, eid, tri, code, status){
+  if (!requireStudentAccount()) return;
+  tri=Number(tri);
+  const student = elevesDe(cid).find(item => item.id === eid);
+  if (!student || ![1,2,3].includes(tri) || !competencesOfficielles(cid).some(item => item.code === code)) return;
+  const allowed = ['', 'acquis', 'en-cours', 'renforcer'];
+  if (!allowed.includes(status)) return;
+  if (!student.competences || typeof student.competences !== 'object' || Array.isArray(student.competences)) student.competences = {};
+  if (!student.competences[String(tri)] || typeof student.competences[String(tri)] !== 'object' || Array.isArray(student.competences[String(tri)])) student.competences[String(tri)] = {};
+  if (status) student.competences[String(tri)][code] = status;
+  else delete student.competences[String(tri)][code];
+  save(true); toast('Progression enregistrée');
+}
+function bulletinPourEleve(cid, student, tri){
+  const exams = epreuvesDe(cid).filter(exam => exam.date && trimestreEleve(cid, exam.date) === Number(tri))
+    .slice().sort((a,b) => String(a.date).localeCompare(String(b.date)));
+  const attendance = Object.keys(presencesDe(cid)).sort().filter(date => trimestreEleve(cid,date) === Number(tri))
+    .map(date => ({ date:date, status:(presencesDe(cid)[date] || {})[student.id] || '' }));
+  const competencyStatus = student.competences && student.competences[String(tri)] || {};
+  return window.STI_STUDENT_REPORTS.summarizeBulletin({
+    studentId:student.id, exams:exams, gradeRecords:store.notes || {}, attendance:attendance,
+    competencies:competencesOfficielles(cid), competencyStatus:competencyStatus
+  });
+}
 function moyennesParNotion(cid){
   const acc = {};
   epreuvesDe(cid).forEach(e => {
@@ -258,13 +309,19 @@ function elSel(cid, idBase){
 function renderEleves(){
   const zone = document.getElementById("v-eleves");
   if (!zone) return;
+  if (window.isProfessorConnected && !window.isProfessorConnected()){
+    zone.innerHTML = '<section class="private-empty-state" role="status"><h2>Connexion requise</h2><p>Les classes et données personnelles apparaîtront après connexion.</p></section>';
+    return;
+  }
   const cid = elClasseCourante();
   const c = cid ? classeDe(cid) : null;
   const vues = [
     ["roster",   "Élèves",            "users"],
     ["presence", "Présences",         "check"],
     ["epreuves", "Épreuves & notes",  "pen"],
-    ["faibles",  "Points faibles",    "target"]
+    ["faibles",  "Points faibles",    "target"],
+    ["competences", "Compétences",    "target"],
+    ["bulletins", "Bulletins",        "file"]
   ];
   const nbEl = cid ? elevesDe(cid).length : 0;
   zone.innerHTML = `
@@ -305,13 +362,145 @@ function renderVueEleves(cid){
   if (elVue === "presence") return vuePresence(cid);
   if (elVue === "epreuves") return vueEpreuves(cid);
   if (elVue === "faibles")  return vueFaibles(cid);
+  if (elVue === "competences") return vueCompetences(cid);
+  if (elVue === "bulletins") return vueBulletins(cid);
   return vueRoster(cid);
+}
+function requireStudentAccount(){
+  if (window.isProfessorConnected && window.isProfessorConnected()) return true;
+  if (window.openAuth) window.openAuth();
+  return false;
+}
+function studentCsvDialog(){
+  let dialog = document.getElementById("student-csv-dialog");
+  if (!dialog){
+    dialog = document.createElement("dialog");
+    dialog.id = "student-csv-dialog";
+    dialog.className = "student-csv-dialog";
+    dialog.setAttribute("aria-labelledby","student-csv-title");
+    document.body.appendChild(dialog);
+  }
+  return dialog;
+}
+function afficherApercuCSV(options){
+  const dialog = studentCsvDialog();
+  const rows = options.rows || [];
+  const errors = options.errors || [];
+  const preview = rows.slice(0,8).map(row => `<tr>${row.cells.map(cell => `<td>${escapeHtml(String(cell == null ? "" : cell))}</td>`).join("")}</tr>`).join("");
+  dialog.innerHTML = `<div class="student-csv-box">
+    <div class="student-csv-head"><div><div class="student-csv-kicker">IMPORT CSV — APERÇU</div><h2 id="student-csv-title">${escapeHtml(options.title || "Vérifier les données")}</h2></div><button class="btn btn-xs btn-line" type="button" data-csv-cancel>Fermer</button></div>
+    <div class="student-csv-body"><p>${escapeHtml(options.summary || "Vérifiez les lignes avant de les appliquer.")}</p>
+      ${errors.length ? `<div class="note rose"><strong>${errors.length} erreur(s) :</strong><ul>${errors.slice(0,8).map(error => `<li>${escapeHtml(error)}</li>`).join("")}</ul>${errors.length>8?`<span class="tiny">et ${errors.length-8} autre(s)…</span>`:""}</div>` : `<div class="note">Aucune erreur détectée. Aucune ligne ou note n’est modifiée avant votre confirmation.</div>`}
+      ${preview ? `<div class="tbl-wrap student-csv-preview"><table class="tbl"><thead><tr>${options.headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${preview}</tbody></table>${rows.length>8?`<p class="tiny muted">Aperçu de 8 lignes sur ${rows.length}.</p>`:""}</div>` : ""}
+    </div><div class="student-csv-actions"><button class="btn btn-line" type="button" data-csv-cancel>Annuler</button><button class="btn btn-blue" type="button" data-csv-apply ${errors.length || !rows.length?"disabled":""}>${escapeHtml(options.applyLabel || "Appliquer l’import")}</button></div>
+  </div>`;
+  dialog.querySelectorAll("[data-csv-cancel]").forEach(button => button.addEventListener("click",() => dialog.close()));
+  const apply = dialog.querySelector("[data-csv-apply]");
+  apply.addEventListener("click",() => {
+    try { if (options.onApply() !== false) dialog.close(); }
+    catch(error){ toast(error && error.message ? error.message : "L’import n’a pas pu être appliqué."); }
+  });
+  if (!dialog.open) dialog.showModal();
+  (apply.disabled ? dialog.querySelector("[data-csv-cancel]") : apply).focus();
+}
+function lireFichierCSV(input, callback){
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  const finish = text => { input.value = ""; callback(String(text || ""),file); };
+  if (typeof file.text === "function") file.text().then(finish).catch(() => { input.value=""; toast("Impossible de lire ce fichier CSV"); });
+  else {
+    const reader = new FileReader();
+    reader.onload = () => finish(reader.result);
+    reader.onerror = () => { input.value=""; toast("Impossible de lire ce fichier CSV"); };
+    reader.readAsText(file,"UTF-8");
+  }
+}
+function telechargerCSV(nom, contenu){
+  const url = URL.createObjectURL(new Blob([contenu],{type:"text/csv;charset=utf-8"}));
+  const link = document.createElement("a"); link.href=url; link.download=nom; document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url),1500);
+}
+function exporterRosterCSV(cid){
+  if (!requireStudentAccount()) return;
+  telechargerCSV("eleves-" + cid + "-" + todayISO() + ".csv",window.STI_STUDENT_CSV.exportRoster(triEleves(elevesDe(cid))));
+}
+function importerRosterCSV(cid,input){
+  if (!requireStudentAccount()) return;
+  lireFichierCSV(input,(text,file) => {
+    const plan = window.STI_STUDENT_CSV.planRosterImport(text,elevesDe(cid),classeDe(cid).groupes || 4);
+    const rows = plan.rows.map(row => {
+      const current=row.matchId?elevesDe(cid).find(student=>student.id===row.matchId):null;
+      const previewStudent=Object.assign({},current||{},row.student);
+      const actionLabel=row.action==="delete"?"Suppression":row.action==="add"?"Nouvel élève":"Mise à jour";
+      return {
+        action:row.action,
+        student:row.student,
+        cells:[actionLabel,(previewStudent.nom||"") + " " + (previewStudent.prenom||""),previewStudent.groupe||1,previewStudent.pc||""]
+      };
+    });
+    afficherApercuCSV({
+      title:"Importer la liste de " + classeDe(cid).nom,
+      summary:file.name + " — " + plan.adds + " ajout(s), " + plan.updates + " mise(s) à jour, " + plan.deletes + " suppression(s) explicite(s). Laissez action vide pour ajouter ou mettre à jour; écrivez « supprimer » avec l’ID pour retirer un élève. Les champs vides et les élèves absents du fichier sont conservés; les notes et présences historiques ne sont pas supprimées.",
+      applyLabel:plan.deletes?"Confirmer l’import et les suppressions":"Appliquer l’import",
+      headers:["Action","Élève","Groupe","N° PC"],rows,errors:plan.errors,
+      onApply:() => {
+        if (!requireStudentAccount()) return false;
+        const current = elevesDe(cid);
+        const staleRow=plan.rows.find(row=>["update","delete"].includes(row.action)&&!current.some(student=>student.id===row.matchId));
+        if(staleRow){toast("La liste a changé depuis l’aperçu. Réimportez le fichier avant de confirmer.");return false;}
+        let deleted=0;
+        plan.rows.forEach(row => {
+          const index = current.findIndex(student => student.id === row.matchId);
+          if(row.action==="delete"){current.splice(index,1);deleted++;}
+          else if(row.action === "update") current[index] = Object.assign({},current[index],row.student);
+          else if(row.action === "add") current.push(Object.assign({id:uidEl()},row.student));
+        });
+        save(true); renderEleves();
+        toast(plan.adds + " ajout(s), " + plan.updates + " mise(s) à jour, " + deleted + " retrait(s) — historique conservé");
+      }
+    });
+  });
+}
+function exporterNotesCSV(cid,eid){
+  if (!requireStudentAccount()) return;
+  const exam = epreuvesDe(cid).find(item => item.id === eid); if (!exam) return;
+  telechargerCSV("notes-" + cid + "-" + eid + "-" + todayISO() + ".csv",window.STI_STUDENT_CSV.exportGrades(exam,triEleves(elevesDe(cid)),store.notes[eid] || {}));
+}
+function importerNotesCSV(cid,eid,input){
+  if (!requireStudentAccount()) return;
+  const exam = epreuvesDe(cid).find(item => item.id === eid); if (!exam) return;
+  lireFichierCSV(input,(text,file) => {
+    const plan = window.STI_STUDENT_CSV.planGradeImport(text,exam,elevesDe(cid));
+    const rows = plan.rows.map(row => ({
+      cells:[row.student.nom + " " + row.student.prenom,row.action === "note" ? row.note + "/" + (exam.bareme||20) : row.action === "absent" ? "Absent(e)" : "Effacer la note"]
+    }));
+    afficherApercuCSV({
+      title:"Importer les notes — " + exam.titre,
+      summary:file.name + " — " + rows.length + " modification(s) proposée(s). Les cellules vides ne changent rien; utilisez la colonne « effacer » pour supprimer explicitement une note.",
+      headers:["Élève","Modification"],rows,errors:plan.errors,
+      onApply:() => {
+        if (!requireStudentAccount()) return false;
+        store.notes[eid] = store.notes[eid] || {};
+        plan.rows.forEach(row => {
+          if (row.action === "clear") delete store.notes[eid][row.id];
+          else if (row.action === "absent") store.notes[eid][row.id] = {abs:true};
+          else store.notes[eid][row.id] = {n:row.note};
+        });
+        save(true); renderEleves(); toast(plan.rows.length + " ligne(s) de notes importée(s)");
+      }
+    });
+  });
 }
 function vueRoster(cid){
   const c = classeDe(cid);
   const els = triEleves(elevesDe(cid));
   return `<div class="card">
-    <div class="card-h"><h3>${ic("users")} Élèves — ${escapeHtml(c.nom)}</h3><span class="badge b-grey">${els.length} inscrit(s)</span></div>
+    <div class="card-h"><h3>${ic("users")} Élèves — ${escapeHtml(c.nom)}</h3>
+      <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><span class="badge b-grey">${els.length} inscrit(s)</span>
+        <button class="btn btn-xs btn-line" onclick="exporterRosterCSV('${cid}')">Exporter CSV</button>
+        <button class="btn btn-xs btn-soft" onclick="document.getElementById('roster-csv-${cid}').click()">Importer CSV</button>
+        <input id="roster-csv-${cid}" type="file" accept=".csv,text/csv" style="display:none" onchange="importerRosterCSV('${cid}',this)">
+      </div></div>
     <div class="card-b">
       <div class="scan-grid">
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -421,10 +610,13 @@ function vueEpreuves(cid){
               <span class="tiny muted">• barème /${e.bareme}</span>
               ${e.tags && e.tags.length ? e.tags.map(t => '<span class="badge b-grey" style="margin-left:4px">' + escapeHtml(t) + '</span>').join("") : ""}
             </div>
-            <div class="row" style="gap:6px">
+            <div class="row" style="gap:6px;flex-wrap:wrap">
               ${moyC !== null ? '<span class="badge b-blue">moy. classe ' + moyC.toFixed(2) + ' /' + e.bareme + '</span>' : ""}
               <span class="tiny muted">${vals.length}/${nbEl} notés</span>
               <button class="btn btn-xs ${ouverte?"btn-blue":"btn-soft"}" onclick="renderEleves(elEpreuve='${ouverte?"":e.id}')">${ouverte?"Fermer":"Saisir les notes"}</button>
+              <button class="btn btn-xs btn-line" onclick="exporterNotesCSV('${cid}','${e.id}')" title="Exporter le modèle de notes CSV">Exporter CSV</button>
+              <button class="btn btn-xs btn-line" onclick="document.getElementById('notes-csv-${e.id}').click()" title="Prévisualiser un fichier de notes avant import">Importer CSV</button>
+              <input id="notes-csv-${e.id}" type="file" accept=".csv,text/csv" style="display:none" onchange="importerNotesCSV('${cid}','${e.id}',this)">
               <button class="btn btn-xs btn-line" style="color:#b02a3a" onclick="delEpreuve('${cid}','${e.id}')">✕</button>
             </div>
           </div>
@@ -445,6 +637,117 @@ function elSelEleve(cid, sel){
   return `<select onchange="renderEleves(elEleve=this.value)">
     ${triEleves(elevesDe(cid)).map(e => `<option value="${e.id}" ${sel && sel.id===e.id?"selected":""}>${escapeHtml(e.nom + " " + (e.prenom||""))}</option>`).join("")}
   </select>`;
+}
+function vueCompetences(cid){
+  const els = triEleves(elevesDe(cid));
+  const student = els.find(item => item.id === elEleve) || els[0] || null;
+  if (!elTriCompetence || ![1,2,3].includes(Number(elTriCompetence))) elTriCompetence = trimestreCourantEleve(cid);
+  const tri = Number(elTriCompetence);
+  const definitions = competencesOfficielles(cid);
+  const states = student ? (student.competences && student.competences[String(tri)] || {}) : {};
+  const counts = { acquis:0, 'en-cours':0, renforcer:0, non:0 };
+  definitions.forEach(item => { const state=states[item.code]||''; if(state) counts[state]++; else counts.non++; });
+  const classSummary = definitions.map(item => {
+    const values = { acquis:0, 'en-cours':0, renforcer:0, non:0 };
+    els.forEach(el => { const state=etatCompetenceEleve(cid,el.id,tri,item.code)||''; if(state) values[state]++; else values.non++; });
+    return { item, values };
+  });
+  return `<div class="card">
+    <div class="card-h"><h3>${ic("target")} Progression par compétence — ${escapeHtml(classeDe(cid).nom)}</h3><div class="row" style="gap:8px;flex-wrap:wrap">
+      <label class="tiny muted" for="competence-term">Trimestre</label><select id="competence-term" style="width:auto" onchange="renderEleves(elTriCompetence=Number(this.value))">${[1,2,3].map(n=>`<option value="${n}" ${tri===n?"selected":""}>T${n}${n===trimestreCourantEleve(cid)?" — en cours":""}</option>`).join("")}</select>
+      ${student ? elSelEleve(cid,student) : ""}</div></div>
+    <div class="card-b">
+      ${!student ? '<p class="tiny muted">Ajoutez d’abord des élèves dans la vue « Élèves ».</p>' : !definitions.length ? '<p class="tiny muted">Ajoutez des notions aux épreuves de cette classe pour les suivre ici par élève.</p>' : `
+        <p class="tiny muted">Évaluez chaque compétence pour ${escapeHtml(student.prenom ? student.prenom + " " : "")}${escapeHtml(student.nom)}. Les états sont enregistrés par élève et par trimestre, dans votre espace privé.</p>
+        <div class="row" style="gap:7px;flex-wrap:wrap;margin:10px 0 14px"><span class="badge b-green">${counts.acquis} acquis(es)</span><span class="badge b-blue">${counts["en-cours"]} en cours</span><span class="badge b-amber">${counts.renforcer} à renforcer</span><span class="badge b-grey">${counts.non} non évaluée(s)</span></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th style="width:70px">Code</th><th>Compétence</th><th style="width:190px">État</th></tr></thead><tbody>${definitions.map(item=>{
+          const state=states[item.code]||'';
+          const codeArg=escapeHtml(JSON.stringify(String(item.code)));
+          const expected=Array.isArray(item.attendu)?item.attendu:[];
+          return `<tr><td><span class="badge b-grey">${escapeHtml(item.code)}</span></td><td><strong>${escapeHtml(item.t||item.code)}</strong><div class="tiny muted">${escapeHtml(item.domaine||'')}</div>${expected.length?`<details style="margin-top:5px"><summary class="tiny">Attendus</summary><ul class="tiny">${expected.map(text=>`<li>${escapeHtml(text)}</li>`).join("")}</ul></details>`:""}</td>
+            <td><select aria-label="État de ${escapeHtml(item.t||item.code)}" onchange="setCompetenceEleve('${cid}','${student.id}',${tri},${codeArg},this.value)"><option value="" ${!state?"selected":""}>Non évaluée</option><option value="acquis" ${state==="acquis"?"selected":""}>Acquis</option><option value="en-cours" ${state==="en-cours"?"selected":""}>En cours</option><option value="renforcer" ${state==="renforcer"?"selected":""}>À renforcer</option></select></td></tr>`;
+        }).join("")}</tbody></table></div>`}
+      ${definitions.length ? `<h4 style="margin:18px 0 7px">Synthèse de la classe — T${tri} (${els.length} élèves)</h4><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Compétence</th><th>Acquis</th><th>En cours</th><th>À renforcer</th><th>Non évaluée</th></tr></thead><tbody>${classSummary.map(row=>`<tr><td><strong>${escapeHtml(row.item.code)}</strong> — ${escapeHtml(row.item.t||row.item.code)}</td><td>${row.values.acquis}</td><td>${row.values["en-cours"]}</td><td>${row.values.renforcer}</td><td>${row.values.non}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    </div></div>`;
+}
+function saveBulletinComment(cid,eid,tri,comment){
+  if(!requireStudentAccount())return;
+  const student=elevesDe(cid).find(item=>item.id===eid); if(!student) return;
+  const value=String(comment||'').trim();
+  student.bulletinCommentaires=student.bulletinCommentaires||{};
+  if(value)student.bulletinCommentaires[String(tri)]=value;
+  else delete student.bulletinCommentaires[String(tri)];
+  save(true); toast("Appréciation du bulletin enregistrée");
+}
+function vueBulletins(cid){
+  const els=triEleves(elevesDe(cid));
+  const student=els.find(item=>item.id===elEleve)||els[0]||null;
+  if(!elTriBulletin||![1,2,3].includes(Number(elTriBulletin)))elTriBulletin=trimestreCourantEleve(cid);
+  const tri=Number(elTriBulletin);
+  const data=student?bulletinPourEleve(cid,student,tri):null;
+  const comment=student&&student.bulletinCommentaires?student.bulletinCommentaires[String(tri)]||'':'';
+  const statusLabel={acquis:'Acquis','en-cours':'En cours',renforcer:'À renforcer','':'Non évaluée'};
+  return `<div class="card">
+    <div class="card-h"><h3>${ic("file")} Bulletins trimestriels — ${escapeHtml(classeDe(cid).nom)}</h3><div class="row" style="gap:8px;flex-wrap:wrap">
+      <label class="tiny muted" for="bulletin-term">Trimestre</label><select id="bulletin-term" style="width:auto" onchange="renderEleves(elTriBulletin=Number(this.value))">${[1,2,3].map(n=>`<option value="${n}" ${tri===n?"selected":""}>T${n}${n===trimestreCourantEleve(cid)?" — en cours":""}</option>`).join("")}</select>
+      ${student?elSelEleve(cid,student):""}</div></div>
+    <div class="card-b">
+      ${!student?'<p class="tiny muted">Ajoutez d’abord des élèves dans la vue « Élèves ».</p>':`
+      <div class="grid g3" style="margin-bottom:14px">
+        <div class="kpi"><div class="lbl">Moyenne du trimestre</div><div class="val" style="color:${coulNote(data.average)}">${data.average===null?"—":data.average.toFixed(2)}<small> /20</small></div><div class="foo">${data.gradeCount} note(s) prise(s) en compte</div></div>
+        <div class="kpi k-amber"><div class="lbl">Absences pointées</div><div class="val">${data.presence.absences}</div><div class="foo">${data.presence.pointages} pointage(s) enregistré(s)</div></div>
+        <div class="kpi k-teal"><div class="lbl">Compétences acquises</div><div class="val">${data.skillCounts.acquis}/${data.skills.length}</div><div class="foo">${data.skillCounts["en-cours"]} en cours · ${data.skillCounts.renforcer} à renforcer</div></div>
+      </div>
+      <h4 style="margin:12px 0 7px">Notes du trimestre</h4><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Épreuve</th><th>Date</th><th>Note</th><th>Sur 20</th></tr></thead><tbody>
+        ${data.grades.length?data.grades.map(grade=>`<tr><td>${escapeHtml(grade.titre)}</td><td>${grade.date?fmtShort(grade.date):"—"}</td><td>${grade.absent?'<span class="badge b-amber">Absent(e)</span>':grade.note===null?"—":`${grade.note} / ${grade.bareme}`}</td><td>${grade.sur20===null?"—":grade.sur20.toFixed(1)}</td></tr>`).join(""):'<tr><td colspan="4" class="tiny muted">Aucune épreuve datée dans ce trimestre.</td></tr>'}
+      </tbody></table></div>
+      <div class="row" style="gap:7px;flex-wrap:wrap;margin:10px 0"><span class="badge b-green">${data.presence.presents} présent(s)</span><span class="badge b-rose">${data.presence.absences} absent(s)</span><span class="badge b-amber">${data.presence.retards} retard(s)</span><span class="badge b-grey">${data.presence.exclus} exclu(s) · ${data.presence.sorties} sortie(s) · ${data.presence.billets} billet(s)</span></div>
+      <h4 style="margin:14px 0 7px">Compétences</h4><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Code</th><th>Compétence</th><th>État</th></tr></thead><tbody>
+        ${data.skills.length?data.skills.map(skill=>`<tr><td>${escapeHtml(skill.code)}</td><td>${escapeHtml(skill.titre)}</td><td><span class="badge ${skill.status==="acquis"?"b-green":skill.status==="renforcer"?"b-amber":skill.status==="en-cours"?"b-blue":"b-grey"}">${statusLabel[skill.status]}</span></td></tr>`).join(""):'<tr><td colspan="3" class="tiny muted">Aucun référentiel de compétences pour cette classe.</td></tr>'}
+      </tbody></table></div>
+      <div style="margin-top:14px"><label class="f" for="bulletin-comment">Appréciation du professeur (facultative)</label><textarea id="bulletin-comment" maxlength="1200" placeholder="Commentaire pour le bulletin…">${escapeHtml(comment)}</textarea></div>
+      <div class="row no-print" style="gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn btn-line" onclick="saveBulletinComment('${cid}','${student.id}',${tri},document.getElementById('bulletin-comment').value)">${ic("check")} Enregistrer l’appréciation</button><button class="btn btn-blue" onclick="imprimerBulletin('${cid}','${student.id}',${tri})">${ic("print")} Imprimer / enregistrer en PDF</button></div>
+      <p class="tiny muted no-print" style="margin-top:8px">Le PDF s’ouvre dans la fenêtre d’impression du navigateur. Choisissez « Enregistrer en PDF ». L’appréciation est enregistrée dans les données privées de cette classe.</p>
+      `}
+    </div></div>`;
+}
+function htmlBulletin(cid,student,tri,data,comment){
+  const c=classeDe(cid),profile=window.activeProfessorProfile?window.activeProfessorProfile():{};
+  const school=window.SCHOOL&&window.SCHOOL.lycee||"Établissement scolaire";
+  const teacher=profile&&profile.nom||window.authUser&&window.authUser()||"Professeur";
+  const trimester=tri===1?"1er trimestre":tri+"e trimestre";
+  const statuses={acquis:"Acquis",'en-cours':"En cours",renforcer:"À renforcer",'':"Non évaluée"};
+  const marks=data.grades.map(grade=>`<tr><td>${escapeHtml(grade.titre)}</td><td>${grade.date?fmtShort(grade.date):"—"}</td><td>${grade.absent?"Absent(e)":grade.note===null?"—":escapeHtml(grade.note+" / "+grade.bareme)}</td><td>${grade.sur20===null?"—":grade.sur20.toFixed(1)+" / 20"}</td></tr>`).join("")||'<tr><td colspan="4">Aucune note enregistrée pour ce trimestre.</td></tr>';
+  const skills=data.skills.map(skill=>`<tr><td>${escapeHtml(skill.code)}</td><td>${escapeHtml(skill.titre)}</td><td>${escapeHtml(skill.domaine)}</td><td>${statuses[skill.status]}</td></tr>`).join("")||'<tr><td colspan="4">Référentiel de compétences non disponible.</td></tr>';
+  const signature=window.STI_SIGNATURE&&profile&&profile.signature?window.STI_SIGNATURE.toMarkup(String(profile.signature)):"";
+  const name=(student.prenom?student.prenom+" ":"")+student.nom;
+  const arabic=[student.prenomAr,student.nomAr].filter(Boolean).join(" ");
+  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bulletin — ${escapeHtml(name)} — ${escapeHtml(trimester)}</title><style>
+    *{box-sizing:border-box}body{font:14px/1.45 Arial,sans-serif;color:#172b42;margin:28px auto;max-width:900px;padding:0 24px}header{border-bottom:3px solid #164f7b;padding-bottom:16px;margin-bottom:18px}h1{font-size:25px;margin:0 0 4px}h2{font-size:17px;margin:22px 0 8px;color:#164f7b}.muted{color:#5b6e7f}.top{display:flex;justify-content:space-between;gap:18px}.meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:18px 0}.meta div,.stat{border:1px solid #d5e0e8;border-radius:9px;padding:10px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat strong{display:block;font-size:20px;color:#164f7b}table{width:100%;border-collapse:collapse}th,td{border:1px solid #cbd7df;padding:8px;text-align:left}th{background:#eef4f8}.comment{min-height:74px;border:1px solid #cbd7df;border-radius:8px;padding:10px;white-space:pre-wrap}.signature{margin:20px 0 0;text-align:right;min-height:70px}.signature svg{width:180px;height:70px}.print{margin:0 0 18px;padding:8px 13px;background:#164f7b;color:white;border:0;border-radius:7px;font:inherit;cursor:pointer}.ar{direction:rtl;text-align:right;font-size:17px;margin-top:4px}@media print{body{margin:0 auto;padding:0}.print{display:none}h2{break-after:avoid}table,header,.stats{break-inside:avoid}}
+    </style></head><body><button class="print" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    <header><div class="top"><div><div class="muted">${escapeHtml(school)}</div><h1>Bulletin individuel — ${escapeHtml(trimester)}</h1><div class="muted">Sciences et technologies de l’informatique · Année scolaire 2026–2027</div></div><div style="text-align:right"><strong>${escapeHtml(c.nom)}</strong><div class="muted">Professeur : ${escapeHtml(teacher)}</div></div></div></header>
+    <section class="meta"><div><strong>Élève</strong><div>${escapeHtml(name)}</div>${arabic?`<div class="ar">${escapeHtml(arabic)}</div>`:""}</div><div><strong>Groupe / poste</strong><div>Groupe ${escapeHtml(student.groupe||1)}${student.pc?" · PC "+escapeHtml(student.pc):""}</div></div></section>
+    <section class="stats"><div class="stat"><span>Moyenne du trimestre</span><strong>${data.average===null?"—":data.average.toFixed(2)+" / 20"}</strong><span class="muted">${data.gradeCount} note(s)</span></div><div class="stat"><span>Absences pointées</span><strong>${data.presence.absences}</strong><span class="muted">${data.presence.pointages} pointage(s) saisi(s)</span></div><div class="stat"><span>Compétences acquises</span><strong>${data.skillCounts.acquis} / ${data.skills.length}</strong><span class="muted">${data.skillCounts["en-cours"]} en cours · ${data.skillCounts.renforcer} à renforcer</span></div></section>
+    <h2>Résultats</h2><table><thead><tr><th>Épreuve</th><th>Date</th><th>Note</th><th>Sur 20</th></tr></thead><tbody>${marks}</tbody></table>
+    <h2>Compétences</h2><table><thead><tr><th>Code</th><th>Compétence</th><th>Domaine</th><th>État</th></tr></thead><tbody>${skills}</tbody></table>
+    <h2>Appréciation du professeur</h2><div class="comment">${escapeHtml(comment||"")||"&nbsp;"}</div>
+    <div class="signature"><div>Signature du professeur</div>${signature}</div>
+    </body></html>`;
+}
+function imprimerBulletin(cid,eid,tri){
+  if(!requireStudentAccount())return;
+  const student=elevesDe(cid).find(item=>item.id===eid); if(!student)return;
+  const printWindow=window.open("","_blank");
+  if(!printWindow){toast("Autorisez les fenêtres contextuelles pour imprimer le bulletin");return;}
+  const commentInput=document.getElementById("bulletin-comment");
+  const comment=commentInput?commentInput.value:String(student.bulletinCommentaires&&student.bulletinCommentaires[String(tri)]||"");
+  student.bulletinCommentaires=student.bulletinCommentaires||{};
+  if(String(comment).trim())student.bulletinCommentaires[String(tri)]=String(comment).trim();
+  else delete student.bulletinCommentaires[String(tri)];
+  save(true);
+  const data=bulletinPourEleve(cid,student,tri);
+  printWindow.document.open(); printWindow.document.write(htmlBulletin(cid,student,tri,data,comment)); printWindow.document.close();
+  printWindow.focus(); setTimeout(()=>printWindow.print(),350);
 }
 function vueFaibles(cid){
   const els = triEleves(elevesDe(cid));
@@ -1079,6 +1382,9 @@ window.cyclePresence = cyclePresence; window.setAllPresent = setAllPresent; wind
 window.nbAbsences = nbAbsences; window.etatPresence = etatPresence;
 window.addEpreuve = addEpreuve; window.delEpreuve = delEpreuve;
 window.presetsOfficiels = presetsOfficiels; window.enregistrerNotes = enregistrerNotes; window.setNote = setNote;
+window.setCompetenceEleve = setCompetenceEleve; window.saveBulletinComment = saveBulletinComment; window.imprimerBulletin = imprimerBulletin;
+window.exporterRosterCSV = exporterRosterCSV; window.importerRosterCSV = importerRosterCSV;
+window.exporterNotesCSV = exporterNotesCSV; window.importerNotesCSV = importerNotesCSV;
 window.statsEleve = statsEleve; window.classementClasse = classementClasse; window.rangDe = rangDe;
 window.moyennesParNotion = moyennesParNotion; window.renderEleves = renderEleves;
 window.triEleves = triEleves; window.elClasseCourante = elClasseCourante;
