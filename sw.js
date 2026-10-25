@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.16.0-current-trimester-assured-cahier';
+const VERSION='sti-espace-v1.17.0-student-reports-skills-calendar-csv';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -8,6 +8,9 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/password-recovery.js",
   "./assets/signature-canvas.js",
   "./assets/cahier-defaults.js",
+  "./assets/calendar-ics.js",
+  "./assets/student-csv.js",
+  "./assets/student-reports.js",
   "./assets/app.js",
   "./assets/professeur-badge.js",
   "./assets/professeur-badge.css",
@@ -165,7 +168,7 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
     Avant, cache.addAll() échouait sur un seul 404 : le nouveau service worker était
     rejeté, l'ancien restait actif et servait indéfiniment l'ancien assets/app.js.
     Seuls les fichiers indispensables au démarrage restent obligatoires. */
- const ESSENTIELS=/(^|\/)(index\.html|assets\/app\.js|assets\/style\.css|assets\/password-recovery\.js|assets\/signature-canvas\.js|assets\/cahier-defaults\.js)$/;
+ const ESSENTIELS=/(^|\/)(index\.html|assets\/app\.js|assets\/style\.css|assets\/password-recovery\.js|assets\/signature-canvas\.js|assets\/cahier-defaults\.js|assets\/calendar-ics\.js|assets\/student-csv\.js|assets\/student-reports\.js|assets\/eleves\.js)$/;
  const manquants=[];
  await Promise.all(CORE_ASSETS.map(async p=>{
    try{const r=await fetch(new Request(p,{cache:'reload'}));
