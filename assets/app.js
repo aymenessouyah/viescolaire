@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.8.9-logout-privacy";
+const APP_VER = "v1.9.0-themed-logout-dialog";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1760,9 +1760,31 @@ async function doSignup(){
     }
   } catch(e){ err.textContent = "Création impossible : " + (e.message || e); }
 }
+function confirmLogout(){
+  const message="Voulez-vous vraiment vous déconnecter ? Vos données resteront enregistrées sur cet appareil.";
+  const dialog=document.getElementById("logout-confirm-dialog");
+  if(!dialog||typeof dialog.showModal!=="function")return Promise.resolve(window.confirm(message));
+  if(dialog.open)return Promise.resolve(false);
+  if(!dialog.dataset.backdropDismissBound){
+    dialog.addEventListener("click",event=>{if(event.target===dialog)dialog.close("cancel");});
+    dialog.dataset.backdropDismissBound="true";
+  }
+  dialog.returnValue="";
+  return new Promise(resolve=>{
+    const onClose=()=>resolve(dialog.returnValue==="confirm");
+    dialog.addEventListener("close",onClose,{once:true});
+    try{dialog.showModal();}
+    catch(error){dialog.removeEventListener("close",onClose);resolve(window.confirm(message));}
+  });
+}
 async function doLogout(){
-  if(!window.confirm("Voulez-vous vraiment vous déconnecter ? Vos données resteront enregistrées sur cet appareil."))return;
+  if(!await confirmLogout())return;
   const c = cloudCfg(), s = authSession();
+  authClear();
+  if(window.STI_SYNC) window.STI_SYNC.onLogout();
+  window.__afterLogin = null;
+  toast("Déconnecté — les données restent sur cet appareil");
+  renderAll(true); renderCloudBar(); renderCompte(); renderLoginInvite();
   if (s && c.url) {
     try {
       await fetch(c.url.replace(/\/$/, "") + "/auth/v1/logout", {
@@ -1770,11 +1792,6 @@ async function doLogout(){
       });
     } catch (e) {}
   }
-  authClear();
-  if(window.STI_SYNC) window.STI_SYNC.onLogout();
-  window.__afterLogin = null;
-  toast("Déconnecté — les données restent sur cet appareil");
-  renderAll(true); renderCloudBar(); renderCompte(); renderLoginInvite();
 }
 /* après une connexion réussie : synchronisation dans le bon sens */
 async function afterLogin(){
