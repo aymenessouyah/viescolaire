@@ -28,3 +28,18 @@ test('le générateur PDF imprime la signature à la suite des séances de la jo
   assert.match(pdf, /Signature - 01\/10\/2026/);
   assert.match(pdf, /Cours de programmation/);
 });
+
+test('le PDF dessine les traits du canevas de signature en fin de journée', async () => {
+  const blob = pdfWindow.STI_PDF.cahier({
+    titre: 'Cahier de textes',
+    colonnes: ['Date', 'Séance'],
+    largeurs: [70, 460],
+    rows: [
+      { type: 'row', cells: ['01/10/2026', 'Cours de programmation'] },
+      { type: 'signature', label: 'Signature - 01/10/2026', strokes: [[[0.1, 0.72], [0.38, 0.2], [0.67, 0.58], [0.9, 0.22]]] }
+    ]
+  });
+  const pdf = Buffer.from(await blob.arrayBuffer()).toString('latin1');
+  assert.match(pdf, /0\.09 0\.22 0\.18 RG 1\.3 w [\d.]+ [\d.]+ m [\d.]+ [\d.]+ l/);
+  assert.match(pdf, /Signature - 01\/10\/2026/);
+});

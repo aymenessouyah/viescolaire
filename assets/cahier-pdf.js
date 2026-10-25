@@ -124,20 +124,55 @@
       return n * 10.2 + 5;
     }
 
+    function signatureStrokes(r) {
+      if (!Array.isArray(r.strokes)) return [];
+      return r.strokes.slice(0, 32).map(function (stroke) {
+        if (!Array.isArray(stroke)) return [];
+        return stroke.slice(0, 600).map(function (point) {
+          if (!Array.isArray(point) || point.length < 2) return null;
+          var x = Number(point[0]), yy = Number(point[1]);
+          if (!isFinite(x) || !isFinite(yy)) return null;
+          return [Math.max(0, Math.min(1, x)), Math.max(0, Math.min(1, yy))];
+        }).filter(Boolean);
+      }).filter(function (stroke) { return stroke.length > 0; });
+    }
+
     function signatureLines(r) {
       var value = String(r.value || '').trim();
       return value ? wrap(value, 9, 172, true) : [];
     }
 
     function signatureHeight(r) {
+      if (signatureStrokes(r).length) return 72;
       var lines = signatureLines(r);
       return lines.length ? lines.length * 10 + 35 : 26;
     }
 
     function drawSignature(r) {
-      var lines = signatureLines(r), h = signatureHeight(r);
+      var strokes = signatureStrokes(r), lines = signatureLines(r), h = signatureHeight(r);
       if (y - h < M + 24) newPage();
-      var width = 180, x = W - M - width;
+      var width = strokes.length ? 160 : 180, x = W - M - width;
+      if (strokes.length) {
+        var top = y - 4, inkHeight = 45;
+        strokes.forEach(function (stroke) {
+          var firstX = x + stroke[0][0] * width;
+          var firstY = top - stroke[0][1] * inkHeight;
+          if (stroke.length === 1) {
+            ops.push('0.09 0.22 0.18 rg ' + (firstX - 1.2) + ' ' + (firstY - 1.2) + ' 2.4 2.4 re f 0 0 0 rg');
+            return;
+          }
+          var path = '0.09 0.22 0.18 RG 1.3 w ' + firstX + ' ' + firstY + ' m';
+          stroke.slice(1).forEach(function (point) {
+            path += ' ' + (x + point[0] * width) + ' ' + (top - point[1] * inkHeight) + ' l';
+          });
+          ops.push(path + ' S 0 0 0 RG');
+        });
+        var imageLineY = y - 53;
+        ops.push('0.68 0.68 0.68 RG 0.65 w ' + x + ' ' + imageLineY + ' m ' + (W - M) + ' ' + imageLineY + ' l S');
+        ops.push('BT /F1 7 Tf 0.42 0.42 0.42 rg 1 0 0 1 ' + x + ' ' + (y - 65) + ' Tm (' + pdfString(r.label || 'Signature du professeur') + ') Tj ET 0 0 0 rg');
+        y -= h;
+        return;
+      }
       var lineY = y - (lines.length ? lines.length * 10 + 2 : 5);
       ops.push('0.68 0.68 0.68 RG 0.65 w ' + x + ' ' + lineY + ' m ' + (W - M) + ' ' + lineY + ' l S');
       lines.forEach(function (line, i) {

@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.14.0-password-recovery-dialog";
+const APP_VER = "v1.15.0-canvas-professor-signature";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1131,6 +1131,7 @@ function renderCahier(){
   list.forEach(s=>{ const k=lundiDe(s.iso); let g=semaines[semaines.length-1];
     if (!g || g.k !== k) { g={k:k, items:[]}; semaines.push(g); } g.items.push(s); });
   const signature = String(activeProfessorProfile()?.signature||"").trim();
+  const signatureMarkup=window.STI_SIGNATURE?.toMarkup(signature)||"";
   const box=document.getElementById("v-cahier");
   box.innerHTML=`
   <div class="sec-head"><div><h2>${ic("pen")} Cahier de textes numérique</h2>
@@ -1192,7 +1193,7 @@ function renderCahier(){
         <div class="row" style="gap:6px">
           <button class="btn btn-xs btn-line" onclick="cahReport('${s.cls}',${s.n})" title="Reporter la séance avec un motif ; le contenu suit">${ic("out")} Reporter</button>
           <button class="btn btn-xs btn-line" onclick="cahDuplicate('${s.cls}',${s.n})" title="Copier le contenu sur la séance suivante de la même classe">${ic("file")} Dupliquer</button>
-        </div>`}</div></div></div>${signature&&finJour?`<div class="cah-day-signature"><span>Signature du professeur</span><strong>${escapeHtml(signature)}</strong></div>`:""}`;
+        </div>`}</div></div></div>${signatureMarkup&&finJour?`<div class="cah-day-signature"><span>Signature du professeur — ${fmtShort(s.iso)}</span>${signatureMarkup}</div>`:""}`;
     }).join("")||`<p class="muted tiny" id="cah-empty">${cahStatus==="pending"?"Aucune séance passée à confirmer dans ce périmètre. Les séances assurées et reportées restent accessibles avec le filtre d’état.":"Aucune séance pour ces filtres."}</p>`}</div>
         </div></div>`;}).join("")}
   </div></div>`;
@@ -1260,6 +1261,7 @@ function printCahier(){
   const etat = { pending:"À confirmer", all:"Toutes les séances", done:"Séances assurées", reported:"Séances reportées" };
   const semaines = [];
   const signature = String(activeProfessorProfile()?.signature||"").trim();
+  const signatureMarkup=window.STI_SIGNATURE?.toMarkup(signature)||"";
   list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n).forEach(s=>{
     const k = lundiDe(s.iso); let g = semaines[semaines.length-1];
     if (!g || g.k !== k){ g = {k:k, items:[]}; semaines.push(g); } g.items.push(s);
@@ -1268,7 +1270,7 @@ function printCahier(){
     const corps = g.items.map((s,dayIndex)=>{
       const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
       const finJour=dayIndex===g.items.length-1||g.items[dayIndex+1].iso!==s.iso;
-      const signatureRow=finJour?`<tr class="day-signature"><td colspan="6"><div><span>Signature du professeur — ${esc(fmtShort(s.iso))}</span><strong>${esc(signature)}</strong></div></td></tr>`:"";
+      const signatureRow=finJour?`<tr class="day-signature"><td colspan="6"><div><span>Signature du professeur — ${esc(fmtShort(s.iso))}</span>${signatureMarkup}</div></td></tr>`:"";
       return `<tr>
         <td class="d">${esc(fmtShort(s.iso))}</td>
         <td class="c">${esc(s.cls)}</td>
@@ -1296,9 +1298,9 @@ function printCahier(){
     tr.sem td{background:#FDF4EC;color:#a8541a;font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;border:0;padding:5px 6px}
     tr.day-signature{break-inside:avoid;page-break-inside:avoid}
     tr.day-signature td{border:0;border-bottom:1px solid #e2ddd6;padding:2px 6px 8px}
-    tr.day-signature div{display:flex;justify-content:flex-end;align-items:baseline;gap:12px;min-height:24px}
+    tr.day-signature div{display:flex;justify-content:flex-end;align-items:center;gap:12px;min-height:44px}
     tr.day-signature span{font-size:9px;color:#777}
-    tr.day-signature strong{display:inline-block;min-width:150px;border-bottom:1px solid #aaa;padding:0 8px 2px;text-align:center;font:italic 16px/1.25 "Segoe Script","Brush Script MT",cursive;color:#333}
+    tr.day-signature .teacher-signature-ink{display:block;width:165px;height:46px;max-width:42%;overflow:visible}
     td.d{white-space:nowrap;width:52px;font-weight:700}
     td.c{width:44px;font-weight:700;color:#14684A}
     td.n{width:22px;text-align:right;color:#666}
@@ -1364,6 +1366,7 @@ function cahierPDF(){
   const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
   const rows = [], tri = list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n);
   const signature = String(activeProfessorProfile()?.signature||"").trim();
+  const signatureStrokes=window.STI_SIGNATURE?.parse(signature)||[];
   const jours = window.STI_CAHIER_PRINT_DATA.groupByDate(tri);
   let semaineCourante = null;
   jours.forEach(day=>{
@@ -1383,7 +1386,7 @@ function cahierPDF(){
                st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")],
         etat: st==="faite"?"ok":(st==="reportee"?"no":"at")});
     });
-    rows.push({type:"signature",label:"Signature — "+fmtShort(day.iso),value:signature});
+    rows.push({type:"signature",label:"Signature — "+fmtShort(day.iso),strokes:signatureStrokes});
   });
   const done = list.filter(s=>seanceState(s)==="faite").length;
   const renseignees = list.filter(s=>{ const o=store.seances[s.cls+"|"+s.n]||{}; return o.preparation||o.contenu||o.devoirs; }).length;
