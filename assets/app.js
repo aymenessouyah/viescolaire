@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.18.1-gemini-agent";
+const APP_VER = "v1.19.0-agent-vie-scolaire-ai";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -193,7 +193,7 @@ const TABS = [
   { id:"v-fiche", t:"Fiche pédagogique", ico:"book" },
   { id:"v-avancement", t:"Avancement des cours", ico:"target" },
   { id:"v-devoirs", t:"Répartition des devoirs", ico:"pen" },
-  { id:"v-agent", t:"Agent STI · IA", ico:"cpu" },
+  { id:"v-agent", t:"Agent Vie Scolaire AI", ico:"cpu" },
 
   { id:"v-suivi", t:"Suivi des notions", ico:"target" },
   { id:"v-edt",    t:"Emploi du temps", ico:"clock" },
@@ -243,7 +243,23 @@ function renderAll(silent){
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
   if(connected)restorePrivateWorkspace();else renderPrivateWorkspace();
 }
-function privateEmptyState(){return `<section class="private-empty-state" role="status"><span class="private-empty-icon">${ic("lock")}</span><span class="private-empty-kicker">ESPACE PERSONNEL</span><h2>Connexion requise</h2><p>Aucune donnée personnelle n’est affichée. Connectez-vous pour retrouver vos classes et votre suivi.</p><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></section>`;}
+function syncAgentDialog(){
+  const dialog=document.getElementById("agent-dialog");
+  if(!dialog)return;
+  if(!dialog.dataset.closeBound){
+    dialog.addEventListener("close",()=>{
+      if(currentTab!=="v-agent")return;
+      currentTab="v-dash";
+      if(history.replaceState&&location.hash!=="#v-dash")history.replaceState(null,"","#v-dash");
+      renderAll(true);
+    });
+    dialog.dataset.closeBound="true";
+  }
+  if(currentTab==="v-agent"){
+    if(!dialog.open){try{dialog.showModal();}catch(e){dialog.setAttribute("open","");dialog.classList.add("agent-dialog-fallback");}}
+  }else if(dialog.open){dialog.close();}
+}
+function privateEmptyState(){ return `<section class="private-empty-state" role="status"><span class="private-empty-icon">${ic("lock")}</span><span class="private-empty-kicker">ESPACE PERSONNEL</span><h2>Connexion requise</h2><p>Aucune donnée personnelle n’est affichée. Connectez-vous pour retrouver vos classes et votre suivi.</p><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></section>`;}
 function renderPrivateWorkspace(){
   const dashboard=document.getElementById("v-dash");
   if(dashboard)dashboard.innerHTML=`<div class="view-head"><div><h1 class="page-title">Bonjour professeur, veuillez entrer vos données de connexion.</h1><p class="page-sub">Connectez-vous pour consulter votre espace personnel.</p></div><div class="head-actions"><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></div></div><div class="stats-grid auth-zero-grid">${[["users","green","0","Élèves suivis"],["target","gold","0 %","Couverture moyenne"],["pen","terra","0","Notes saisies"],["calendar","violet","—","Prochain devoir prévu"]].map(x=>`<div class="stat-card"><div class="stat-icon ${x[1]}">${ic(x[0])}</div><div><div class="stat-value">${x[2]}</div><div class="stat-label">${x[3]}</div><div class="stat-foot">Aucune donnée à afficher</div></div></div>`).join("")}</div><section class="class-dashboard-section auth-no-classes" aria-labelledby="auth-no-classes-title"><div class="class-dashboard-section-head"><div><h2 id="auth-no-classes-title">Aucune classe à afficher</h2><p>Les classes et leurs données apparaîtront après connexion au compte professeur.</p></div></div><div class="auth-no-classes-card"><span>${ic("users")}</span><strong>Aucun dossier de classe disponible</strong><small>Connectez-vous pour afficher vos classes.</small></div></section>`;
@@ -272,7 +288,9 @@ function go(id){
   currentTab = id;
   /* lien profond (raccourcis du manifeste, partage d'adresse) */
   if (id && history.replaceState && location.hash.slice(1) !== id) history.replaceState(null, "", "#" + id);
-  renderAll(true); window.scrollTo({top:0,behavior:"smooth"});
+  renderAll(true);
+  syncAgentDialog();
+  if(id!=="v-agent")window.scrollTo({top:0,behavior:"smooth"});
 }
 function toast(msg){
   const t = document.getElementById("toast");
@@ -2452,6 +2470,7 @@ window.addEventListener("offline", () => { const e = document.getElementById("ne
   const hash = (location.hash || "").replace("#", "");
   if (hash && /^v-/.test(hash) && document.getElementById(hash)) currentTab = hash;
   renderAll(true);
+  syncAgentDialog();
   renderCloudBar();
   renderCompte();
   renderLoginInvite();
