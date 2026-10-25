@@ -38,5 +38,5 @@ window.STI_SUPABASE = {
   admin: "aymenessouyah@gmail.com",   // compte administrateur : gestion des professeurs
   // ID client OAuth Google de type « application Web » (public, sans secret).
   // À renseigner après activation de l’API Google Drive ; voir README.md.
-  googleDriveClientId: ""
+  googleDriveClientId: "1020605610253-mnc9ld37srmhphic9n69b8u1125poecv.apps.googleusercontent.com"
 };
