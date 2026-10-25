@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.8.8-private-data-gate";
+const APP_VER = "v1.8.9-logout-privacy";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -204,15 +204,21 @@ const TABS = [
   { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
   { id:"v-ref",    t:"Annexes &amp; mémo", ico:"book" }
 ];
+const GUEST_HIDDEN_VIEWS=["v-fiche","v-devoirs","v-rep","v-cahier"];
 let currentTab = "v-dash";
 let repCls = "3SI1", repTri = 1;
 
 /* ---------------- rendu global ---------------- */
 function renderAll(silent){
   const connected=isProfessorConnected();
+  if(!connected&&GUEST_HIDDEN_VIEWS.includes(currentTab)){
+    currentTab="v-dash";
+    if(typeof history!=="undefined"&&history.replaceState&&typeof location!=="undefined"&&location.hash.slice(1)!=="v-dash")history.replaceState(null,"","#v-dash");
+  }
   document.body.classList.toggle("vs-guest-mode",!connected);
   document.body.dataset.professorConnected=String(connected);
-  document.getElementById("tabs").innerHTML = TABS.map(t =>
+  const visibleTabs=connected?TABS:TABS.filter(t=>!GUEST_HIDDEN_VIEWS.includes(t.id));
+  document.getElementById("tabs").innerHTML = visibleTabs.map(t =>
     '<button class="tab '+(currentTab===t.id?"on":"")+'" onclick="go(\''+t.id+'\')">'+ic(t.ico)+t.t+
     (connected&&t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].concat(SESSIONS["4SI2"]).filter(s => s.iso >= todayISO()).length) +'</span>' : '') +
     '</button>').join("");
@@ -240,8 +246,9 @@ function privateEmptyState(){return `<section class="private-empty-state" role="
 function renderPrivateWorkspace(){
   const dashboard=document.getElementById("v-dash");
   if(dashboard)dashboard.innerHTML=`<div class="view-head"><div><h1 class="page-title">Bonjour professeur, veuillez entrer vos données de connexion.</h1><p class="page-sub">Connectez-vous pour consulter votre espace personnel.</p></div><div class="head-actions"><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></div></div><div class="stats-grid auth-zero-grid">${[["users","green","0","Élèves suivis"],["target","gold","0 %","Couverture moyenne"],["pen","terra","0","Notes saisies"],["calendar","violet","—","Prochain devoir prévu"]].map(x=>`<div class="stat-card"><div class="stat-icon ${x[1]}">${ic(x[0])}</div><div><div class="stat-value">${x[2]}</div><div class="stat-label">${x[3]}</div><div class="stat-foot">Aucune donnée à afficher</div></div></div>`).join("")}</div><section class="class-dashboard-section auth-no-classes" aria-labelledby="auth-no-classes-title"><div class="class-dashboard-section-head"><div><h2 id="auth-no-classes-title">Aucune classe à afficher</h2><p>Les classes et leurs données apparaîtront après connexion au compte professeur.</p></div></div><div class="auth-no-classes-card"><span>${ic("users")}</span><strong>Aucun dossier de classe disponible</strong><small>Connectez-vous pour afficher vos classes.</small></div></section>`;
-  const privateViews=["v-cours","v-fiche","v-avancement","v-devoirs","v-agent","v-suivi","v-edt","v-cal","v-rep","v-prog","v-eleves","v-cahier","v-ref"];
+  const privateViews=["v-cours","v-avancement","v-agent","v-suivi","v-edt","v-cal","v-prog","v-eleves","v-ref"];
   privateViews.forEach(id=>{const view=document.getElementById(id);if(view)view.innerHTML=privateEmptyState();});
+  GUEST_HIDDEN_VIEWS.forEach(id=>{const view=document.getElementById(id);if(view){view.innerHTML="";view.hidden=true;view.style.display="none";}});
   const year=document.getElementById("ref-year");if(year)year.replaceChildren();
   const bell=document.getElementById("ref-bell"),count=document.getElementById("ref-bell-count"),panel=document.getElementById("ref-notifications");
   if(bell){bell.disabled=true;bell.setAttribute("aria-label","Notifications disponibles après connexion");bell.setAttribute("aria-expanded","false");bell.classList.remove("has-unconfirmed","motion-paused");}
@@ -255,6 +262,7 @@ function renderPrivateWorkspace(){
   document.getElementById("menu-compte")?.classList.add("hidden");
 }
 function restorePrivateWorkspace(){
+  GUEST_HIDDEN_VIEWS.forEach(id=>{const view=document.getElementById(id);if(view){view.hidden=false;view.style.display="";}});
   document.querySelectorAll('[data-ref="new"]').forEach(button=>{button.hidden=false;});
   const bell=document.getElementById("ref-bell");if(bell)bell.disabled=false;
   const search=document.getElementById("ref-search");if(search){search.disabled=false;if(search.dataset.connectedPlaceholder)search.placeholder=search.dataset.connectedPlaceholder;}
@@ -1753,6 +1761,7 @@ async function doSignup(){
   } catch(e){ err.textContent = "Création impossible : " + (e.message || e); }
 }
 async function doLogout(){
+  if(!window.confirm("Voulez-vous vraiment vous déconnecter ? Vos données resteront enregistrées sur cet appareil."))return;
   const c = cloudCfg(), s = authSession();
   if (s && c.url) {
     try {
