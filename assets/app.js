@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.8.6-auth-greeting";
+const APP_VER = "v1.8.7-class-dashboard-cahier";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
