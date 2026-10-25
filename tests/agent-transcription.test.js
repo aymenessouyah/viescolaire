@@ -89,6 +89,7 @@ test('la fonction Agent STI appelle Gemini avec les images inline et une sortie 
   assert.match(edgeSource, /\/auth\/v1\/user/);
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_API_KEY"\)/);
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_MODEL"\)/);
+  assert.match(edgeSource, /GEMINI_MODELE"\) \|\| "gemini-3\.8-flash"/);
   assert.match(edgeSource, /generativelanguage\.googleapis\.com\/v1beta\/models/);
   assert.match(edgeSource, /"x-goog-api-key": apiKey/);
   assert.match(edgeSource, /const \[header, encoded\] = item\.data\.split\(",", 2\)/);
