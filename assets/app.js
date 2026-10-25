@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.17.8-print-center-cahier";
+const APP_VER = "v1.17.9-unified-cahier-export";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1217,9 +1217,9 @@ function renderCahier(){
       <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre${n===currentTri?" — en cours":""}</option>`).join("")}</select>
       <select id="cah-status" aria-label="État des séances du cahier" style="width:auto"><option value="pending" ${cahStatus==="pending"?"selected":""}>À confirmer (dates passées)</option><option value="all" ${cahStatus==="all"?"selected":""}>Toutes les séances</option><option value="done" ${cahStatus==="done"?"selected":""}>Assurées</option><option value="reported" ${cahStatus==="reported"?"selected":""}>Reportées</option></select>
       <button class="btn btn-xs btn-line" onclick="STI_FICHES.printMenu({cahier:{classe:'${cahCls}',trimestre:${cahTri},statut:'${cahStatus}'}})" title="Ouvrir le centre et affiner l'impression par classe">${ic("print")} Centre d'impression</button>
-      <button class="btn btn-xs btn-line" onclick="printCahier()" title="Document imprimable : en-tête, séances de la période, travail donné">${ic("print")} Imprimer le cahier</button>
+      <button class="btn btn-xs btn-line" onclick="printCahier()" title="Imprimer le cahier assemblé au même format que le Centre d’impression">${ic("print")} Imprimer le cahier</button>
       <button class="btn btn-xs btn-line" onclick="cahierCSV()" title="Export tableur des séances affichées">${ic("file")} Export CSV</button>
-      <button class="btn btn-xs btn-primary" onclick="cahierPDF()" title="Fichier PDF partageable, même mise en page que l’impression">${ic("file")} Export PDF</button>
+      <button class="btn btn-xs btn-primary" onclick="cahierPDF()" title="Ouvre le même cahier assemblé; dans la fenêtre, choisir Enregistrer au format PDF">${ic("file")} Export PDF</button>
       ${(() => { if (!cahTri) return `<span class="tiny muted">Choisissez un trimestre pour le verrouiller</span>`;
         if (cahCls === "both") return `<span class="tiny muted">Choisissez une classe pour verrouiller son trimestre</span>`;
         const v = verrouInfo(cahCls, cahTri);
@@ -1335,103 +1335,12 @@ function cahierSelection(){
   return period.filter(s=>cahStatus==="all"||cahStatus==="pending"&&pending(s)||cahStatus==="done"&&seanceState(s)==="faite"||cahStatus==="reported"&&(store.seances[s.cls+"|"+s.n]||{}).done===false)
                .sort((a,b)=>b.iso.localeCompare(a.iso)||a.cls.localeCompare(b.cls)||b.n-a.n);
 }
-/* Document imprimable : en-tête, informations, tableau semaine par semaine. */
+/* Le bouton d’impression partage l’assemblage complet du Centre d’impression. */
 function printCahier(){
   if(!isProfessorConnected()){openAuth();return;}
-  const list = cahierSelection();
-  if (!list.length){ toast("Aucune séance à imprimer dans ce périmètre."); return; }
-  const esc = x => escapeHtml(x==null?"":String(x));
-  const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
-  const etat = { pending:"À confirmer", all:"Toutes les séances", done:"Séances assurées", reported:"Séances reportées" };
-  const semaines = [];
-  const signature = String(activeProfessorProfile()?.signature||"").trim();
-  const signatureMarkup=window.STI_SIGNATURE?.toMarkup(signature)||"";
-  list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n).forEach(s=>{
-    const k = lundiDe(s.iso); let g = semaines[semaines.length-1];
-    if (!g || g.k !== k){ g = {k:k, items:[]}; semaines.push(g); } g.items.push(s);
-  });
-  const rows = semaines.map(g=>{
-    const corps = g.items.map((s,dayIndex)=>{
-      const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
-      const finJour=dayIndex===g.items.length-1||g.items[dayIndex+1].iso!==s.iso;
-      const statusLabel=st==="faite"?"Assurée":st==="reportee"?"Reportée":s.iso===todayISO()?"Aujourd’hui":s.iso<todayISO()?"À confirmer":"À venir";
-      const statusClass=st==="faite"?"ok":st==="reportee"?"no":s.iso<todayISO()?"at":"future";
-      const realisation=o.contenu&&o.contenu.trim()?`<div class="work-line"><b>Réalisé :</b> ${esc(o.contenu)}</div>`:`<div class="work-line muted"><b>Réalisé :</b> non renseigné</div>`;
-      const prevu=!o.contenu&&s.blk&&s.blk.det?`<div class="work-line muted"><b>Prévu :</b> ${esc(s.blk.det)}</div>`:"";
-      const devoirs=o.devoirs&&o.devoirs.trim()?`<div class="work-line homework"><b>À faire :</b> ${esc(o.devoirs)}</div>`:"";
-      const observation=o.obs&&o.obs.trim()?`<div class="work-line muted"><b>Observation :</b> ${esc(o.obs)}</div>`:"";
-      const report=o.report?`<div class="work-line report"><b>Reportée :</b> ${esc(o.report.motif)}${o.report.vers?" · remplacée le "+esc(fmtShort(o.report.vers)):""}</div>`:"";
-      const signatureCell=finJour?(signatureMarkup?`<div class="signature-box">${signatureMarkup}<small>Signature du professeur</small></div>`:`<div class="signature-empty"><span></span><small>Signature à apposer</small></div>`):"";
-      return `<tr class="session-row ${st==="faite"?"done":st==="reportee"?"reported":""}">
-        <td class="date-cell"><time datetime="${esc(s.iso)}">${esc(fmtLong(s.iso))}</time><div class="date-meta"><b>${esc(s.cls)}</b><span>Séance n°${s.n}</span></div><span class="status ${statusClass}">${statusLabel}</span><small class="slots">${esc(slotsTxt(s.cls,s.iso))}</small></td>
-        <td class="work-cell"><strong class="work-title">${esc(titleOf(s,store))}</strong>${realisation}${prevu}${devoirs}${observation}${report}</td>
-        <td class="signature-cell">${signatureCell}</td>
-      </tr>`;
-    }).join("");
-    return `<tr class="sem"><td colspan="3">Semaine du ${esc(fmtLong(g.k))} — ${g.items.length} séance${g.items.length>1?"s":""}</td></tr>${corps}`;
-  }).join("");
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
-  <style>
-    @page{size:A4 portrait;margin:12mm 10mm}
-    *{box-sizing:border-box}
-    body{font:11px/1.4 Arial,Helvetica,sans-serif;color:#1b2d3d;margin:0}
-    h1{font-size:19px;margin:0 0 2px;color:#0b2545}
-    .sub{font-size:10.5px;color:#627487;margin-bottom:3px}
-    .bar{height:3px;background:#0fb3a3;margin:7px 0 10px}
-    .infos{display:flex;gap:16px;flex-wrap:wrap;font-size:10px;color:#44596b;margin-bottom:9px}
-    .infos b{color:#0b2545}
-    table{width:100%;border-collapse:collapse;table-layout:fixed}
-    th{background:#0b2545;color:#fff;font-size:9.5px;letter-spacing:.055em;text-transform:uppercase;text-align:left;padding:7px 8px}
-    th:first-child{width:20%}th:nth-child(2){width:55%}th:last-child{width:25%;text-align:center}
-    td{border-bottom:1px solid #dce6ef;padding:7px 8px;vertical-align:top;overflow-wrap:anywhere}
-    tr.session-row{break-inside:avoid;page-break-inside:avoid}
-    tr.session-row.done td:first-child{border-left:3px solid #0d8a5c}
-    tr.session-row.reported td:first-child{border-left:3px solid #c22c48}
-    tr.sem td{background:#eef5fa;color:#234d6d;font-weight:700;font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;border:0;padding:6px 8px}
-    .date-cell time{display:block;color:#0b2545;font-weight:700}
-    .date-meta{display:flex;gap:7px;align-items:center;margin:5px 0;color:#52687b;font-size:9.5px}
-    .date-meta b{color:#0d705f}
-    .status{display:inline-block;padding:2px 6px;border-radius:999px;font-size:8.5px;font-weight:700;background:#f1f5f9;color:#566b7f}
-    .status.ok{background:#e9f9f2;color:#0d754f}.status.no{background:#fdeef1;color:#a5223b}.status.at{background:#fff6e3;color:#8a5a08}
-    .slots{display:block;margin-top:5px;font-size:8.5px;color:#718397}
-    .work-title{display:block;color:#0b2545;font-size:11px;margin-bottom:4px}
-    .work-line{margin-top:3px;color:#33485b;white-space:pre-wrap}
-    .work-line b{color:#172b40}
-    .work-line.muted{color:#758596;font-size:9.5px}.work-line.homework{color:#395e80}.work-line.report{color:#a5223b}
-    .signature-cell{text-align:center;vertical-align:middle}
-    .signature-box{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
-    .signature-box .teacher-signature-ink{display:block;width:145px;height:39px;max-width:100%;overflow:visible}
-    .signature-box small,.signature-empty small{color:#788696;font-size:8px}
-    .signature-empty{min-height:52px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px}
-    .signature-empty span{display:block;width:92%;height:24px;border-bottom:1px solid #8897a5}
-    .foot{margin-top:11px;font-size:9px;color:#778596;display:flex;justify-content:space-between}
-    .sig{margin-top:16px;display:flex;gap:40px;font-size:10px;color:#55697c}
-    .sig div{flex:1;border-top:1px solid #bbb;padding-top:4px}
-  </style></head><body>
-  <h1>Cahier de textes — ${esc(SCHOOL && SCHOOL.nom ? SCHOOL.nom : "Lycée Rafèha")}</h1>
-  <div class="sub">STI 2026-2027 · ${esc(periode)} · ${esc(etat[cahStatus]||"")}</div>
-  <div class="bar"></div>
-  <div class="infos">
-    <span><b>Classe(s)</b> ${esc(cahCls==="both"?"3SI1 et 4SI2":cahCls)}</span>
-    <span><b>Séances</b> ${list.length}</span>
-    <span><b>Assurées</b> ${list.filter(s=>seanceState(s)==="faite").length}</span>
-    <span><b>Édité le</b> ${esc(fmtLong(todayISO()))}</span>
-    ${cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri) ? `<span><b>Trimestre verrouillé</b> ${esc(verrouInfo(cahCls,cahTri).par)} le ${esc(fmtLong(verrouInfo(cahCls,cahTri).le))}</span>` : ""}
-  </div>
-  <table aria-label="Cahier de textes à trois colonnes"><thead><tr><th>Date</th><th>Le travail réalisé</th><th>Signature</th></tr></thead>
-  <tbody>${rows}</tbody></table>
-  <div class="sig"><div>Visa du chef d’établissement</div></div>
-  <div class="foot"><span>${esc((activeProfessorProfile()?.nom)||authUser()||"Professeur")}</span><span>Généré par l’espace pédagogique</span></div>
-  </body></html>`;
-  let fr = document.getElementById("cah-print");
-  if (fr) fr.remove();
-  fr = document.createElement("iframe");
-  fr.id = "cah-print";
-  fr.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
-  document.body.appendChild(fr);
-  const d = fr.contentDocument;
-  d.open(); d.write(html); d.close();
-  setTimeout(()=>{ try{ fr.contentWindow.focus(); fr.contentWindow.print(); }catch(e){ toast("Impression bloquée par le navigateur"); } }, 250);
+  const printer=window.STI_FICHES&&window.STI_FICHES.printCahier;
+  if(typeof printer!=="function"){toast("Centre d’impression indisponible : rechargez la page.","err");return;}
+  printer.call(window.STI_FICHES,{classe:cahCls,trimestre:cahTri,statut:cahStatus});
 }
 /* Export CSV des séances du cahier */
 function cahierCSV(){
@@ -1452,64 +1361,13 @@ function cahierCSV(){
   document.body.appendChild(a); a.click(); a.remove();
   toast("Cahier exporté en CSV");
 }
-/* Export PDF du cahier : même mise en page que l'impression (générateur autonome). */
+/* Export PDF : ouvre le même cahier assemblé que le Centre d’impression.
+   Dans la boîte d’impression du navigateur, choisir « Enregistrer au format PDF ». */
 function cahierPDF(){
   if(!isProfessorConnected()){openAuth();return;}
-  if (!window.STI_PDF || !window.STI_PDF.cahier){ toast("Générateur PDF indisponible : rechargez la page.", "err"); return; }
-  const list = cahierSelection();
-  if (!list.length){ toast("Aucune séance à exporter dans ce périmètre."); return; }
-  const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
-  const rows = [], tri = list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n);
-  const signature = String(activeProfessorProfile()?.signature||"").trim();
-  const signatureStrokes=window.STI_SIGNATURE?.parse(signature)||[];
-  const jours = window.STI_CAHIER_PRINT_DATA.groupByDate(tri);
-  let semaineCourante = null;
-  jours.forEach(day=>{
-    const k = lundiDe(day.iso);
-    if (semaineCourante !== k){
-      semaineCourante = k;
-      const n = tri.filter(x=>lundiDe(x.iso)===k).length;
-      rows.push({type:"sem", label:"Semaine du "+fmtLong(k)+" — "+n+" séance"+(n>1?"s":"")});
-    }
-    day.items.forEach((s,dayIndex)=>{
-      const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
-      const statusLabel=st==="faite"?"Assurée":st==="reportee"?"Reportée":s.iso===todayISO()?"Aujourd’hui":s.iso<todayISO()?"À confirmer":"À venir";
-      const work=["Séance n°"+s.n+" — "+titleOf(s,store)];
-      if(o.contenu&&o.contenu.trim())work.push("Réalisé : "+o.contenu.trim());
-      else{work.push("Réalisé : non renseigné");if(s.blk&&s.blk.det)work.push("Prévu : "+s.blk.det);}
-      if(o.devoirs&&o.devoirs.trim())work.push("À faire : "+o.devoirs.trim());
-      if(o.obs&&o.obs.trim())work.push("Observation : "+o.obs.trim());
-      if(o.report)work.push("Reportée : "+String(o.report.motif||"")+(o.report.vers?" · remplacée le "+fmtShort(o.report.vers):""));
-      rows.push({type:"row",
-        cells:[fmtShort(s.iso)+" · "+s.cls+" · n°"+s.n+" · "+statusLabel,work.join(" | "),""],
-        signature:dayIndex===day.items.length-1?{strokes:signatureStrokes,label:"Signature du professeur — "+fmtShort(day.iso)}:null,
-        fond:st==="faite"});
-    });
-  });
-  const done = list.filter(s=>seanceState(s)==="faite").length;
-  const renseignees = list.filter(s=>{ const o=store.seances[s.cls+"|"+s.n]||{}; return o.preparation||o.contenu||o.devoirs; }).length;
-  const d = new Date();
-  const edite = d.toLocaleDateString("fr-FR", {day:"2-digit",month:"long",year:"numeric"});
-  let blob;
-  try {
-    blob = window.STI_PDF.cahier({
-      titre: "Cahier de textes — Lycée Rafèha",
-      sous: "Sciences et technologies de l’informatique 2026-2027 · " + periode,
-      infos: [{k:"Séances", v:String(list.length)}, {k:"Assurées", v:String(done)},
-              {k:"Renseignées", v:String(renseignees)}, {k:"Édité le", v:edite}]
-             .concat(cahTri && cahCls!=="both" && verrouInfo(cahCls,cahTri)
-               ? [{k:"Visé par", v:verrouInfo(cahCls,cahTri).par + " le " + fmtShort(verrouInfo(cahCls,cahTri).le)}] : []),
-      colonnes: ["Date","Le travail réalisé","Signature"],
-      largeurs: [82,290,143],
-      rows: rows,
-      pied: "Cahier de textes numérique · généré depuis l’espace STI"
-    });
-  } catch (e){ console.error(e); toast("Échec de génération du PDF.", "err"); return; }
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "cahier-de-textes-" + cahCls + (cahTri?("-T"+cahTri):"") + "-" + todayISO() + ".pdf";
-  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  toast("Cahier exporté en PDF — " + list.length + " séance" + (list.length>1?"s":""));
+  const exporter=window.STI_FICHES&&window.STI_FICHES.exportCahierPDF;
+  if(typeof exporter!=="function"){toast("Export PDF indisponible : rechargez la page.","err");return;}
+  exporter.call(window.STI_FICHES,{classe:cahCls,trimestre:cahTri,statut:cahStatus});
 }
 
 /* ---------------- 6 ter. CAHIER : REPORT, DUPLICATION, VERROUILLAGE, RAPPELS ---------------- */

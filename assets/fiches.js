@@ -1004,7 +1004,7 @@ function printSelected() {
 }
 
 /* ------------------------------------------------------------ impression */
-function printDoc(html, landscape, extraStyle) {
+function printDoc(html, landscape, extraStyle, title) {
   const old = document.getElementById('print-frame');
   if (old) old.remove();
   const fr = document.createElement('iframe');
@@ -1012,7 +1012,8 @@ function printDoc(html, landscape, extraStyle) {
   /* Une vraie surface de page évite les impressions blanches dans les navigateurs
      qui ignorent les iframes d'impression de taille nulle. Elle reste sous l'app. */
   fr.style.cssText = 'position:fixed;left:-10000px;top:0;width:' + (landscape ? '297mm' : '210mm') + ';height:' + (landscape ? '210mm' : '297mm') + ';border:0;pointer-events:none';
-  const doc = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+  const titleMarkup = title ? '<title>' + esc(title) + '</title>' : '';
+  const doc = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">${titleMarkup}
     <link rel="stylesheet" href="assets/fiches.css">
     <style>@page{size:${landscape ? '11in 8.5in' : 'A4 portrait'};margin:${landscape ? '0' : '12mm 10mm'};}
     html,body{margin:0;padding:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#333}
@@ -1418,18 +1419,31 @@ function updateCahierPrintSummary() {
   if (summary) summary.innerHTML = `<strong>${sessions.length} séance${sessions.length > 1 ? 's' : ''}${contextCount ? ` + ${contextCount} repère${contextCount > 1 ? 's' : ''}` : ''}</strong><span>${classe === 'both' ? '3SI1 + 4SI2' : classe} · ${trimestre ? cahierQuarterLabel(trimestre) : 'tous les trimestres'} · ${esc(({ all: 'tous les états', pending: 'à confirmer', done: 'assurées', reported: 'reportées', future: 'à venir' })[statut] || 'tous les états')}${selectedClasses.length ? ' · répartitions incluses' : ''}</span>`;
   if (button) button.disabled = sessions.length === 0;
 }
-function printCahier() {
+function printCahier(options) {
+  const settings = options && typeof options === 'object' ? options : {};
   const modal = document.getElementById('prm-modal');
-  if (!modal) return;
-  const classe = modal.querySelector('#prm-cahier-cls').value;
-  const trimestre = Number(modal.querySelector('#prm-cahier-tri').value) || 0;
-  const statut = modal.querySelector('#prm-cahier-status').value;
-  const sessions = selectCahierPrintSessions(classe, trimestre, statut);
+  const hasFilters = ['classe', 'trimestre', 'statut'].some(function (key) {
+    return Object.prototype.hasOwnProperty.call(settings, key);
+  });
+  if (!modal && !hasFilters) return;
+
+  const selectedClass = ['both', '3SI1', '4SI2'].includes(settings.classe)
+    ? settings.classe
+    : (modal ? modal.querySelector('#prm-cahier-cls').value : 'both');
+  const requestedTerm = Number(settings.trimestre);
+  const trimestre = hasFilters && [0, 1, 2, 3].includes(requestedTerm)
+    ? requestedTerm
+    : (modal ? Number(modal.querySelector('#prm-cahier-tri').value) || 0 : 0);
+  const validStatuses = ['all', 'pending', 'done', 'reported', 'future'];
+  const statut = validStatuses.includes(settings.statut)
+    ? settings.statut
+    : (modal ? modal.querySelector('#prm-cahier-status').value : 'all');
+  const sessions = selectCahierPrintSessions(selectedClass, trimestre, statut);
   if (!sessions.length) { if (root.toast) root.toast('Aucune séance ne correspond à ces filtres.'); return; }
 
-  const classes = cahierSelectedClasses(classe);
+  const classes = cahierSelectedClasses(selectedClass);
   const source = cahierPrintSessions();
-  const filters = { classe: classe, trimestre: trimestre, statut: statut };
+  const filters = { classe: selectedClass, trimestre: trimestre, statut: statut };
   const timeline = root.STI_CAHIER_PRINT_DATA
     ? root.STI_CAHIER_PRINT_DATA.chronology(sessions, source, filters)
     : sessions;
@@ -1468,9 +1482,15 @@ function printCahier() {
   });
   flushTimeline();
 
-  /* Ferme le panneau sans supprimer les filtres avant d’ouvrir la vraie impression. */
-  closePrintMenu();
-  printDoc(parts.join(''), false, cahierPrintCss());
+  /* Même document pour l’impression du Centre et le PDF lancé depuis le cahier. */
+  if (modal && modal.classList.contains('on')) closePrintMenu();
+  const classeLabel = selectedClass === 'both' ? '3SI1 et 4SI2' : selectedClass;
+  const periodLabel = trimestre ? cahierQuarterLabel(trimestre) : 'toute l’année';
+  const documentTitle = 'Cahier de textes - ' + classeLabel + ' - ' + periodLabel;
+  printDoc(parts.join(''), false, cahierPrintCss(), documentTitle);
+  if (settings.output === 'pdf' && root.toast) {
+    root.toast('Dans la fenêtre d’impression, choisissez « Enregistrer au format PDF ».');
+  }
 }
 let printMenuReturnFocus = null;
 function closePrintMenu() {
@@ -1717,7 +1737,7 @@ function install() {
 
 root.STI_FICHES = {
   install, render, show, filter: (k, v) => { filtre[k] = v; render(); },
-  open, close, save, reset, openClassic, printMenu, closePrintMenu, printFiche, printAll, printRepartition, printCahier, selectCahierPrintSessions,
+  open, close, save, reset, openClassic, printMenu, closePrintMenu, printFiche, printAll, printRepartition, printCahier, exportCahierPDF: options => printCahier(Object.assign({}, options || {}, { output: 'pdf' })), selectCahierPrintSessions,
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,

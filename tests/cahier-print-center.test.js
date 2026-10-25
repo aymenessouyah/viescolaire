@@ -22,7 +22,7 @@ test('le Centre d’impression conserve les champs du cahier et la signature man
 });
 
 test('le cahier assemblé garde sa couverture, son emploi du temps, ses répartitions et leur ordre chronologique', () => {
-  const start = source.indexOf('function printCahier() {');
+  const start = source.indexOf('function printCahier(options) {');
   const end = source.indexOf('let printMenuReturnFocus', start);
   const print = source.slice(start, end);
   const cover = print.indexOf('cahierCoverPage(classes');
@@ -62,7 +62,7 @@ test('le Centre d’impression produit le même tableau, conserve les contenus e
     '#prm-cahier-tri': { value: '0' },
     '#prm-cahier-status': { value: 'all' }
   };
-  const modal = { querySelector: selector => controls[selector] || null, classList: { remove() {} } };
+  const modal = { querySelector: selector => controls[selector] || null, classList: { contains: () => true, remove() {} } };
   let printedHtml = '';
   const document = {
     readyState: 'loading',
@@ -72,8 +72,9 @@ test('le Centre d’impression produit le même tableau, conserve les contenus e
     body: { appendChild() {} }
   };
   vm.runInNewContext(source, { window: root, document, todayISO: root.todayISO, Date, Map, Set, Promise, console });
-  root.STI_FICHES.printCahier();
+  root.STI_FICHES.exportCahierPDF({ classe: 'both', trimestre: 0, statut: 'all' });
 
+  assert.match(printedHtml, /<title>Cahier de textes - 3SI1 et 4SI2 - toute l’année<\/title>/);
   assert.match(printedHtml, /<th>Date<\/th><th>Le travail réalisé<\/th><th>Signature<\/th>/);
   assert.match(printedHtml, /T1_PREPARATION_A/);
   assert.match(printedHtml, /T1_REALISE_A/);
