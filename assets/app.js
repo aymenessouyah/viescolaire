@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.17.0-student-reports-skills-calendar-csv";
+const APP_VER = "v1.17.1-dashboard-student-breakdown";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

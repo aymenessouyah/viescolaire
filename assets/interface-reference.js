@@ -59,6 +59,24 @@ function covCard(mean){
    </div></div>`;
 }
 
+function studentBreakdown(){
+ const rosters=ctx.store.eleves||{},names=new Map(classes.map(c=>[c,c]));
+ if(Array.isArray(ctx.store.classes))ctx.store.classes.forEach(c=>{if(c&&c.id!==undefined&&c.id!==null){const id=String(c.id);names.set(id,String(c.nom||id));}});
+ Object.keys(rosters).forEach(id=>{if(Array.isArray(rosters[id])&&!names.has(id))names.set(id,id);});
+ const items=[...names.entries()].map(([id,name])=>({id,name,count:Array.isArray(rosters[id])?rosters[id].length:0,color:colors[id]||'#987334'}));
+ return {total:items.reduce((sum,item)=>sum+item.count,0),items};
+}
+function studentsCard(data){
+ const ariaLabel='Effectif total : '+num(data.total)+' élèves. '+data.items.map(item=>item.name+' : '+num(item.count)).join('; ');
+ const cells=data.items.map(item=>{
+  const share=data.total?item.count/data.total*100:0;
+  return `<div class="cov-col" style="--c:${item.color}"><div class="cov-cls"><span class="cov-dot"></span><span class="student-class-name">${esc(item.name)}</span><b>${num(item.count)}</b></div><div class="cov-bar"><i style="width:${share}%"></i></div><div class="cov-num">${num(share)} % du total</div></div>`;
+ }).join('');
+ return `<div class="stat-card cov-card students-card" role="group" aria-label="${esc(ariaLabel)}">
+  <div class="stat-icon green">${icon('users',22)}</div><div class="cov-body"><div class="cov-top"><span class="stat-value" data-ref-kpi="0">${num(data.total)}</span><span class="cov-title">Élèves au total</span></div>
+  <div class="cov-cols student-count-cols">${cells}</div><div class="stat-foot">Effectif inscrit · répartition par classe</div></div></div>`;
+}
+
 function classPlan(c){
  const source=root.STI_DATA&&root.STI_DATA['repartition'+c];
  if(Array.isArray(source)&&source.length)return source;
@@ -201,7 +219,7 @@ function openClassDetails(c){
 }
 
 function dashboard(){
- const a=all(),students=Object.values(ctx.store.eleves||{}).reduce((n,x)=>n+(Array.isArray(x)?x.length:0),0),mean=classes.reduce((n,c)=>n+summary(c).percent,0)/2;
+ const a=all(),studentStats=studentBreakdown(),students=studentStats.total,mean=classes.reduce((n,c)=>n+summary(c).percent,0)/2;
  const notes=Object.values(ctx.store.notes||{}).reduce((n,exam)=>n+Object.values(exam||{}).filter(v=>v&&typeof v==='object'&&!v.abs&&typeof v.n==='number'&&Number.isFinite(v.n)).length,0),up=exams().find(e=>e.iso>=today());
  const connected=!!(root.isProfessorConnected&&root.isProfessorConnected());
  const email=connected?root.authUser():'';
@@ -213,7 +231,7 @@ function dashboard(){
  const actions=btn('today-fiche','Fiche du jour','ghost','file')+btn('new','Nouvelle séance','gold','plus');
  const welcome=connected?head('Bonjour,',esc(first),dateSubtitle,actions):head('Bonjour','professeur,',`Veuillez entrer vos données de connexion. ${dateSubtitle}`,actions);
  el('v-dash').innerHTML=welcome+
- `<div class="stats-grid">${kpis.map((k,i)=>i===1?covCard(mean):`<div class="stat-card"><div class="stat-icon ${k[1]}">${icon(k[0],22)}</div><div><div class="stat-value ${i===3?'compact':''}" data-ref-kpi="${i}">${k[2]}</div><div class="stat-label">${k[3]}</div><div class="stat-foot">${k[4]}</div></div></div>`).join('')}</div>
+ `<div class="stats-grid">${kpis.map((k,i)=>i===0?studentsCard(studentStats):i===1?covCard(mean):`<div class="stat-card"><div class="stat-icon ${k[1]}">${icon(k[0],22)}</div><div><div class="stat-value ${i===3?'compact':''}" data-ref-kpi="${i}">${k[2]}</div><div class="stat-label">${k[3]}</div><div class="stat-foot">${k[4]}</div></div></div>`).join('')}</div>
  ${classDashboardSection()}
  <div class="grid-12"><div class="card span-7">${cardHead('Progression des programmes','Heures enseignant cumulées · 2 groupes × 2 h',`<div class="chart-legend"><span class="legend-item"><i class="legend-dot" style="background:#C9C5B2"></i>Prévu</span><span class="legend-item"><i class="legend-dot" style="background:#14684A"></i>Effectué</span></div>`)}<div class="chart-box">${lineChart()}</div><p class="mini-note">Le réalisé s’arrête à aujourd’hui et compte uniquement les séances confirmées. Une date passée ne vaut pas une séance assurée.</p></div><div class="card span-5">${cardHead('Séances par classe','Fiches communes aux deux groupes · 2026–2027')}${donut()}</div></div>
  <div class="grid-12"><div class="card span-4">${cardHead('Aujourd’hui en classe','',navLink('v-cours','Suivi complet'))}${todays.length?todays.map(s=>`<div class="tl-item"><div><div class="tl-time">${s.cls==='3SI1'&&new Date(s.iso+'T12:00').getDay()===4?'13:00':'08:00'}</div><div class="tl-dur">2 × 2 h</div></div><div class="tl-body" style="--tc:${colors[s.cls]}"><div class="tl-title">${esc(s.cls+' · '+title(s))}</div><div class="tl-meta">S${s.n} · ${state(s)}</div><button class="card-link" data-ref="fiche" data-key="${s.key}">Voir la fiche →</button></div></div>`).join(''):'<div class="empty-info">Aucune séance au planning aujourd’hui.</div>'+a.filter(s=>s.iso>today()).sort((a,b)=>a.iso.localeCompare(b.iso)).slice(0,2).map(s=>`<div class="feed-item"><span class="feed-dot" style="background:${colors[s.cls]}"></span><div><b>${esc(s.cls)}</b> · ${esc(title(s))}<div class="feed-time">Prochaine séance · ${esc(full(s.iso))}</div></div></div>`).join('')}</div>
@@ -293,5 +311,5 @@ document.addEventListener('click',e=>{if(!e.composedPath().some(node=>node.class
 setInterval(()=>{if(ctx&&!document.hidden&&notificationDay!==today())notifications();},30000);
 window.addEventListener('focus',()=>notifications());
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)notifications();});
-root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.17.0-student-reports-skills-calendar-csv'};
+root.STI_INTERFACE={render,termChanged,metrics:()=>({realHours:all().filter(real).length*4,done:all().filter(real).length,coverage:classes.map(c=>summary(c).covered),exams:exams().length}),version:'v1.17.1-dashboard-student-breakdown'};
 })(window);

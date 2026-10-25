@@ -655,6 +655,17 @@ body.vs-themed .ref-ui .stats-grid:has(.cov-card){grid-template-columns:repeat(5
 body.vs-themed .ref-ui .stats-grid .cov-card{grid-column:span 2}
 @media (max-width:1000px){body.vs-themed .ref-ui .stats-grid:has(.cov-card){grid-template-columns:repeat(2,minmax(0,1fr))}}
 
+/* Effectif total avec détail des listes de chaque classe, sur le modèle de la couverture. */
+body.vs-themed .ref-ui .students-card .student-count-cols{grid-template-columns:repeat(auto-fit,minmax(105px,1fr))}
+body.vs-themed .ref-ui .students-card .student-class-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+body.vs-themed .ref-ui .stats-grid:has(.students-card):has(.cov-card){grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:1000px){body.vs-themed .ref-ui .stats-grid:has(.students-card):has(.cov-card){grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:560px){
+ body.vs-themed .ref-ui .stats-grid:has(.students-card):has(.cov-card){grid-template-columns:1fr}
+ body.vs-themed .ref-ui .stats-grid .students-card,body.vs-themed .ref-ui .stats-grid .cov-card{grid-column:span 1}
+ body.vs-themed .ref-ui .students-card .student-count-cols{grid-template-columns:1fr}
+}
+
 /* Tableau de bord détaillé par classe : suivi pédagogique, présence et échéances. */
 body.vs-themed .ref-ui .class-dashboard-section{margin:24px 0 20px}
 body.vs-themed .ref-ui .class-dashboard-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:0 0 14px}
