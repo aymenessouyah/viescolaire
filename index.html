@@ -120,7 +120,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.17.2-drive-backup-shortcut";
+  var ATTENDU = "v1.17.3-drive-profile-backup";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -355,6 +355,16 @@
           <div class="note tiny" style="margin-top:6px">Compte connecté : <span id="pf-email" class="tiny">—</span></div>
         </div>
       </div>
+      <section class="sti-profile-drive" aria-labelledby="pf-drive-title">
+        <div class="sti-profile-drive-heading">
+          <div>
+            <h4 id="pf-drive-title">Sauvegardes personnelles Google Drive</h4>
+            <p>Après votre accord, les copies datées de vos données professeur sont enregistrées dans le Drive que vous choisissez. Elles restent conservées dans votre historique Drive.</p>
+          </div>
+          <span id="pf-drive-status" class="badge b-grey" data-state="idle" aria-live="polite">Vérification en attente</span>
+        </div>
+        <button class="btn btn-line" id="pf-drive-settings" type="button" onclick="window.STI_DRIVE_BACKUP ? window.STI_DRIVE_BACKUP.openSettings() : toast('La sauvegarde Drive n’est pas chargée.')">Gérer ma sauvegarde Drive</button>
+      </section>
     </div>
     <div class="box-f">
       <button class="btn btn-line" type="button" onclick="closeProfil()">Annuler</button>

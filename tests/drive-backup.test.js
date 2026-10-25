@@ -27,6 +27,28 @@ function policy() {
   return window.STI_DRIVE_BACKUP.policy;
 }
 
+test('le statut Drive est aussi affiché dans la modale du profil', () => {
+  const nodes = Object.fromEntries(['sti-drive-status', 'pf-drive-status'].map(id => [id, {
+    textContent: '', dataset: {}, classList: { remove() {}, add() {} }
+  }]));
+  const window = {
+    STI_SUPABASE: { googleDriveClientId: '' },
+    STI_SYNC: { backupSnapshot: () => null },
+    isProfessorConnected: () => false,
+    addEventListener() {},
+    setInterval() {}
+  };
+  const document = {
+    readyState: 'loading',
+    addEventListener() {},
+    getElementById(id) { return nodes[id] || null; }
+  };
+  vm.runInNewContext(source, { window, document }, { filename: 'assets/drive-backup.js' });
+  window.STI_DRIVE_BACKUP.workspaceReady();
+  assert.equal(nodes['pf-drive-status'].textContent, 'Disponible après connexion professeur');
+  assert.equal(nodes['pf-drive-status'].dataset.state, 'idle');
+});
+
 test('la politique Google Drive ne demande que drive.file', () => {
   assert.equal(policy().scope, 'https://www.googleapis.com/auth/drive.file');
 });

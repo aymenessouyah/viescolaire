@@ -24,6 +24,13 @@
 .sti-badge-footer span:last-child{overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap}
 .sti-badge-section-title{margin:14px 0 7px;font-size:13px;font-weight:800;color:var(--ink,#1f2c37)}
 .sti-badge-note{margin:5px 0 0;color:var(--ink-3,#64717b);font-size:11px;line-height:1.45}
+.sti-profile-drive{display:grid;gap:11px;margin-top:17px;padding:14px 15px;border:1px solid var(--ref-line,var(--line,#dce3e7));border-radius:13px;background:var(--vs-soft,var(--surface-2,#f2f5f7))}
+.sti-profile-drive-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sti-profile-drive-heading>div{min-width:0}
+.sti-profile-drive h4{margin:0;color:var(--vs-ink,var(--ink,#1f2c37));font-size:13px;line-height:1.35}
+.sti-profile-drive p{margin:5px 0 0;color:var(--ref-muted,var(--ink-2,#52616b));font-size:11px;line-height:1.55}
+.sti-profile-drive #pf-drive-status{flex:none;max-width:45%;overflow-wrap:anywhere;text-align:center;font-size:10px}
+.sti-profile-drive #pf-drive-settings{justify-self:start}
 .sti-photo-field{display:grid;gap:6px;margin:12px 0}
 .sti-photo-field input[type=file]{max-width:100%;padding:8px;background:var(--surface,#fff)}
 .sti-photo-required{padding:8px 10px;border:1px solid #f3d69a;border-radius:9px;background:#fff8e8;color:#7a5510;font-size:11px;line-height:1.4}

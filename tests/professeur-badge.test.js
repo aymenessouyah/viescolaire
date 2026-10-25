@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const indexHtml = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
 
 const siteBadge = { hidden: true, innerHTML: '' };
 const badgeWindow = {
@@ -20,6 +21,17 @@ const badge = badgeWindow.STI_PROF_BADGE;
 test('le code de badge est stable et dérivé de façon courte de l’identifiant professeur', () => {
   assert.equal(badge.makeBadgeCode('a03b5ce1-7123-44aa-88bb-ccddee998877'), 'STI-A03B5CE1');
   assert.equal(badge.makeBadgeCode(''), 'STI-À COMPLÉTER');
+});
+
+test('la modale Mon profil et mon badge professeur donne accès à la sauvegarde Drive', () => {
+  const start = indexHtml.indexOf('<div class="modal" id="profil-modal"');
+  const end = indexHtml.indexOf('<!-- ===================== MODALE CONNEXION', start);
+  assert.ok(start >= 0 && end > start, 'la modale du profil doit exister');
+  const profileModal = indexHtml.slice(start, end);
+  assert.match(profileModal, /id="pf-drive-title">Sauvegardes personnelles Google Drive/);
+  assert.match(profileModal, /id="pf-drive-status"/);
+  assert.match(profileModal, /id="pf-drive-settings"[^>]*STI_DRIVE_BACKUP[^>]*openSettings/);
+  assert.match(profileModal, /Après votre accord/);
 });
 
 test('le badge imprimable affiche identité, courriel, discipline et portrait sans donnée médicale', () => {
