@@ -117,7 +117,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.8.9-logout-privacy";
+  var ATTENDU = "v1.9.0-themed-logout-dialog";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -423,5 +423,16 @@
 <script src="assets/cahier-print-data.js"></script>
 <script src="assets/fiches.js"></script>
 <dialog id="ref-dialog" class="ref-ui" aria-labelledby="ref-dialog-title"></dialog>
+<dialog id="logout-confirm-dialog" class="logout-confirm-dialog" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-description">
+  <div class="logout-confirm-content">
+    <div class="logout-confirm-mark" aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path><path d="M12 4h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7"></path></svg></span><small>CONFIRMATION DU COMPTE</small></div>
+    <h2 id="logout-confirm-title">Se déconnecter&nbsp;?</h2>
+    <p id="logout-confirm-description">Votre session va être fermée. Vos données resteront enregistrées sur cet appareil.</p>
+    <form method="dialog" class="logout-confirm-actions">
+      <button type="submit" value="cancel" class="logout-confirm-cancel" autofocus>Annuler</button>
+      <button type="submit" value="confirm" class="logout-confirm-accept">Se déconnecter</button>
+    </form>
+  </div>
+</dialog>
 </body>
 </html>
