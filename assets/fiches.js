@@ -1239,22 +1239,66 @@ function cahierCoverPage(classes, selectedCount, contextCount, trimestre, statut
 function cahierPrintStateLabel(currentState) {
   return ({ done: 'Séance assurée', reported: 'Séance reportée', pending: 'À confirmer', today: 'Aujourd’hui — à confirmer', future: 'À venir' })[currentState] || 'À confirmer';
 }
-function cahierSessionHtml(session) {
+function cahierWeekStart(iso) {
+  const parts = String(iso || '').split('-').map(Number);
+  if (parts.length !== 3 || parts.some(function (part) { return !Number.isInteger(part); })) return String(iso || '');
+  const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+  if (!Number.isFinite(date.getTime())) return String(iso || '');
+  date.setUTCDate(date.getUTCDate() - (date.getUTCDay() + 6) % 7);
+  return date.toISOString().slice(0, 10);
+}
+function cahierSessionHtml(session, signatureMarkup, signatureAtEnd) {
   const records = root.store && root.store.seances ? root.store.seances : {};
   const record = records[session.cls + '|' + session.n] || {};
   const currentState = cahierPrintState(session);
   const title = record.title || (session.blk && session.blk.t) || 'Séance à planifier';
   const date = session.iso ? fmtLong(session.iso) : 'Date non renseignée';
+  const sessionNumber = Number(session.n) || '';
   if (session.contextOnly) {
-    return `<article class="cp-context-session cp-${session.cls.toLowerCase()}"><div><span>REPÈRE DE TRANSITION · FIN DU ${cahierQuarterLabel(Number(session.tri) || 1).toUpperCase()}</span><h2>${esc(session.cls)} · ${esc(title)}</h2><p>${esc(date)} · ${esc(cahierPrintStateLabel(currentState))}</p></div><small>Repère placé hors du filtre de période/état pour que la répartition suivante suive bien la dernière séance du trimestre.</small></article>`;
+    return `<tr class="cp-context-session cp-${session.cls.toLowerCase()}"><td colspan="3"><span>REPÈRE DE TRANSITION · FIN DU ${esc(cahierQuarterLabel(Number(session.tri) || 1).toUpperCase())}</span><strong>${esc(session.cls)} · ${esc(title)}</strong><small>${esc(date)} · ${esc(cahierPrintStateLabel(currentState))} — repère inclus pour positionner la répartition suivante.</small></td></tr>`;
   }
-  const preparation = record.preparation || (session.blk && session.blk.det) || '';
   const text = function (value) {
     const content = String(value == null ? '' : value).trim();
     return content ? esc(content).replace(/\r\n?/g, '\n').replace(/\n/g, '<br>') : '<span class="cp-empty">Non renseigné.</span>';
   };
-  return `<article class="cp-session cp-${session.cls.toLowerCase()}"><header class="cp-session-head"><div><span class="cp-kicker">${esc(session.cls)} · SÉANCE N° ${Number(session.n) || ''}</span><h2>${esc(title)}</h2><p>${esc(date)}${session.blk && session.blk.d ? ' · ' + esc(session.blk.d) : ''}</p></div><span class="cp-state cp-state-${currentState}">${esc(cahierPrintStateLabel(currentState))}</span></header>
-    <div class="cp-fields"><section><h3>Préparation pédagogique</h3><p>${text(preparation)}</p></section><section><h3>Déroulement réellement effectué</h3><p>${text(record.contenu)}</p></section><section><h3>Travail donné à la maison</h3><p>${text(record.devoirs)}</p></section><section><h3>Observations / bilan</h3><p>${text(record.obs)}</p></section></div></article>`;
+  const preparation = record.preparation || (session.blk && session.blk.det) || '';
+  const report = record.report && typeof record.report === 'object'
+    ? `<div class="cp-work-line cp-work-report"><b>Reportée :</b> ${esc(record.report.motif || '')}${record.report.vers ? ' · remplacée le ' + esc(fmtShort(record.report.vers)) : ''}</div>`
+    : '';
+  const signatureCell = signatureAtEnd
+    ? (signatureMarkup
+      ? `<div class="cp-signature-box">${signatureMarkup}<small>Signature du professeur</small></div>`
+      : '<div class="cp-signature-empty"><span></span><small>Signature à apposer</small></div>')
+    : '<span class="cp-signature-follow" aria-label="Signature à la fin de la journée">—</span>';
+  return `<tr class="cp-session-row cp-${session.cls.toLowerCase()} cp-row-${currentState}">
+    <td class="cp-date-cell"><time datetime="${esc(session.iso || '')}">${esc(date)}</time>
+      <div class="cp-date-meta"><b>${esc(session.cls)}</b><span>Séance n°${sessionNumber}</span></div>
+      <span class="cp-row-state cp-state-${currentState}">${esc(cahierPrintStateLabel(currentState))}</span>
+      ${session.blk && session.blk.d ? `<small class="cp-date-time">${esc(session.blk.d)}</small>` : ''}
+    </td>
+    <td class="cp-work-cell"><strong class="cp-work-title">${esc(title)}</strong>
+      <div class="cp-work-lines"><div class="cp-work-line"><b>Prévu / préparation :</b> ${text(preparation)}</div>
+        <div class="cp-work-line"><b>Réalisé :</b> ${text(record.contenu)}</div>
+        <div class="cp-work-line"><b>À faire :</b> ${text(record.devoirs)}</div>
+        <div class="cp-work-line"><b>Observations :</b> ${text(record.obs)}</div>${report}
+      </div>
+    </td>
+    <td class="cp-signature-cell">${signatureCell}</td>
+  </tr>`;
+}
+function cahierTimelineTable(entries, signatureMarkup) {
+  let currentWeek = null;
+  const rows = entries.map(function (entry) {
+    const session = entry.session;
+    const week = cahierWeekStart(session.iso);
+    let weekRow = '';
+    if (week !== currentWeek) {
+      currentWeek = week;
+      weekRow = `<tr class="cp-week-row"><td colspan="3">Semaine du ${esc(week ? fmtLong(week) : 'date non renseignée')}</td></tr>`;
+    }
+    return weekRow + cahierSessionHtml(session, signatureMarkup, entry.signatureAtEnd);
+  }).join('');
+  return `<section class="cp-timeline"><table class="cp-cahier-table" aria-label="Cahier de textes à trois colonnes"><thead><tr><th>Date</th><th>Le travail réalisé</th><th>Signature</th></tr></thead><tbody>${rows}</tbody></table></section>`;
 }
 function cahierPrintCss() {
   return `
@@ -1323,15 +1367,37 @@ function cahierPrintCss() {
     .cp-term-table .cp-topic strong{font-size:6.2pt;font-weight:700}.cp-term-table .cp-topic small{display:block;margin-top:.5mm;color:#738177;font-size:5.7pt;line-height:1.15}
     .cp-term-table .cp-kind{color:#68766c;font-size:5.6pt}.cp-no-data{color:#778177;font-style:italic}
     .cp-session{margin:0 0 5mm;padding:4mm 4.5mm;border:1px solid #d6e0d7;border-left:1.2mm solid #1d674a;border-radius:2mm;break-inside:avoid-page;page-break-inside:avoid}
-    .cp-session.cp-3si1,.cp-context-session.cp-3si1{border-left-color:#17649e}
+    .cp-session.cp-3si1{border-left-color:#17649e}
     .cp-session-head{display:flex;justify-content:space-between;gap:5mm;align-items:flex-start;border-bottom:.3mm solid #e2e8e2;padding-bottom:2.5mm;margin-bottom:2.5mm}
     .cp-kicker{font-size:7pt;letter-spacing:.7pt;color:#778479;font-weight:800}.cp-session h2{font-family:Georgia,serif;font-size:13pt;line-height:1.25;margin:1mm 0;color:#21382b}.cp-session-head p{margin:0;color:#68756b;font-size:8pt}
     .cp-state{font-size:7pt;white-space:nowrap;padding:1mm 2mm;border:1px solid #b7c7ba;border-radius:20px;color:#526058}
     .cp-state-done{background:#e8f4eb;color:#216342;border-color:#badac2}.cp-state-reported{background:#fff0ed;color:#a9433b;border-color:#edc9c2}.cp-state-pending{background:#fff6df;color:#8a6318;border-color:#ead69e}
     .cp-fields{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}.cp-fields section{min-width:0}.cp-fields h3{font-size:7pt;text-transform:uppercase;letter-spacing:.5pt;color:#52665a;margin:0 0 1mm}.cp-fields p{font-size:8.3pt;line-height:1.4;margin:0;white-space:normal;overflow-wrap:anywhere}.cp-empty{color:#889189;font-style:italic}
-    .cp-context-session{margin:0 0 4mm;padding:3mm 4mm;border:1px dashed #b9c9bb;border-left:1.2mm solid #1d674a;border-radius:2mm;background:#f8faf7;break-inside:avoid-page}
-    .cp-context-session span{font-size:6.5pt;letter-spacing:.7pt;color:#7c6b47;font-weight:800}.cp-context-session h2{font-size:10pt;margin:1mm 0;color:#2c4032}.cp-context-session p{font-size:7.5pt;color:#66756a;margin:0}.cp-context-session small{display:block;margin-top:1.5mm;color:#877b67;font-size:6.5pt}
-    @media print{.cp-session,.cp-context-session,.cp-plan-table tr{break-inside:avoid-page;page-break-inside:avoid}}
+    .cp-context-session td{padding:2.5mm 2mm;background:#f8faf7;border-bottom:.3mm dashed #b9c9bb;border-left:1mm solid #1d674a;color:#66756a}
+    .cp-context-session.cp-3si1 td{border-left-color:#17649e}
+    .cp-context-session span,.cp-context-session strong,.cp-context-session small{display:block}.cp-context-session span{font-size:6pt;color:#7c6b47;font-weight:800;letter-spacing:.5pt}.cp-context-session strong{margin:.7mm 0;color:#2c4032;font-size:7pt}.cp-context-session small{font-size:6pt}
+    .cp-timeline{box-sizing:border-box;width:210mm;padding:8mm 12mm;color:#203029}
+    .cp-cahier-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8pt;line-height:1.35;color:#26342b}
+    .cp-cahier-table thead{display:table-header-group}
+    .cp-cahier-table th{padding:2.5mm 2mm;background:#174c39;color:#fff;text-align:left;font-size:7pt;letter-spacing:.35pt;text-transform:uppercase}
+    .cp-cahier-table th:first-child{width:20%}.cp-cahier-table th:nth-child(2){width:55%}.cp-cahier-table th:last-child{width:25%;text-align:center}
+    .cp-cahier-table td{padding:2.5mm 2mm;vertical-align:top;border-bottom:.35mm solid #dce4dc;overflow-wrap:anywhere}
+    .cp-week-row td{padding:2mm;background:#edf3ed;color:#24523d;font-size:7pt;font-weight:800;letter-spacing:.35pt;text-transform:uppercase;border:0}
+    .cp-date-cell time{display:block;color:#173e31;font-weight:800}
+    .cp-date-meta{display:flex;gap:2mm;flex-wrap:wrap;margin:1.5mm 0;color:#5b6c60;font-size:7pt}
+    .cp-date-meta b{color:#17649e}.cp-date-time{display:block;margin-top:1.5mm;color:#778177;font-size:6.5pt}
+    .cp-row-state{display:inline-block;padding:.6mm 1.6mm;border:1px solid #d3ded4;border-radius:10mm;font-size:6pt;color:#536459}
+    .cp-state-done{background:#e8f4eb;color:#216342;border-color:#badac2}.cp-state-reported{background:#fff0ed;color:#a9433b;border-color:#edc9c2}.cp-state-pending{background:#fff6df;color:#8a6318;border-color:#ead69e}
+    .cp-work-title{display:block;margin-bottom:1.4mm;color:#173e31;font-size:8.5pt}
+    .cp-work-lines{display:grid;gap:.8mm}.cp-work-line{white-space:pre-wrap;color:#35483a}.cp-work-line b{color:#23382b}.cp-work-report{color:#a9433b}
+    .cp-signature-cell{text-align:center;vertical-align:middle!important;border-left:.25mm solid #e1e7df}
+    .cp-signature-box,.cp-signature-empty{min-height:18mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5mm}
+    .cp-signature-box .teacher-signature-ink{display:block;width:40mm;height:11mm;max-width:100%;overflow:visible}
+    .cp-signature-box small,.cp-signature-empty small{font-size:6pt;color:#788477}
+    .cp-signature-empty span{display:block;width:90%;height:8mm;border-bottom:.3mm solid #89958a}
+    .cp-signature-follow{display:inline-flex;width:5mm;height:5mm;align-items:center;justify-content:center;border:.3mm dashed #cbd5cc;border-radius:50%;color:#9aa49a;font-size:7pt}
+    .cp-session-row.cp-row-done td:first-child{border-left:1mm solid #1d674a}.cp-session-row.cp-row-reported td:first-child{border-left:1mm solid #b4433c}
+    @media print{.cp-session,.cp-context-session,.cp-cahier-table tr{break-inside:avoid-page;page-break-inside:avoid}}
   `;
 }
 function updateCahierPrintSummary() {
@@ -1374,16 +1440,33 @@ function printCahier() {
     cahierAnnualPage(classes),
     cahierQuarterPage(1, classes)
   ];
+  const profile = typeof root.activeProfessorProfile === 'function' ? root.activeProfessorProfile() : null;
+  const signatureMarkup = root.STI_SIGNATURE && typeof root.STI_SIGNATURE.toMarkup === 'function'
+    ? root.STI_SIGNATURE.toMarkup(String(profile && profile.signature || '').trim()) : '';
+  const lastSessionByDate = new Map();
+  timeline.forEach(function (session, index) {
+    if (!session.contextOnly) lastSessionByDate.set(String(session.iso || ''), index);
+  });
 
-  let currentQuarter = 1;
-  timeline.forEach(function (session) {
+  let currentQuarter = 1, batch = [];
+  const flushTimeline = function () {
+    if (!batch.length) return;
+    parts.push(cahierTimelineTable(batch, signatureMarkup));
+    batch = [];
+  };
+  timeline.forEach(function (session, index) {
     const sessionQuarter = Math.max(1, Number(session.tri) || 1);
     while (currentQuarter < sessionQuarter) {
+      flushTimeline();
       currentQuarter++;
       if (currentQuarter > 1 && currentQuarter <= 3) parts.push(cahierQuarterPage(currentQuarter, classes));
     }
-    parts.push(cahierSessionHtml(session));
+    batch.push({
+      session: session,
+      signatureAtEnd: !session.contextOnly && lastSessionByDate.get(String(session.iso || '')) === index
+    });
   });
+  flushTimeline();
 
   /* Ferme le panneau sans supprimer les filtres avant d’ouvrir la vraie impression. */
   closePrintMenu();
@@ -1422,7 +1505,7 @@ function ensurePrintMenu(preset) {
         <div class="note tiny" style="margin-bottom:12px">Choisissez une fiche, une répartition ou le cahier de textes. Pour le cahier, affinez l'impression par classe, trimestre et état des séances.</div>
 
         <div class="prm-row prm-cahier-row">
-          <div class="prm-cahier-intro"><strong>Cahier de textes</strong><div class="tiny muted">Couverture, emploi du temps du professeur, répartition annuelle, T1 par classe et séances datées. Les répartitions suivantes sont insérées après la dernière séance du trimestre précédent.</div></div>
+          <div class="prm-cahier-intro"><strong>Cahier de textes assemblé</strong><div class="tiny muted">Couverture, emploi du temps du professeur, répartitions et séances datées. Le tableau des séances reprend les colonnes Date, Le travail réalisé et Signature; la signature apparaît à la dernière séance de chaque journée. Les répartitions suivantes sont insérées après la dernière séance du trimestre précédent.</div></div>
           <div class="prm-cahier-filters">
             <label>Classe<select id="prm-cahier-cls" aria-label="Classe du cahier de textes"><option value="both" ${cahierClass === 'both' ? 'selected' : ''}>Les deux classes</option><option value="3SI1" ${cahierClass === '3SI1' ? 'selected' : ''}>3SI1</option><option value="4SI2" ${cahierClass === '4SI2' ? 'selected' : ''}>4SI2</option></select></label>
             <label>Trimestre<select id="prm-cahier-tri" aria-label="Trimestre du cahier de textes"><option value="0" ${cahierTri === 0 ? 'selected' : ''}>Tous</option><option value="1" ${cahierTri === 1 ? 'selected' : ''}>1er trimestre</option><option value="2" ${cahierTri === 2 ? 'selected' : ''}>2e trimestre</option><option value="3" ${cahierTri === 3 ? 'selected' : ''}>3e trimestre</option></select></label>
