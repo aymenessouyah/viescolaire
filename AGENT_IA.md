@@ -6,7 +6,7 @@ L'**Agent STI** est un véritable agent pédagogique intégré à Vie Scolaire. 
 
 - **Fiche pédagogique** : objectifs, prérequis, phases de 2 h, notions, évaluation, travail et remédiation ; insertion possible dans la préparation d'une séance.
 - **Séries d'exercices** : énoncés théoriques ou pratiques, questions, corrigés et barème ; export HTML et impression.
-- **Correction de copies** : choix explicite entre devoir **théorique** et **pratique** ; texte, photos, captures et fichiers HTML/CSS/JS/PHP/SQL/TXT/JSON pour le pratique. Barème fourni par l'enseignant ou proposé d'abord par l'agent puis modifiable avant correction. Justification question par question, limites de l'analyse, note proposée et remédiation. Le code n'est jamais prétendu exécuté et aucune note n'est saisie automatiquement.
+- **Correction de copies** : choix explicite entre devoir **théorique** et **pratique** ; texte, photos, captures et fichiers HTML/CSS/JS/PHP/SQL/TXT/JSON pour le pratique. Pour les copies théoriques photographiées, l'agent transcrit d'abord les réponses sans les noter. La transcription est éditable; les passages incertains sont signalés et l'enseignant doit confirmer explicitement s'il poursuit malgré l'avertissement. La correction utilise ensuite le texte relu, sans renvoyer les photos lors du second appel. Barème fourni par l'enseignant ou proposé d'abord par l'agent puis modifiable avant correction. Justification question par question, limites de l'analyse, note proposée et remédiation. Le code n'est jamais prétendu exécuté et aucune note n'est saisie automatiquement.
 - **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; la séance n'est jamais confirmée automatiquement.
 - **Répartition** : proposition séance par séance avec dates et numéros inchangés ; seules les séances futures peuvent recevoir la proposition.
 
@@ -94,14 +94,15 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 3. Cliquer sur **Tester la connexion**. Le modèle configuré doit apparaître.
 4. Générer d'abord une courte série théorique, puis une courte série pratique pour vérifier l'adaptation au type de devoir.
 5. Tester une correction théorique avec une copie fictive et un barème fourni.
-6. Tester une correction pratique avec de petits fichiers de code anonymisés : choisir **L’agent propose le barème**, relire et modifier la proposition, puis lancer la correction. Vérifier que le rapport distingue bien l'analyse du code du fonctionnement à tester.
-7. Vérifier les points et les faits avant toute application ou export.
+6. Tester une copie manuscrite fictive en photo : relire et modifier la transcription; si un passage est signalé, vérifier l'avertissement et la confirmation avant de poursuivre.
+7. Tester une correction pratique avec de petits fichiers de code anonymisés : choisir **L’agent propose le barème**, relire et modifier la proposition, puis lancer la correction. Vérifier que le rapport distingue bien l'analyse du code du fonctionnement à tester.
+8. Vérifier les points et les faits avant toute application ou export.
 
 ## Protection des données
 
 - Envoyer uniquement la séance, le thème ou la copie nécessaire à la demande ; l'agent n'envoie pas la base complète des élèves.
 - Utiliser des identifiants anonymes (« Copie 1 ») plutôt que les noms complets.
-- Les images sont réduites dans le navigateur, limitées à six par demande, puis transmises à la fonction pour l'analyse.
+- Les images sont réduites dans le navigateur, limitées à six par demande, puis transmises à la fonction pour l'analyse. Pour une copie manuscrite théorique, elles servent d'abord à la transcription; après relecture, le second appel de correction reçoit le texte et non les photos.
 - Les fichiers de code sont limités à huit fichiers de 200 Ko chacun ; ils sont lus localement et ne sont pas enregistrés dans l'historique.
 - Les corrections et les propositions de barème ne sont pas ajoutées à l'historique local des générations.
 - Les autres documents récents sont conservés dans le navigateur pour être rouverts ; ils peuvent être effacés depuis l'agent.

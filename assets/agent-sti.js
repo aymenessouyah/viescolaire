@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0-handwriting-review';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -41,6 +41,8 @@ let notice = '';
 let status = null;
 let attachments = [];
 let codeFiles = [];
+let transcriptionReview = null;
+let transcriptionAcknowledged = false;
 let results = {};
 let resultMeta = {};
 let history = readHistory();
@@ -57,6 +59,30 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 const nl = value => esc(value || '—').replace(/\n/g, '<br>');
 const icon = (name, size = 18) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.spark}</svg>`;
 const asArray = value => Array.isArray(value) ? value : [];
+function shouldTranscribeHandwriting(form, imageCount) {
+  return form?.type_devoir === 'théorique' && Number(imageCount) > 0;
+}
+function hasUncertainTranscription(review) {
+  const confidence = String(review?.confiance_globale || '').trim().toLocaleLowerCase('fr');
+  return asArray(review?.transcription_incertaine).length > 0 || Boolean(confidence && confidence !== 'haute');
+}
+function preserveTranscriptionWarnings(result, review, acknowledged) {
+  if (!result || !review || !hasUncertainTranscription(review)) return result;
+  const reviewWarnings = asArray(review.transcription_incertaine);
+  const fallback = reviewWarnings.length ? [] : [`Confiance de lecture ${review.confiance_globale || 'incertaine'} lors de la transcription préliminaire.`];
+  const all = [...reviewWarnings, ...asArray(result.transcription_incertaine), ...fallback];
+  const seen = new Set();
+  result.transcription_incertaine = all.filter(item => {
+    const key = typeof item === 'string' ? item : JSON.stringify(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const limits = asArray(result.limites_analyse);
+  if (acknowledged) limits.push('La correction a été poursuivie après confirmation de l’enseignant malgré l’avertissement de lecture.');
+  result.limites_analyse = limits;
+  return result;
+}
 const keyOf = s => `${s.cls}|${s.n}`;
 const sessions = () => ctx?.sessions?.[classe] || [];
 const record = s => ctx?.store?.seances?.[keyOf(s)] || {};
@@ -204,6 +230,7 @@ function formHtml() {
   const practical = f.type_devoir === 'pratique';
   const proposeRubric = f.mode_bareme === 'proposer';
   const rubricFirst = proposeRubric && !f.bareme.trim();
+  const handwritingFirst = shouldTranscribeHandwriting(f, attachments.length) && !transcriptionReview;
   return `
     <div class="agent-form-grid">
       <label class="agent-field"><span>Type de devoir</span><select data-agent-field="type_devoir">${assignmentTypeOptions(f.type_devoir)}</select></label>
@@ -217,7 +244,7 @@ function formHtml() {
       <label class="agent-field full agent-upload"><span>${practical ? 'Captures du code, du rendu ou des tests' : 'Photos de la copie'} · ${attachments.length}/${MAX_IMAGES}</span><input id="agent-copy-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPEG, PNG ou WebP. Les images sont réduites dans le navigateur avant l’envoi. 6 images maximum par analyse.</small></label>
       ${attachments.length ? `<div class="agent-attachments full">${attachments.map((a, i) => `<span>${esc(a.name)}<button type="button" data-agent-remove="${i}" aria-label="Retirer ${esc(a.name)}">×</button></span>`).join('')}</div>` : ''}
       <label class="agent-field full"><span>Règles d’appréciation <em>facultatif</em></span><input data-agent-field="consignes" value="${esc(f.consignes)}" placeholder="Ex. : valoriser la démarche, ne pas pénaliser deux fois la même erreur"></label>
-    </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${generateButton(rubricFirst ? 'Proposer d’abord le barème' : 'Analyser et proposer une correction')}`;
+    </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${transcriptionReview ? '<div class="agent-form-footer"><span>La transcription est prête. Relisez-la et poursuivez depuis l’avertissement ci-dessous.</span></div>' : generateButton(rubricFirst ? 'Proposer d’abord le barème' : handwritingFirst ? 'Transcrire avant correction' : 'Analyser et proposer une correction')}`;
 }
 
 function resultHeader(title, subtitle, applyLabel = '') {
@@ -266,6 +293,22 @@ function renderRepartition(r, meta) {
     <div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>N° / date</th><th>Séance proposée</th><th>Objectif et travail</th></tr></thead><tbody>${rows.map(s => `<tr><td><strong>S${esc(s.numero ?? s.n)}</strong><br>${esc(s.date || '')}</td><td><strong>${esc(s.titre)}</strong><br><small>${esc(s.domaine || '')}${s.type ? ` · ${esc(s.type)}` : ''}</small></td><td>${nl(s.objectif)}${s.travail_maison ? `<p><b>Devoir :</b> ${nl(s.travail_maison)}</p>` : ''}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
 }
+function renderTranscriptionReview() {
+  if (!transcriptionReview) return '';
+  const uncertain = asArray(transcriptionReview.transcription_incertaine);
+  const needsAck = hasUncertainTranscription(transcriptionReview);
+  const confidence = String(transcriptionReview.confiance_globale || 'à vérifier');
+  const uncertaintyMessage = uncertain.length
+    ? `<strong>${uncertain.length} passage(s) signalé(s) comme incertain(s)</strong>${bulletList(uncertain)}`
+    : `<strong>La lecture est évaluée comme ${esc(confidence)}.</strong><p>Relisez la transcription avant de poursuivre.</p>`;
+  return `<section class="agent-transcription-review agent-no-print" aria-labelledby="agent-transcription-title">
+    <div class="agent-transcription-heading"><span>${icon('file')}</span><div><small>LECTURE DES PHOTOS</small><h3 id="agent-transcription-title">Transcription à relire · confiance ${esc(confidence)}</h3></div></div>
+    ${needsAck ? `<div class="agent-uncertainties" role="alert">${uncertaintyMessage}</div>` : '<div class="agent-message success"><strong>Aucun passage incertain signalé.</strong><p>Relisez tout de même le texte avant de lancer la correction.</p></div>'}
+    <p class="agent-transcription-help">La transcription est préremplie dans le champ « Réponses de l’élève » ci-dessus. Vous pouvez la corriger avant de continuer.</p>
+    ${needsAck ? `<label class="agent-transcription-ack"><input id="agent-transcription-ack" data-agent-transcription-ack type="checkbox" ${transcriptionAcknowledged ? 'checked' : ''}><span>J’ai relu la transcription et je souhaite poursuivre malgré les passages incertains.</span></label>` : ''}
+    <div class="agent-transcription-actions"><button class="btn btn-primary" type="button" data-agent-transcription-proceed ${needsAck && !transcriptionAcknowledged ? 'disabled' : ''}>${needsAck ? 'Continuer malgré les incertitudes' : 'Valider la transcription et corriger'}</button><button class="btn btn-ghost" type="button" data-agent-transcription-reset>Relire les photos</button></div>
+  </section>`;
+}
 function renderCorrection(r, meta) {
   const questions = asArray(r.questions);
   const uncertain = asArray(r.transcription_incertaine);
@@ -309,7 +352,8 @@ function draw() {
       ${busy ? `<div class="agent-loading" role="status"><span></span><div><strong>L’agent analyse votre demande…</strong><p>La génération peut prendre une à deux minutes pour une répartition ou une copie avec photos.</p></div></div>` : ''}
       ${error ? `<div class="agent-message error agent-no-print" role="alert"><strong>La demande n’a pas abouti</strong><p>${nl(error)}</p></div>` : ''}
       ${notice ? `<div class="agent-message success agent-no-print"><p>${nl(notice)}</p></div>` : ''}
-      ${renderResult() || (!busy && !error ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez vérifier, exporter ou appliquer le résultat.</p></div>` : '')}</main>
+      ${transcriptionReview ? renderTranscriptionReview() : ''}
+      ${renderResult() || (!busy && !error && !transcriptionReview ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez vérifier, exporter ou appliquer le résultat.</p></div>` : '')}</main>
     </div>${historyHtml()}</div>`;
 }
 
@@ -357,9 +401,30 @@ function buildPayload(meta) {
       calendrier: { vacances: root.VACANCES || [], fin_annee: root.SCHOOL?.finAnnee }
     };
   } else {
-    base.input = { ...f, fichiers_code: f.type_devoir === 'pratique' ? codeFiles : [], note_maximale: Number(f.sur) || 20, regles: 'Attribuer les points uniquement à partir du sujet, du barème validé et des éléments fournis. Signaler toute illisibilité et ne jamais prétendre avoir exécuté le code.' };
+    const uncertain = asArray(transcriptionReview?.transcription_incertaine);
+    base.input = {
+      ...f,
+      fichiers_code: f.type_devoir === 'pratique' ? codeFiles : [],
+      note_maximale: Number(f.sur) || 20,
+      transcription_incertaine: uncertain,
+      transcription_preverifiee: Boolean(transcriptionReview),
+      poursuite_malgre_incertitudes_confirmee: Boolean(transcriptionAcknowledged),
+      regles: ['Attribuer les points uniquement à partir du sujet, du barème validé et des éléments fournis. Signaler toute illisibilité et ne jamais prétendre avoir exécuté le code.', transcriptionReview ? 'La copie photo a été transcrite puis relue par l’enseignant. Ne devine pas les segments marqués [illisible]; garde les limites de lecture visibles dans la correction.' : ''].filter(Boolean).join(' ')
+    };
   }
   return base;
+}
+function buildTranscriptionPayload() {
+  const f = forms.correction;
+  return {
+    context: { ...commonContext(), classe, type_devoir: f.type_devoir, task: 'transcription' },
+    input: {
+      type_devoir: f.type_devoir,
+      sujet: f.sujet,
+      texte_fourni_par_enseignant: f.copie.trim(),
+      nombre_de_photos: attachments.length
+    }
+  };
 }
 function buildRubricPayload(meta) {
   const f = forms.correction;
@@ -391,7 +456,7 @@ async function callAgent(task, payload = {}) {
     const response = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/assistant-ia`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: cfg.key, Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ task, ...payload, attachments: task === 'correction' ? attachments : [] }),
+      body: JSON.stringify({ task, ...payload, attachments: (task === 'transcription' || (task === 'correction' && !transcriptionReview)) ? attachments : [] }),
       signal: controller.signal
     });
     const data = await response.json().catch(() => ({}));
@@ -411,9 +476,10 @@ async function generate() {
   notice = '';
   if (error) { draw(); return; }
   const rubricFirst = tool === 'correction' && forms.correction.mode_bareme === 'proposer' && !forms.correction.bareme.trim();
-  const task = rubricFirst ? 'bareme' : tool;
+  const handwritingFirst = tool === 'correction' && shouldTranscribeHandwriting(forms.correction, attachments.length) && !transcriptionReview;
+  const task = rubricFirst ? 'bareme' : handwritingFirst ? 'transcription' : tool;
   const meta = makeMeta();
-  const payload = rubricFirst ? buildRubricPayload(meta) : buildPayload(meta);
+  const payload = rubricFirst ? buildRubricPayload(meta) : handwritingFirst ? buildTranscriptionPayload() : buildPayload(meta);
   busy = true;
   results[tool] = null;
   draw();
@@ -426,6 +492,20 @@ async function generate() {
       notice = 'Le barème proposé est maintenant dans le champ modifiable. Relisez-le, ajustez les points si nécessaire, puis lancez la correction avec ce barème.';
       return;
     }
+    if (task === 'transcription') {
+      forms.correction.copie = String(data.result.transcription || '');
+      transcriptionReview = {
+        transcription_incertaine: asArray(data.result.transcription_incertaine),
+        confiance_globale: String(data.result.confiance_globale || 'à vérifier'),
+        pages_lues: Number(data.result.pages_lues) || 0,
+        imageCount: attachments.length
+      };
+      transcriptionAcknowledged = false;
+      results.correction = null;
+      notice = '';
+      return;
+    }
+    if (task === 'correction' && transcriptionReview) preserveTranscriptionWarnings(data.result, transcriptionReview, transcriptionAcknowledged);
     results[tool] = data.result;
     resultMeta[tool] = meta;
     if (task !== 'correction') {
@@ -435,6 +515,8 @@ async function generate() {
     } else {
       attachments = [];
       codeFiles = [];
+      transcriptionReview = null;
+      transcriptionAcknowledged = false;
     }
   } catch (e) {
     error = e.message || String(e);
@@ -442,6 +524,27 @@ async function generate() {
     busy = false;
     draw();
   }
+}
+function continueFromTranscription() {
+  if (!transcriptionReview || busy) return;
+  if (hasUncertainTranscription(transcriptionReview) && !el('agent-transcription-ack')?.checked) {
+    error = 'Relisez les passages signalés et confirmez explicitement si vous souhaitez poursuivre malgré l’incertitude.';
+    draw();
+    return;
+  }
+  transcriptionAcknowledged = true;
+  error = '';
+  notice = '';
+  generate();
+}
+function restartTranscription() {
+  if (busy || !transcriptionReview) return;
+  transcriptionReview = null;
+  transcriptionAcknowledged = false;
+  results.correction = null;
+  error = '';
+  notice = '';
+  draw();
 }
 async function testConnection() {
   if (busy) return;
@@ -590,6 +693,11 @@ async function addImages(fileList) {
   draw();
   try {
     for (const file of files) attachments.push(await compressImage(file));
+    if (transcriptionReview) {
+      transcriptionReview = null;
+      transcriptionAcknowledged = false;
+      results.correction = null;
+    }
     notice = `${files.length} image(s) préparée(s). Vous pouvez lancer l’analyse.`;
   } catch (e) { error = e.message || 'Impossible de lire cette image.'; }
   finally { busy = false; draw(); }
@@ -604,6 +712,13 @@ document.addEventListener('input', e => {
   const field = e.target.closest('[data-agent-field]');
   if (!field || !forms[tool] || !(field.dataset.agentField in forms[tool])) return;
   forms[tool][field.dataset.agentField] = fieldValue(field);
+  if (tool === 'correction' && field.dataset.agentField === 'copie' && transcriptionReview) {
+    transcriptionAcknowledged = false;
+    const checkbox = el('agent-transcription-ack');
+    if (checkbox) checkbox.checked = false;
+    const proceed = document.querySelector('[data-agent-transcription-proceed]');
+    if (proceed && hasUncertainTranscription(transcriptionReview)) proceed.disabled = true;
+  }
 });
 document.addEventListener('change', e => {
   if (e.target.matches('[data-agent-class]')) {
@@ -614,18 +729,30 @@ document.addEventListener('change', e => {
   }
   if (e.target.id === 'agent-copy-files') { addImages(e.target.files); return; }
   if (e.target.id === 'agent-code-files') { addCodeFiles(e.target.files); return; }
+  if (e.target.id === 'agent-transcription-ack') {
+    transcriptionAcknowledged = e.target.checked;
+    const proceed = document.querySelector('[data-agent-transcription-proceed]');
+    if (proceed) proceed.disabled = hasUncertainTranscription(transcriptionReview) && !transcriptionAcknowledged;
+    return;
+  }
   const field = e.target.closest('[data-agent-field]');
   if (field && field.tagName === 'SELECT') {
     forms[tool][field.dataset.agentField] = fieldValue(field);
     if (tool === 'correction' && ['type_devoir', 'mode_bareme'].includes(field.dataset.agentField)) results.correction = null;
+    if (tool === 'correction' && field.dataset.agentField === 'type_devoir') {
+      transcriptionReview = null;
+      transcriptionAcknowledged = false;
+    }
     error = ''; draw();
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
+  if (button.hasAttribute('data-agent-transcription-proceed')) continueFromTranscription();
+  if (button.hasAttribute('data-agent-transcription-reset')) restartTranscription();
   if (button.hasAttribute('data-agent-test')) testConnection();
   if (button.hasAttribute('data-agent-apply')) applyResult();
   if (button.hasAttribute('data-agent-download')) downloadResult();
@@ -642,6 +769,6 @@ document.addEventListener('click', e => {
 root.STI_AGENT = {
   version: VERSION,
   render(context) { ctx = context; draw(); },
-  _test: { ficheText, relatedNotions, validate, buildPayload: () => buildPayload(makeMeta()) }
+  _test: { ficheText, relatedNotions, validate, shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings, buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload }
 };
 })(window);

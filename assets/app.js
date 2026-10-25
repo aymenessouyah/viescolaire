@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.17.3-drive-profile-backup";
+const APP_VER = "v1.17.5-agent-handwriting-review";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -202,7 +202,8 @@ const TABS = [
   { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
   { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
   { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
-  { id:"v-ref",    t:"Annexes &amp; mémo", ico:"book" }
+  { id:"v-ref",    t:"Annexes &amp; mémo", ico:"book" },
+  { id:"v-carte",  t:"Carte de visite", ico:"web" }
 ];
 const GUEST_HIDDEN_VIEWS=["v-fiche","v-devoirs","v-rep","v-cahier"];
 let currentTab = "v-dash";
@@ -279,6 +280,25 @@ function toast(msg){
   t.classList.add("on");
   clearTimeout(window.__tt);
   window.__tt = setTimeout(()=>t.classList.remove("on"), 2600);
+}
+const SITE_CARD_URL="https://aymenessouyah.github.io/viescolaire/";
+function printSiteBusinessCard(){
+  const view=document.getElementById("v-carte");if(!view||typeof window.print!=="function")return;
+  if(!view.classList.contains("on"))go("v-carte");
+  requestAnimationFrame(()=>{
+    const cleanup=()=>{document.body.classList.remove("sti-business-card-print");clearTimeout(fallback);};
+    document.body.classList.add("sti-business-card-print");
+    window.addEventListener("afterprint",cleanup,{once:true});
+    const fallback=setTimeout(cleanup,60000);
+    window.print();
+  });
+}
+async function shareSiteCard(){
+  try{
+    if(navigator.share){await navigator.share({title:"Espace pédagogique STI",text:"Découvrez l’Espace pédagogique STI du Lycée Rafèha Ariana.",url:SITE_CARD_URL});return;}
+    if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(SITE_CARD_URL);toast("Adresse du site copiée.");return;}
+    window.prompt("Copiez l’adresse du site :",SITE_CARD_URL);
+  }catch(error){if(error.name!=="AbortError")toast("Impossible de partager l’adresse. Vous pouvez scanner le QR code.");}
 }
 
 /* ---------------- 1. TABLEAU DE BORD ---------------- */
@@ -2664,6 +2684,7 @@ window.exportJSON = exportJSON;
 window.cloudCard = cloudCard;
 window.renderCloudBar = renderCloudBar;
 window.installApp = installApp;
+window.printSiteBusinessCard = printSiteBusinessCard; window.shareSiteCard = shareSiteCard;
 window.registerSW = registerSW;
 window.applyUpdate = applyUpdate;
 /* état exposé (débogage et tests) */

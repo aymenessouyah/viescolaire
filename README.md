@@ -316,7 +316,7 @@ Après modification : `git add . && git commit -m "…" && git push`.
 
 ## 8. Agent STI — assistant pédagogique IA
 
-La version **1.5.1** ajoute un véritable agent pédagogique dans le menu **Agent STI · IA** : fiches pédagogiques, séries d'exercices théoriques ou pratiques avec corrigés, correction de copies texte, photos ou fichiers de code, cahier de textes et propositions de répartition. Le barème peut être fourni par l'enseignant ou proposé puis validé avant correction.
+Le menu **Agent STI · IA** propose des fiches pédagogiques, des séries d'exercices théoriques ou pratiques avec corrigés, la correction de copies texte, photos ou fichiers de code, le cahier de textes et des propositions de répartition. Le barème peut être fourni par l'enseignant ou proposé puis validé avant correction. Pour une copie théorique photographiée, l'agent propose d'abord une transcription éditable; les incertitudes sont signalées et doivent être confirmées explicitement avant de poursuivre malgré l'avertissement.
 
 L'interface appelle une fonction sécurisée `supabase/functions/assistant-ia`. La clé privée du fournisseur d'IA reste dans les secrets Supabase et n'est jamais publiée sur GitHub Pages. Chaque résultat est affiché pour vérification ; l'agent ne confirme pas une séance et n'enregistre pas une note automatiquement.
 

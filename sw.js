@@ -1,8 +1,11 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.17.3-drive-profile-backup';
+const VERSION='sti-espace-v1.17.5-agent-handwriting-review';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
+  "./assets/carte-visite-site.png",
+  "./assets/carte-visite-site.svg",
+  "./assets/carte-visite-site.pdf",
   "./manifest.webmanifest",
   "./assets/style.css",
   "./assets/password-recovery.js",

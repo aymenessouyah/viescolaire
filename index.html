@@ -120,7 +120,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.17.3-drive-profile-backup";
+  var ATTENDU = "v1.17.5-agent-handwriting-review";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -184,6 +184,32 @@
   <section id="v-eleves" class="view"></section>
   <section id="v-cahier" class="view"></section>
   <section id="v-ref" class="view"></section>
+  <section id="v-carte" class="view ref-ui">
+    <div class="site-card-page">
+      <div class="site-card-page-head">
+        <div>
+          <span class="site-card-kicker">À PARTAGER</span>
+          <h1 class="page-title">Carte de visite du site</h1>
+          <p class="page-sub">Présentez l’Espace pédagogique STI et partagez son adresse avec un QR code.</p>
+        </div>
+        <div class="site-card-actions no-print" aria-label="Actions de la carte de visite">
+          <button class="btn btn-primary" type="button" onclick="printSiteBusinessCard()">Imprimer la carte</button>
+          <a class="btn btn-line" href="assets/carte-visite-site.pdf" download="carte-visite-espace-pedagogique-sti.pdf">Télécharger PDF</a>
+          <a class="btn btn-line" href="assets/carte-visite-site.png" download="carte-visite-espace-pedagogique-sti.png">Télécharger PNG</a>
+          <a class="btn btn-line" href="assets/carte-visite-site.svg" download="carte-visite-espace-pedagogique-sti.svg">Télécharger SVG</a>
+          <button class="btn btn-line" type="button" onclick="shareSiteCard()">Partager l’adresse</button>
+        </div>
+      </div>
+      <figure class="site-card-stage">
+        <img src="assets/carte-visite-site.png" alt="Carte de visite de l’Espace pédagogique STI : Aymen Essouyah, professeur au Lycée Rafèha Ariana, courriel et QR code vers le site." width="1004" height="650">
+      </figure>
+      <div class="site-card-meta">
+        <div><strong>Adresse du site</strong><a href="https://aymenessouyah.github.io/viescolaire/" target="_blank" rel="noopener noreferrer">aymenessouyah.github.io/viescolaire/</a></div>
+        <div><strong>Format imprimé</strong><span>85 × 55 mm · paysage</span></div>
+        <div><strong>Contact</strong><a href="mailto:aymenessouyah@gmail.com">aymenessouyah@gmail.com</a></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer>
