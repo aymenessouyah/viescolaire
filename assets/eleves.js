@@ -478,6 +478,7 @@ function vueFaibles(cid){
 
 /* ---------- profil du professeur connecté ---------- */
 function openProfil(){
+  if(typeof window.isProfessorConnected!=="function"||!window.isProfessorConnected()){openAuth();return;}
   const b = document.getElementById("profil-modal");
   if (!b) return;
   b.querySelector("#pf-nom").value = (store.profil && store.profil.nom) || "";
@@ -489,6 +490,7 @@ function openProfil(){
 }
 function closeProfil(){ const b = document.getElementById("profil-modal"); if (b) b.classList.remove("on"); }
 function saveProfil(){
+  if(typeof window.isProfessorConnected!=="function"||!window.isProfessorConnected()){closeProfil();openAuth();return;}
   const b = document.getElementById("profil-modal");
   const nom = b.querySelector("#pf-nom").value.trim();
   const mat = b.querySelector("#pf-mat").value.trim() || "STI";
@@ -499,18 +501,23 @@ function saveProfil(){
 }
 /* adapte l'en-tête au professeur connecté */
 function applyProfil(){
-  const p = store.profil;
-  const nom = p && p.nom ? p.nom : SCHOOL.prof;
-  const mat = p && p.matiere ? p.matiere : SCHOOL.matiere;
+  const connected=typeof window.isProfessorConnected==="function"&&window.isProfessorConnected();
+  const p=connected?store.profil:null;
+  const nom=connected?(p&&p.nom?p.nom:SCHOOL.prof):"Professeur";
+  const mat=connected?(p&&p.matiere?p.matiere:SCHOOL.matiere):"";
   const h = document.getElementById("hero-prof");
-  if (h) h.textContent = "Prof. " + nom;
+  if (h) h.textContent = connected ? "Prof. " + nom : "Professeur";
+  const classesChip=document.getElementById("hero-classes");
+  if(classesChip){classesChip.textContent=connected?"3SI1 & 4SI2":"";classesChip.hidden=!connected;}
+  document.title=connected?"Espace pédagogique STI — Prof. "+nom+" | Lycée Rafèha Ariana — 2026/2027":"Espace pédagogique STI — Professeur | Lycée Rafèha Ariana — 2026/2027";
   const w = document.getElementById("bienvenue-prof");
-  const connected = typeof window.isProfessorConnected === "function" && window.isProfessorConnected();
   if (w) w.textContent = connected
     ? "Bonjour, " + ((nom.trim().split(/\s+/)[0]) || "professeur")
     : "Bonjour professeur, veuillez entrer vos données de connexion.";
   const f = document.getElementById("ft-prof");
-  if (f) f.textContent = "Matière " + mat;
+  if (f) f.textContent = connected ? "Matière " + mat : "";
+  const footerName=document.getElementById("ft-prof-name");
+  if(footerName)footerName.textContent=connected?"Prof. "+nom:"Professeur";
 }
 
 /* ==================================================================
@@ -1001,3 +1008,9 @@ window.vocTraiter = vocTraiter; window.vocAnalyse = vocAnalyse; window.vocCible 
 window.setPresence = setPresence; window.vocSuivantNonMarque = vocSuivantNonMarque;
 window.openProfil = openProfil; window.closeProfil = closeProfil; window.saveProfil = saveProfil;
 window.applyProfil = applyProfil;
+function initializeConnectedProfile(){
+  if(typeof window.renderAll==="function")window.renderAll(true);else applyProfil();
+  window.STI_THEME?.refresh?.();
+}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",initializeConnectedProfile,{once:true});
+else initializeConnectedProfile();

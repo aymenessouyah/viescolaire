@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Espace pédagogique STI — Prof. Aymen Essouyah | Lycée Rafèha Ariana — 2026/2027</title>
-<meta name="description" content="Espace pédagogique du professeur Aymen Essouyah (matière STI) — 3SI1 et 4SI2 — Lycée Rafèha Ariana : emploi du temps, calendrier scolaire tunisien 2026-2027, répartition du 1er trimestre, annexes HTML5/CSS3/JavaScript/PHP/SQL, cahier de textes et sauvegarde distante.">
-<meta name="author" content="Aymen Essouyah">
+<title>Espace pédagogique STI — Professeur | Lycée Rafèha Ariana — 2026/2027</title>
+<meta name="description" content="Espace pédagogique STI du Lycée Rafèha Ariana : ressources, calendrier scolaire tunisien, programme, suivi des cours et cahier de textes. Les données personnelles sont accessibles après connexion au compte professeur.">
+<meta name="author" content="Espace pédagogique STI">
 <meta name="theme-color" content="#0b2545">
 <meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -90,12 +90,12 @@
 <svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"></path><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"></path></svg>
 </div>
 <div>
-<h1><span id="hero-prof" onclick="openProfil()" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier">Prof. Aymen Essouyah</span></h1>
+<h1><span id="hero-prof" onclick="openProfil()" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier">Professeur</span></h1>
 <div class="sub">
 <span><strong id="hero-lycee">Lycée Rafèha Ariana</strong></span>
 <span class="chip">Matière : STI</span>
 <span class="chip">2026 / 2027</span>
-<span class="chip">3SI1 &amp; 4SI2</span>
+<span class="chip" id="hero-classes" hidden></span>
 <span class="chip" id="ver-chip" title="Version réellement chargée dans ce navigateur">version</span>
 </div>
 </div>
@@ -117,7 +117,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.8.7-class-dashboard-cahier";
+  var ATTENDU = "v1.8.8-private-data-gate";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -162,7 +162,7 @@
 
  <p class="vs-navlabel">PILOTAGE</p>
  <nav class="tabbar no-print" aria-label="Navigation principale"><div class="wrap" id="tabs"></div></nav>
- <div id="ref-year" class="ref-ui"></div><div class="vs-side-bottom"><div class="vs-cloud-note"><strong>Votre espace de travail</strong><span id="vs-cloud-status">Sauvegarde dans votre espace</span><br><button type="button" onclick="openCloud()">Gérer la sauvegarde</button></div><button class="vs-profile" type="button" onclick="openProfil()" aria-label="Ouvrir mon profil"><span class="vs-avatar" id="vs-prof-initials">AE</span><span><strong id="vs-prof-name">Aymen Essouyah</strong><small id="vs-prof-school">Lycée Rafèha Ariana</small></span></button></div>
+ <div id="ref-year" class="ref-ui"></div><div class="vs-side-bottom"><div class="vs-cloud-note"><strong>Votre espace de travail</strong><span id="vs-cloud-status">Sauvegarde dans votre espace</span><br><button type="button" onclick="openCloud()">Gérer la sauvegarde</button></div><button class="vs-profile" type="button" onclick="openProfil()" aria-label="Ouvrir mon profil"><span class="vs-avatar" id="vs-prof-initials">P</span><span><strong id="vs-prof-name">Professeur</strong><small id="vs-prof-school">Lycée Rafèha Ariana</small></span></button></div>
 </aside>
 
 <main class="wrap">
@@ -186,7 +186,7 @@
 <footer>
   <div class="wrap">
     <div>
-      <strong style="color:var(--ink)">Espace pédagogique — Prof. Aymen Essouyah</strong> &bull; Lycée Rafèha Ariana (Tunisie) &bull; <span id="ft-prof">Matière STI</span>
+      <strong style="color:var(--ink)">Espace pédagogique — <span id="ft-prof-name">Professeur</span></strong> &bull; Lycée Rafèha Ariana (Tunisie) &bull; <span id="ft-prof"></span>
     </div>
     <div>
       Année scolaire 2026-2027 &bull; Données locales + sauvegarde distante Supabase &bull; <span id="ft-year"></span>
@@ -302,7 +302,7 @@
         Ce nom s'affiche en en-tête du site et signe vos sauvegardes.
       </p>
       <div style="margin-bottom:10px"><label class="f">Nom et prénom</label>
-        <input type="text" id="pf-nom" placeholder="Aymen Essouyah"></div>
+        <input type="text" id="pf-nom" placeholder="Nom et prénom"></div>
       <div style="margin-bottom:10px"><label class="f">Matière enseignée</label>
         <input type="text" id="pf-mat" placeholder="STI"></div>
       <div class="note tiny" style="margin-top:6px">Compte connecté : <span id="pf-email" class="tiny">—</span></div>
@@ -369,7 +369,7 @@
         <input type="text" id="cfg-key" placeholder="eyJhbGciOi... ou sb_publishable_..."></div>
       <div class="grid g2" style="gap:10px;margin-bottom:10px">
         <div><label class="f">Table <span class="tiny muted">(nom SQL — ne pas modifier)</span></label><input type="text" id="cfg-table" value="espace_pedagogique"></div>
-        <div><label class="f">Nom de cet appareil</label><input type="text" id="cfg-device" placeholder="Téléphone — Prof. Aymen"></div>
+        <div><label class="f">Nom de cet appareil</label><input type="text" id="cfg-device" placeholder="Téléphone — Professeur"></div>
       </div>
       <label class="badge b-blue" style="cursor:pointer;display:inline-flex;gap:6px">
         <input type="checkbox" id="cfg-auto"> Synchroniser automatiquement dans les deux sens
