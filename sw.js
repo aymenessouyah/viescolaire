@@ -1,11 +1,13 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.9.0-themed-logout-dialog';
+const VERSION='sti-espace-v1.13.0-sticky-professor-badge';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
   "./manifest.webmanifest",
   "./assets/style.css",
   "./assets/app.js",
+  "./assets/professeur-badge.js",
+  "./assets/professeur-badge.css",
   "./assets/cahier-pdf.js",
   "./assets/suivi-sti.js",
   "./assets/suivi-sti.css",
@@ -28,6 +30,7 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./data/docs.js",
   "./supabase/config.js",
   "./assets/offline-sync.js",
+  "./assets/drive-backup.js",
   "./assets/offline-sync.css",
   "./assets/sync-merge.js",
   "./assets/fiches.js",

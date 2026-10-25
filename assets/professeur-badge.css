@@ -1,0 +1,79 @@
+/* Badge professeur inspiré du modèle fourni : bleu nuit, turquoise et photo circulaire. */
+.sti-badge-stage{display:flex;justify-content:center;align-items:center;width:100%;padding:12px;background:var(--surface-2,#f2f5f7);border:1px solid var(--line,#dce3e7);border-radius:14px}
+.sti-professor-badge{position:relative;isolation:isolate;overflow:hidden;width:272px;max-width:100%;aspect-ratio:54/86;border:1px solid #dfe4e8;border-radius:18px;background:#fff;color:#202533;box-shadow:0 14px 32px rgba(12,22,50,.16);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.sti-badge-header{position:absolute;inset:0 0 auto;height:34%;display:flex;align-items:flex-start;gap:12px;padding:10% 8% 0;background:#171a36;color:#fff;z-index:1}
+.sti-badge-mark{display:grid;place-items:center;flex:none;width:45px;height:45px;border:2px solid #14a792;border-radius:13px;color:#30c4ac;font-size:10px;font-weight:900;letter-spacing:.08em;transform:rotate(-4deg)}
+.sti-badge-mark span{transform:rotate(4deg)}
+.sti-badge-brand{min-width:0;display:flex;flex-direction:column;gap:4px;padding-top:1px}
+.sti-badge-brand strong{font-size:17px;line-height:1.05;letter-spacing:-.025em}
+.sti-badge-brand small{font-size:9px;line-height:1.25;color:#c8d2e1}
+.sti-badge-ribbon{position:absolute;z-index:0;top:29%;left:0;width:100%;height:21%;background:#f7f8f8;clip-path:polygon(0 0,100% 0,100% 48%,74% 100%,51% 44%,0 100%)}
+.sti-badge-ribbon span{position:absolute;inset:0;background:#13a893;clip-path:polygon(0 0,36% 0,57% 48%,0 100%)}
+.sti-badge-portrait{position:absolute;z-index:2;left:50%;top:27%;width:39%;aspect-ratio:1;transform:translateX(-50%);padding:5px;border:2px solid #13a893;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(19,168,147,.16)}
+.sti-badge-photo{display:block;width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:center;background:#e9edef}
+.sti-badge-photo-placeholder{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;background:#e8ebed;color:#b6bec4}
+.sti-badge-photo-placeholder svg{width:62%;height:62%;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.sti-badge-identity{position:absolute;top:49%;left:7%;right:7%;text-align:center}
+.sti-badge-identity h2{overflow:hidden;margin:0;color:#138f83;font-size:20px;line-height:1.08;font-weight:850;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap;letter-spacing:.025em}
+.sti-badge-identity p{overflow:hidden;margin:5px 0 0;color:#353943;font-size:11px;line-height:1.2;text-overflow:ellipsis;white-space:nowrap}
+.sti-badge-details{position:absolute;top:62%;left:12%;right:10%;display:grid;gap:8px;margin:0}
+.sti-badge-details>div{min-width:0;display:grid;grid-template-columns:62px minmax(0,1fr);gap:5px;align-items:baseline}
+.sti-badge-details dt{color:#5c626b;font-size:8px;line-height:1.2}
+.sti-badge-details dd{overflow:hidden;margin:0;color:#292e39;font-size:8px;line-height:1.25;font-weight:650;text-overflow:ellipsis;white-space:nowrap}
+.sti-badge-footer{position:absolute;right:7%;bottom:4.5%;left:7%;display:flex;justify-content:space-between;gap:8px;border-top:1px solid #e4e8e9;padding-top:6px;color:#73808a;font-size:6px;line-height:1.2;font-weight:800;letter-spacing:.08em}
+.sti-badge-footer span:last-child{overflow:hidden;text-align:right;text-overflow:ellipsis;white-space:nowrap}
+.sti-badge-section-title{margin:14px 0 7px;font-size:13px;font-weight:800;color:var(--ink,#1f2c37)}
+.sti-badge-note{margin:5px 0 0;color:var(--ink-3,#64717b);font-size:11px;line-height:1.45}
+.sti-photo-field{display:grid;gap:6px;margin:12px 0}
+.sti-photo-field input[type=file]{max-width:100%;padding:8px;background:var(--surface,#fff)}
+.sti-photo-required{padding:8px 10px;border:1px solid #f3d69a;border-radius:9px;background:#fff8e8;color:#7a5510;font-size:11px;line-height:1.4}
+.sti-photo-status{min-height:16px;color:var(--ink-3,#64717b);font-size:11px}
+.sti-badge-error{min-height:18px;color:#b02a3a;font-size:12px}
+.sti-badge-preview-layout{display:grid;grid-template-columns:minmax(175px,220px) minmax(0,1fr);gap:14px;align-items:start}
+.sti-badge-preview-layout .sti-professor-badge{width:100%}
+.sti-badge-preview-layout .sti-badge-stage{padding:8px}
+.sti-badge-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
+.sti-badge-form-grid>div{min-width:0}
+.sti-badge-form-grid .full{grid-column:1/-1}
+.sti-admin-photo-preview{display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;align-items:center;margin-top:10px;padding:10px;border:1px dashed var(--line,#dce3e7);border-radius:12px;background:var(--surface-2,#f8fafb)}
+.sti-admin-photo-preview img,.sti-admin-photo-empty{width:72px;height:72px;border:3px solid #13a893;border-radius:50%;object-fit:cover;background:#e8ebed}
+.sti-admin-photo-empty{display:grid;place-items:center;color:#77858e;font-size:10px;text-align:center}
+.sti-admin-photo-preview strong{display:block;font-size:12px}
+.sti-admin-photo-preview small{display:block;margin-top:3px;color:var(--ink-3,#64717b);font-size:10px}
+.sti-professor-badge-print-frame{position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden}
+@media(max-width:680px){.sti-badge-preview-layout{grid-template-columns:1fr}.sti-badge-preview-layout>.sti-badge-stage{max-width:250px;margin:auto}.sti-badge-form-grid{grid-template-columns:1fr}}
+@media print{
+  @page{size:54mm 86mm;margin:0}
+  html,body{width:54mm!important;height:86mm!important;margin:0!important;padding:0!important;overflow:hidden!important}
+  body{display:flex;align-items:center;justify-content:center;background:#fff!important}
+  .sti-professor-badge{width:54mm!important;height:86mm!important;max-width:none!important;aspect-ratio:auto!important;min-height:86mm!important;border-radius:2.5mm!important;box-shadow:none!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
+
+/* Mini-badge personnel toujours visible dans la barre haute après connexion. */
+body.vs-fusion .site-professor-badge{order:1;flex:0 0 214px;width:214px;min-width:0;margin-left:auto;align-self:center;z-index:66}
+body.vs-fusion .site-professor-badge[hidden]{display:none!important}
+body.vs-fusion .site-professor-badge-trigger{display:flex;align-items:center;width:100%;min-height:68px;padding:8px 10px;gap:10px;border:1px solid #38405d;border-radius:13px;background:linear-gradient(145deg,#171a36,#252b4b);color:#fff;text-align:left;cursor:pointer;box-shadow:0 7px 18px rgba(12,22,50,.22);transform:rotate(2deg);transition:transform .18s ease,box-shadow .18s ease;}
+body.vs-fusion .site-professor-badge-trigger:hover,body.vs-fusion .site-professor-badge-trigger:focus-visible{transform:rotate(0deg) translateY(-1px);box-shadow:0 10px 24px rgba(12,22,50,.28)}
+body.vs-fusion .site-professor-badge-trigger:focus-visible{outline:2px solid #14a792;outline-offset:3px}
+body.vs-fusion .site-badge-avatar{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;overflow:hidden;border:2px solid #13a893;border-radius:50%;background:#e8ebed;color:#73808a}
+body.vs-fusion .site-badge-avatar img{display:block;width:100%;height:100%;object-fit:cover;border-radius:50%}
+body.vs-fusion .site-badge-avatar svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+body.vs-fusion .site-badge-copy{display:grid;min-width:0;flex:1;gap:2px}
+body.vs-fusion .site-badge-kicker{overflow:hidden;color:#48c8b2;font:800 7px/1.2 Inter,system-ui,sans-serif;letter-spacing:.13em;text-overflow:ellipsis;white-space:nowrap}
+body.vs-fusion .site-badge-name{overflow:hidden;color:#fff;font:750 11px/1.2 Inter,system-ui,sans-serif;text-overflow:ellipsis;white-space:nowrap}
+body.vs-fusion .site-badge-role{overflow:hidden;color:#c8d2e1;font:500 8px/1.25 Inter,system-ui,sans-serif;text-overflow:ellipsis;white-space:nowrap}
+body.vs-fusion .site-badge-code{color:#b4eadf;font:700 7px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+body.vs-fusion .site-badge-arrow{flex:0 0 auto;color:#d9a441;font:700 15px/1 Inter,system-ui,sans-serif}
+@media(max-width:1200px){body.vs-fusion .site-professor-badge{flex-basis:190px;width:190px}body.vs-fusion .site-professor-badge-trigger{min-height:62px;padding:7px 8px;gap:8px}body.vs-fusion .site-badge-avatar{flex-basis:44px;width:44px;height:44px}}
+@media(max-width:700px){
+ body.vs-fusion .site-professor-badge{order:1;flex:0 0 174px;width:174px;margin:0 5px 2px auto;align-self:flex-end}
+ body.vs-fusion .site-professor-badge-trigger{min-height:58px;padding:6px 8px;gap:7px;border-radius:11px;transform:rotate(2.5deg)}
+ body.vs-fusion .site-professor-badge-trigger:hover,body.vs-fusion .site-professor-badge-trigger:focus-visible{transform:rotate(0deg)}
+ body.vs-fusion .site-badge-avatar{flex-basis:40px;width:40px;height:40px}
+ body.vs-fusion .site-badge-avatar svg{width:23px;height:23px}
+ body.vs-fusion .site-badge-kicker{font-size:6.5px}
+ body.vs-fusion .site-badge-name{font-size:10px}
+ body.vs-fusion .site-badge-role{font-size:7px}
+ body.vs-fusion .site-badge-code{font-size:6.5px}
+}
+@media print{body.vs-fusion .site-professor-badge{display:none!important}}

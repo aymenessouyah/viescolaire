@@ -7,6 +7,7 @@
    les serveurs Supabase — le navigateur n'envoie que sa propre session.
    ================================================================== */
 'use strict';
+let adminPhotoPreviewUrl = "";
 
 function estAdmin(){
   const a = (cloudCfg().admin || "").toLowerCase();
@@ -38,13 +39,49 @@ function openAdmin(){
     return;
   }
   b.classList.add("on");
+  adminBadgePreview();
   adminLister();
 }
-function closeAdmin(){ const b = document.getElementById("admin-modal"); if (b) b.classList.remove("on"); }
+function closeAdmin(){
+  const b = document.getElementById("admin-modal"); if (b) b.classList.remove("on");
+  if (adminPhotoPreviewUrl) URL.revokeObjectURL(adminPhotoPreviewUrl);
+  adminPhotoPreviewUrl = "";
+  const photo=b&&b.querySelector("#ad-photo"),status=b&&b.querySelector("#ad-photo-status");
+  if(photo)photo.value="";if(status)status.textContent="";
+}
+function adminBadgeDraft(){
+  const b = document.getElementById("admin-modal");
+  const value = id => b && b.querySelector(id) ? b.querySelector(id).value.trim() : "";
+  return {
+    nom:value("#ad-name")||"NOM PRÉNOM",
+    fonction:value("#ad-function")||"Professeur",
+    matiere:value("#ad-subject")||"Sciences et technologies de l’informatique",
+    email:value("#ad-email"),
+    badge_code:"STI-ATTRIBUÉ À LA CRÉATION"
+  };
+}
+function adminBadgePreview(){
+  if(window.STI_PROF_BADGE)window.STI_PROF_BADGE.renderInto("ad-badge-preview",adminBadgeDraft(),adminPhotoPreviewUrl||"",{compact:true});
+}
+function adminBadgePhotoChanged(input){
+  const file=input&&input.files&&input.files[0],status=document.getElementById("ad-photo-status");
+  if(adminPhotoPreviewUrl)URL.revokeObjectURL(adminPhotoPreviewUrl);
+  adminPhotoPreviewUrl="";
+  if(!file){if(status)status.textContent="Une photo est obligatoire pour créer le badge.";adminBadgePreview();return;}
+  if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>10*1024*1024){
+    if(status)status.textContent=file.size>10*1024*1024?"Photo trop volumineuse (10 Mo maximum).":"Format non accepté : choisissez un JPEG, PNG ou WebP.";
+    input.value="";adminBadgePreview();return;
+  }
+  adminPhotoPreviewUrl=URL.createObjectURL(file);
+  if(status)status.textContent="Photo sélectionnée : "+file.name;
+  adminBadgePreview();
+}
 function adminLigne(u){
   const em = (u.email || "").replace(/"/g, "");
   return '<tr>' +
-    '<td><strong>' + escapeHtml(u.email || "(sans adresse)") + '</strong>' +
+    '<td><strong>' + escapeHtml(u.nom || u.email || "(sans adresse)") + '</strong>' +
+      (u.nom ? '<div class="tiny muted">' + escapeHtml(u.email || "") + '</div>' : "") +
+      (u.badge_code ? '<div class="tiny muted">' + escapeHtml(u.badge_code) + '</div>' : "") +
       (u.email && cloudCfg().admin && u.email.toLowerCase() === cloudCfg().admin.toLowerCase() ? ' <span class="badge b-navy" style="margin-left:4px">administrateur</span>' : "") + '</td>' +
     '<td class="tiny">' + (u.cree ? fmtShort(String(u.cree).slice(0,10)) : "—") + '</td>' +
     '<td class="tiny">' + (u.derniere ? fmtShort(String(u.derniere).slice(0,10)) : '<span class="muted">jamais</span>') + '</td>' +
@@ -75,21 +112,34 @@ async function adminCreer(){
   const b = document.getElementById("admin-modal");
   const email = b.querySelector("#ad-email").value.trim();
   const pwd   = b.querySelector("#ad-pass").value;
+  const nom   = b.querySelector("#ad-name").value.trim();
+  const fonction = b.querySelector("#ad-function").value.trim() || "Professeur";
+  const matiere = b.querySelector("#ad-subject").value.trim() || "Sciences et technologies de l’informatique";
+  const photoFile = b.querySelector("#ad-photo").files[0];
   const msg   = b.querySelector("#ad-msg");
-  msg.textContent = "";
-  if (!email || !pwd){ msg.textContent = "Adresse et mot de passe requis."; return; }
+  msg.style.color = "#b02a3a"; msg.textContent = "";
+  if (!nom || !email || !pwd){ msg.textContent = "Nom, adresse électronique et mot de passe sont requis."; return; }
   if (pwd.length < 6){ msg.textContent = "Mot de passe : 6 caractères au moins."; return; }
-  msg.textContent = "Création…";
+  if (!photoFile){ msg.textContent = "Choisissez la photo du professeur pour créer son badge."; return; }
+  if (!window.STI_PROF_BADGE){ msg.textContent = "Le module de création des badges n’est pas chargé. Rechargez la page."; return; }
+  const button = b.querySelector("button[onclick=\"adminCreer()\"]");
+  if(button)button.disabled=true;
+  msg.style.color = "var(--ink-3)"; msg.textContent = "Préparation de la photo…";
   try {
-    await adminAppel("creer", { email: email, password: pwd });
+    const photoData = await window.STI_PROF_BADGE.blobToDataUrl(await window.STI_PROF_BADGE.compressPhoto(photoFile));
+    msg.textContent = "Création du compte et enregistrement sécurisé du badge…";
+    await adminAppel("creer", { email: email, password: pwd, nom:nom, fonction:fonction, matiere:matiere, photoData:photoData });
     msg.style.color = "var(--green)";
-    msg.textContent = "Compte créé ✔ — à transmettre : adresse du site + " + email + " + ce mot de passe.";
-    b.querySelector("#ad-email").value = ""; b.querySelector("#ad-pass").value = "";
+    msg.textContent = "Compte et badge créés ✔ — transmettez au professeur l’adresse du site, son adresse et son mot de passe provisoire.";
+    ["#ad-name","#ad-email","#ad-pass","#ad-photo"].forEach(selector=>{const field=b.querySelector(selector);if(field)field.value="";});
+    if(adminPhotoPreviewUrl)URL.revokeObjectURL(adminPhotoPreviewUrl);
+    adminPhotoPreviewUrl="";b.querySelector("#ad-photo-status").textContent="";
+    adminBadgePreview();
     adminLister();
   } catch(e){
     msg.style.color = "#b02a3a";
     msg.textContent = "Échec : " + (e.message || e);
-  }
+  } finally { if(button)button.disabled=false; }
 }
 async function adminSupprimer(id, email){
   if (!confirm("Supprimer définitivement le compte de " + (email || id) + " ?\nSes données sauvegardées resteront dans la table jusqu'à purge.")) return;
@@ -107,5 +157,6 @@ function adminReinitPrompt(id, email){
 
 window.estAdmin = estAdmin; window.openAdmin = openAdmin; window.closeAdmin = closeAdmin;
 window.adminLister = adminLister; window.adminCreer = adminCreer;
+window.adminBadgePreview = adminBadgePreview; window.adminBadgePhotoChanged = adminBadgePhotoChanged;
 window.adminSupprimer = adminSupprimer; window.adminReinitPrompt = adminReinitPrompt;
 window.adminAppel = adminAppel;

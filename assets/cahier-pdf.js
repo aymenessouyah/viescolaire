@@ -3,7 +3,7 @@
    sauts de page, numérotation) directement en JavaScript, avec l'encodage WinAnsi
    pour les accents français. Utilisation :
      const blob = window.STI_PDF.cahier({ titre, sous, infos, colonnes, largeurs, rows, pied });
-     // rows : {type:'sem', label} ou {type:'row', cells:[…], etat:'ok'|'no'|'at'}
+     // rows : {type:'sem', label}, {type:'row', cells:[…], etat} ou {type:'signature', label, value}
 */
 (function (root) {
   'use strict';
@@ -124,7 +124,34 @@
       return n * 10.2 + 5;
     }
 
+    function signatureLines(r) {
+      var value = String(r.value || '').trim();
+      return value ? wrap(value, 9, 172, true) : [];
+    }
+
+    function signatureHeight(r) {
+      var lines = signatureLines(r);
+      return lines.length ? lines.length * 10 + 35 : 26;
+    }
+
+    function drawSignature(r) {
+      var lines = signatureLines(r), h = signatureHeight(r);
+      if (y - h < M + 24) newPage();
+      var width = 180, x = W - M - width;
+      var lineY = y - (lines.length ? lines.length * 10 + 2 : 5);
+      ops.push('0.68 0.68 0.68 RG 0.65 w ' + x + ' ' + lineY + ' m ' + (W - M) + ' ' + lineY + ' l S');
+      lines.forEach(function (line, i) {
+        ops.push('BT /F2 9 Tf 0.12 0.24 0.17 rg 1 0 0 1 ' + (x + 4) + ' ' + (y - 10 - i * 10) + ' Tm (' + pdfString(line) + ') Tj ET 0 0 0 rg');
+      });
+      ops.push('BT /F1 7 Tf 0.42 0.42 0.42 rg 1 0 0 1 ' + x + ' ' + (lineY - 10) + ' Tm (' + pdfString(r.label || 'Signature du professeur') + ') Tj ET 0 0 0 rg');
+      y -= h;
+    }
+
     doc.rows.forEach(function (r, idx) {
+      if (r.type === 'signature') {
+        drawSignature(r);
+        return;
+      }
       if (r.type === 'sem') {
         /* ne jamais laisser un bandeau de semaine seul en bas de page */
         var nxt = doc.rows[idx + 1], besoin = 16;
@@ -142,7 +169,9 @@
         return wrap(t, 8, wds[i] - 8, bold);
       });
       var h = hauteur(r);
-      if (y - h < M + 24) newPage();
+      var suivant = doc.rows[idx + 1];
+      var reserveSignature = suivant && suivant.type === 'signature' ? signatureHeight(suivant) : 0;
+      if (y - h - reserveSignature < M + 24) newPage();
       if (r.fond) ops.push('0.97 0.97 0.96 rg ' + M + ' ' + (y - h) + ' ' + (W - 2 * M) + ' ' + h + ' re f 0 0 0 rg');
       var x = M;
       cells.forEach(function (lignes, i) {
@@ -162,7 +191,8 @@
       y -= h;
     });
 
-    if (y < M + 40) newPage();
+    /* Le pied de page est placé dans la marge fixe de chaque page : ne pas
+       créer une page vide quand la dernière signature approche du bas. */
 
     /* pied de page */
     pages.forEach(function (o, i) {

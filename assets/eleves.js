@@ -476,34 +476,118 @@ function vueFaibles(cid){
     </div></div>`;
 }
 
-/* ---------- profil du professeur connecté ---------- */
-function openProfil(){
+/* ---------- profil, photo privée et badge du professeur connecté ---------- */
+function connectedProfessorProfile(){
+  return window.activeProfessorProfile?.()||{};
+}
+function renderSiteProfessorBadge(){
+  if(!window.STI_PROF_BADGE?.renderSiteBadge)return;
+  const profile=window.isProfessorConnected?.()?connectedProfessorProfile():null;
+  window.STI_PROF_BADGE.renderSiteBadge("site-professor-badge",profile,window.STI_PROF_BADGE.activePhotoUrl());
+}
+function profileBadgeData(){
+  const b=document.getElementById("profil-modal"),old=connectedProfessorProfile();
+  const value=id=>b&&b.querySelector(id)?b.querySelector(id).value.trim():"";
+  const user=authSession()?.user||{};
+  return Object.assign({},old,{
+    prof_id:user.id||"",
+    nom:value("#pf-nom")||old.nom||"",
+    fonction:value("#pf-function")||old.fonction||"Professeur",
+    matiere:value("#pf-mat")||old.matiere||(window.STI_PROF_BADGE&&window.STI_PROF_BADGE.subject)||"Sciences et technologies de l’informatique",
+    signature:value("#pf-signature").slice(0,100),
+    email:authUser(),
+    badge_code:old.badge_code||(window.STI_PROF_BADGE&&window.STI_PROF_BADGE.makeBadgeCode(user.id))||""
+  });
+}
+function renderProfileBadgePreview(){
+  const data=profileBadgeData();
+  window.STI_PROF_BADGE?.renderInto("pf-badge-preview",data,window.STI_PROF_BADGE.activePhotoUrl()||"");
+  const required=document.getElementById("pf-photo-required");
+  if(required)required.hidden=!!(data.photo_path||window.STI_PROF_BADGE?.activePhotoUrl());
+}
+async function profilePhotoChanged(input){
+  const status=document.getElementById("pf-photo-status"),file=input&&input.files&&input.files[0];
+  if(!window.STI_PROF_BADGE)return;
+  try{
+    await window.STI_PROF_BADGE.setDraftPhoto(file);
+    if(status)status.textContent=file?"Portrait sélectionné : "+file.name:"";
+    renderProfileBadgePreview();
+  }catch(error){
+    if(status)status.textContent=error.message||String(error);
+    if(input)input.value="";
+  }
+}
+async function openProfil(){
   if(typeof window.isProfessorConnected!=="function"||!window.isProfessorConnected()){openAuth();return;}
-  const b = document.getElementById("profil-modal");
+  const syncStatus=window.STI_SYNC?.status?.();
+  if(window.STI_PROF_BADGE&&navigator.onLine&&syncStatus?.code!=="account")await window.STI_PROF_BADGE.bootstrap();
+  const b = document.getElementById("profil-modal"),profile=connectedProfessorProfile();
   if (!b) return;
-  b.querySelector("#pf-nom").value = (store.profil && store.profil.nom) || "";
-  b.querySelector("#pf-mat").value = (store.profil && store.profil.matiere) || "STI";
+  window.STI_PROF_BADGE?.clearDraftPhoto();
+  b.querySelector("#pf-nom").value = profile.nom || "";
+  b.querySelector("#pf-function").value = profile.fonction || "Professeur";
+  b.querySelector("#pf-mat").value = (!profile.matiere||profile.matiere==="STI") ? (window.STI_PROF_BADGE?.subject||"Sciences et technologies de l’informatique") : profile.matiere;
+  b.querySelector("#pf-signature").value = profile.signature || "";
+  b.querySelector("#pf-photo").value = "";
   const em = b.querySelector("#pf-email");
-  if (em) em.textContent = authUser() || "(non connecté — le profil sera relié au compte à la connexion)";
+  if (em) em.textContent = authUser() || "(non connecté)";
+  const status=b.querySelector("#pf-photo-status"),error=b.querySelector("#pf-error");
+  if(status)status.textContent=profile.photo_path?"Photo de profil enregistrée." : (window.STI_PROF_BADGE?.lastError()?"Vérifiez la migration Supabase du badge : "+window.STI_PROF_BADGE.lastError():"Une photo est nécessaire pour créer le badge.");
+  if(error)error.textContent="";
   b.classList.add("on");
+  renderProfileBadgePreview();
+  if(profile.photo_path&&window.STI_PROF_BADGE){
+    window.STI_PROF_BADGE.loadProfilePhoto(profile.photo_path).then(()=>{
+      renderSiteProfessorBadge();
+      if(b.classList.contains("on"))renderProfileBadgePreview();
+    }).catch(e=>{if(status)status.textContent="Photo indisponible : "+(e.message||e);});
+  }
   setTimeout(() => { const f = b.querySelector("#pf-nom"); if (f) f.focus(); }, 60);
 }
-function closeProfil(){ const b = document.getElementById("profil-modal"); if (b) b.classList.remove("on"); }
-function saveProfil(){
+function closeProfil(){
+  const b = document.getElementById("profil-modal"); if (b) b.classList.remove("on");
+  window.STI_PROF_BADGE?.clearDraftPhoto();
+  renderSiteProfessorBadge();
+}
+async function saveProfil(){
   if(typeof window.isProfessorConnected!=="function"||!window.isProfessorConnected()){closeProfil();openAuth();return;}
-  const b = document.getElementById("profil-modal");
+  const b = document.getElementById("profil-modal"),error=b.querySelector("#pf-error"),button=b.querySelector("#pf-save");
   const nom = b.querySelector("#pf-nom").value.trim();
-  const mat = b.querySelector("#pf-mat").value.trim() || "STI";
-  if (!nom){ toast("Indiquez votre nom"); return; }
-  store.profil = { nom:nom, matiere:mat, email:authUser() };
-  save(); closeProfil(); if (typeof applyProfil === "function") applyProfil(); renderAll(true);
-  toast("Profil enregistré — " + nom);
+  const mat = b.querySelector("#pf-mat").value.trim() || "Sciences et technologies de l’informatique";
+  const fonction = b.querySelector("#pf-function").value.trim() || "Professeur";
+  const signature = b.querySelector("#pf-signature").value.trim().slice(0,100);
+  const photoFile=b.querySelector("#pf-photo").files[0]||null;
+  if(error)error.textContent="";
+  if (!nom){ if(error)error.textContent="Indiquez votre nom et votre prénom."; return; }
+  if(!window.STI_PROF_BADGE){if(error)error.textContent="Module de badge indisponible. Rechargez la page.";return;}
+  if(button)button.disabled=true;
+  try{
+    const saved=await window.STI_PROF_BADGE.saveProfile({
+      ...connectedProfessorProfile(),nom:nom,fonction:fonction,matiere:mat,signature:signature,email:authUser()
+    },photoFile);
+    store.profil=Object.assign({},connectedProfessorProfile(), {
+      prof_id:authSession()?.user?.id||"",
+      nom:nom,fonction:fonction,matiere:mat,signature:signature,email:authUser(),
+      badge_code:saved.badge_code||window.STI_PROF_BADGE.makeBadgeCode(authSession()?.user?.id),
+      photo_path:saved.photo_path
+    });
+    b.querySelector("#pf-photo").value="";
+    closeProfil();save();if(typeof applyProfil==="function")applyProfil();renderAll(true);
+    toast("Profil et badge enregistrés — "+nom);
+  }catch(e){if(error)error.textContent=e.message||String(e);}
+  finally{if(button)button.disabled=false;}
+}
+async function printProfilBadge(){
+  if(!window.isProfessorConnected?.()){openAuth();return;}
+  try{await window.STI_PROF_BADGE.printBadge(profileBadgeData());}
+  catch(error){const status=document.getElementById("pf-photo-status");if(status)status.textContent=error.message||String(error);}
 }
 /* adapte l'en-tête au professeur connecté */
 function applyProfil(){
   const connected=typeof window.isProfessorConnected==="function"&&window.isProfessorConnected();
-  const p=connected?store.profil:null;
-  const nom=connected?(p&&p.nom?p.nom:SCHOOL.prof):"Professeur";
+  const p=connected?connectedProfessorProfile():null;
+  renderSiteProfessorBadge();
+  const nom=connected?(p&&p.nom?p.nom:(authUser().split("@")[0]||"Professeur")):"Professeur";
   const mat=connected?(p&&p.matiere?p.matiere:SCHOOL.matiere):"";
   const h = document.getElementById("hero-prof");
   if (h) h.textContent = connected ? "Prof. " + nom : "Professeur";
@@ -1007,6 +1091,7 @@ window.vocOuvrir = vocOuvrir; window.vocToggle = vocToggle; window.vocStop = voc
 window.vocTraiter = vocTraiter; window.vocAnalyse = vocAnalyse; window.vocCible = vocCible;
 window.setPresence = setPresence; window.vocSuivantNonMarque = vocSuivantNonMarque;
 window.openProfil = openProfil; window.closeProfil = closeProfil; window.saveProfil = saveProfil;
+window.profilePhotoChanged = profilePhotoChanged; window.renderProfileBadgePreview = renderProfileBadgePreview; window.renderSiteProfessorBadge = renderSiteProfessorBadge; window.printProfilBadge = printProfilBadge;
 window.applyProfil = applyProfil;
 function initializeConnectedProfile(){
   if(typeof window.renderAll==="function")window.renderAll(true);else applyProfil();

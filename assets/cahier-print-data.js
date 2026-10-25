@@ -100,6 +100,27 @@
     });
   }
 
+  /* Regroupe toutes les séances d'une même date pour n'ajouter qu'une signature
+     quotidienne, y compris lorsque plusieurs classes ont cours le même jour. */
+  function groupByDate(sessions) {
+    const ordered = (sessions || []).slice().sort(function (a, b) {
+      return String(a.iso).localeCompare(String(b.iso)) ||
+        String(a.cls).localeCompare(String(b.cls)) ||
+        (Number(a.n) - Number(b.n));
+    });
+    const days = [];
+    ordered.forEach(function (session) {
+      const iso = String(session.iso || '');
+      let day = days[days.length - 1];
+      if (!day || day.iso !== iso) {
+        day = { iso: iso, items: [] };
+        days.push(day);
+      }
+      day.items.push(session);
+    });
+    return days;
+  }
+
   /* Ajoute un repère de clôture par trimestre antérieur lorsqu'un filtre
      (trimestre ou état) masque la séance qui doit précéder la répartition suivante. */
   function chronology(selectedSessions, sessionsByClass, filters) {
@@ -152,6 +173,7 @@
     state: state,
     withPlans: withPlans,
     select: select,
+    groupByDate: groupByDate,
     chronology: chronology
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="assets/suivi-sti.css">
 <link rel="stylesheet" href="assets/theme-classe.css">
 <link rel="stylesheet" href="assets/interface-reference.css">
+<link rel="stylesheet" href="assets/professeur-badge.css">
 <link rel="stylesheet" href="assets/offline-sync.css">
 <link rel="stylesheet" href="assets/color-mode.css">
 <link rel="stylesheet" href="assets/agent-sti.css">
@@ -35,6 +36,7 @@
 <div class="bell-wrap"><button class="bell-btn" id="ref-bell" type="button" aria-controls="ref-notifications" aria-label="Notifications du planning" aria-expanded="false"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M14 21h-4"/></svg><span id="ref-bell-count" class="ref-bell-count" aria-hidden="true" hidden></span></button><div class="bell-dropdown" id="ref-notifications" role="region" aria-label="Notifications du planning"></div></div>
 <button class="bell-btn" type="button" id="ref-theme-toggle" data-ref="color-mode" aria-label="Activer le mode sombre" aria-pressed="false" title="Passer au mode sombre"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></svg></button>
 <button class="btn btn-primary" data-ref="new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>Nouvelle séance</span></button>
+<aside id="site-professor-badge" class="site-professor-badge no-print" hidden aria-label="Badge du professeur connecté"></aside>
 <section class="ref-essential-bar" aria-label="Compte et Cloud"><button type="button" id="ref-account-toggle" class="ref-account-toggle" aria-expanded="false" aria-controls="ref-account-content"><span>Compte &amp; sauvegarde</span><span id="ref-account-state" class="ref-account-state" aria-live="polite">Local</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><div id="ref-account-content"><button type="button" class="btn btn-line" id="sti-sync-details" data-sync="details">Hors ligne &amp; synchronisation</button><div class="ref-essential-heading"><strong>COMPTE &amp; SAUVEGARDE</strong><div class="ref-essential-status" aria-live="polite"><span id="net-state" class="badge b-grey">En ligne</span><span id="cloud-bar">—</span></div></div><div aria-label="Actions essentielles du compte et des sauvegardes" class="head-actions no-print">
 <div style="position:relative;display:inline-block">
 <button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg> <span id="compte-txt">Connexion</span> <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:14px;height:14px" viewbox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
@@ -117,7 +119,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.9.0-themed-logout-dialog";
+  var ATTENDU = "v1.13.0-sticky-professor-badge";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -241,15 +243,32 @@
       <button class="btn btn-xs btn-line" onclick="closeAdmin()">Fermer</button>
     </div>
     <div class="box-b">
-      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
-        <div style="min-width:220px"><label class="f">Adresse électronique du collègue</label>
-          <input type="email" id="ad-email" placeholder="collegue@exemple.tn"></div>
-        <div style="min-width:180px"><label class="f">Mot de passe provisoire</label>
-          <input type="text" id="ad-pass" placeholder="6 caractères au moins"></div>
-        <button class="btn btn-blue" onclick="adminCreer()">Créer le compte</button>
-        <button class="btn btn-line" onclick="adminLister()">Rafraîchir</button>
+      <p class="small" style="color:var(--ink-2);margin-bottom:12px">À la création du compte, renseignez le nom et choisissez une photo. Le badge sera lié à l’identifiant Supabase du professeur ; les photos restent privées.</p>
+      <div class="sti-badge-preview-layout" style="grid-template-columns:minmax(150px,185px) minmax(0,1fr);margin-bottom:14px">
+        <div id="ad-badge-preview" class="sti-badge-stage"></div>
+        <div class="sti-badge-form-grid">
+          <div><label class="f" for="ad-name">Nom et prénom <strong aria-hidden="true">*</strong></label>
+            <input type="text" id="ad-name" placeholder="Nom et prénom" autocomplete="name" oninput="adminBadgePreview()"></div>
+          <div><label class="f" for="ad-function">Fonction</label>
+            <input type="text" id="ad-function" value="Professeur" oninput="adminBadgePreview()"></div>
+          <div class="full"><label class="f" for="ad-subject">Discipline</label>
+            <input type="text" id="ad-subject" value="Sciences et technologies de l’informatique" oninput="adminBadgePreview()"></div>
+          <div><label class="f" for="ad-email">Adresse électronique <strong aria-hidden="true">*</strong></label>
+            <input type="email" id="ad-email" placeholder="collegue@exemple.tn" autocomplete="email" oninput="adminBadgePreview()"></div>
+          <div><label class="f" for="ad-pass">Mot de passe provisoire <strong aria-hidden="true">*</strong></label>
+            <input type="text" id="ad-pass" placeholder="6 caractères au moins" autocomplete="new-password"></div>
+          <div class="full sti-photo-field"><label class="f" for="ad-photo">Photo du professeur <strong aria-hidden="true">*</strong></label>
+            <input type="file" id="ad-photo" accept="image/jpeg,image/png,image/webp" onchange="adminBadgePhotoChanged(this)">
+            <small class="sti-badge-note">JPEG, PNG ou WebP, 10 Mo maximum avant compression.</small>
+            <div id="ad-photo-status" class="sti-photo-status" aria-live="polite"></div>
+          </div>
+        </div>
       </div>
-      <div id="ad-msg" class="tiny" style="min-height:18px;margin-bottom:8px"></div>
+      <div class="row" style="gap:8px;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-line" type="button" onclick="adminLister()">Rafraîchir</button>
+        <button class="btn btn-blue" type="button" onclick="adminCreer()">Créer le compte et le badge</button>
+      </div>
+      <div id="ad-msg" class="tiny" role="status" aria-live="polite" style="min-height:18px;margin-bottom:8px"></div>
       <div id="admin-liste"><p class="tiny muted">Chargement…</p></div>
     </div>
     <div class="box-f">
@@ -289,27 +308,47 @@
 </div>
 
 <!-- ===================== MODALE PROFIL PROFESSEUR ===================== -->
-<div class="modal" id="profil-modal">
-  <div class="box" style="max-width:430px">
+<div class="modal" id="profil-modal" role="dialog" aria-modal="true" aria-labelledby="pf-title">
+  <div class="box" style="max-width:760px;max-height:92vh;display:flex;flex-direction:column">
     <div class="box-h">
-      <h3 style="font-size:16px">Votre profil de professeur</h3>
-      <button class="btn btn-xs btn-line" onclick="closeProfil()">Fermer</button>
+      <h3 id="pf-title" style="font-size:16px">Mon profil et mon badge professeur</h3>
+      <button class="btn btn-xs btn-line" type="button" onclick="closeProfil()">Fermer</button>
     </div>
-    <div class="box-b">
+    <div class="box-b" style="overflow:auto">
       <p class="small" style="color:var(--ink-2);margin-bottom:12px">
-        Chaque professeur dispose de son propre espace protégé par son compte :
-        ses classes, ses élèves, ses notes et ses présences restent <strong>privés</strong>.
-        Ce nom s'affiche en en-tête du site et signe vos sauvegardes.
+        Votre badge utilise votre portrait et vos informations professionnelles. La photo est enregistrée dans un espace privé Supabase, accessible uniquement par votre compte.
+        Le nom du profil signe aussi vos sauvegardes. Vous pouvez définir une signature textuelle pour la fin de chaque journée dans le cahier de textes.
       </p>
-      <div style="margin-bottom:10px"><label class="f">Nom et prénom</label>
-        <input type="text" id="pf-nom" placeholder="Nom et prénom"></div>
-      <div style="margin-bottom:10px"><label class="f">Matière enseignée</label>
-        <input type="text" id="pf-mat" placeholder="STI"></div>
-      <div class="note tiny" style="margin-top:6px">Compte connecté : <span id="pf-email" class="tiny">—</span></div>
+      <div class="sti-badge-preview-layout">
+        <div>
+          <div id="pf-badge-preview" class="sti-badge-stage" aria-live="polite"></div>
+          <button class="btn btn-line" style="width:100%;margin-top:8px" type="button" onclick="printProfilBadge()">Imprimer mon badge</button>
+        </div>
+        <div>
+          <div class="sti-badge-form-grid">
+            <div class="full"><label class="f" for="pf-nom">Nom et prénom</label>
+              <input type="text" id="pf-nom" placeholder="Nom et prénom" autocomplete="name" oninput="renderProfileBadgePreview()"></div>
+            <div><label class="f" for="pf-function">Fonction</label>
+              <input type="text" id="pf-function" placeholder="Professeur" oninput="renderProfileBadgePreview()"></div>
+            <div><label class="f" for="pf-mat">Discipline</label>
+              <input type="text" id="pf-mat" placeholder="Sciences et technologies de l’informatique" oninput="renderProfileBadgePreview()"></div>
+            <div class="full"><label class="f" for="pf-signature">Signature à afficher dans le cahier (texte)</label>
+              <input type="text" id="pf-signature" maxlength="100" placeholder="Nom ou signature du professeur"></div>
+            <div class="full sti-photo-field"><label class="f" for="pf-photo">Photo du professeur <strong aria-hidden="true">*</strong></label>
+              <input type="file" id="pf-photo" accept="image/jpeg,image/png,image/webp" onchange="profilePhotoChanged(this)">
+              <small class="sti-badge-note">JPEG, PNG ou WebP, 10 Mo maximum avant compression. La photo reste privée dans le compte du professeur.</small>
+              <div id="pf-photo-required" class="sti-photo-required" hidden>Ajoutez votre portrait pour finaliser votre badge.</div>
+              <div id="pf-photo-status" class="sti-photo-status" aria-live="polite"></div>
+            </div>
+          </div>
+          <div id="pf-error" class="sti-badge-error" role="status" aria-live="polite"></div>
+          <div class="note tiny" style="margin-top:6px">Compte connecté : <span id="pf-email" class="tiny">—</span></div>
+        </div>
+      </div>
     </div>
     <div class="box-f">
-      <button class="btn btn-line" onclick="closeProfil()">Annuler</button>
-      <button class="btn btn-blue" onclick="saveProfil()">Enregistrer</button>
+      <button class="btn btn-line" type="button" onclick="closeProfil()">Annuler</button>
+      <button class="btn btn-blue" id="pf-save" type="button" onclick="saveProfil()">Enregistrer le profil et le badge</button>
     </div>
   </div>
 </div>
@@ -330,12 +369,13 @@
         <input type="email" id="auth-email" autocomplete="username" placeholder="vous@exemple.tn"></div>
       <div style="margin-bottom:10px"><label class="f">Mot de passe</label>
         <input type="password" id="auth-pass" autocomplete="current-password" placeholder="••••••••"></div>
+      <button type="button" class="btn-link" style="padding:2px 0;margin-bottom:7px;text-decoration:underline" onclick="sendPasswordRecovery()">Mot de passe oublié ?</button>
       <div id="auth-err" class="tiny" style="color:#b02a3a;min-height:16px"></div>
       <p class="tiny muted" style="margin:4px 0 0">Ici on saisit <strong>votre identité</strong> (adresse + mot de passe).
       L'URL du projet, la clé, la table et le nom de l'appareil se règlent dans
       <a href="#" onclick="closeAuth(); openCloudSettings(); return false" style="color:inherit;text-decoration:underline">Réglages avancés</a>
       — normalement déjà remplis.</p>
-      <p class="tiny muted" style="margin:2px 0 0">Première utilisation ? Remplissez les deux champs puis cliquez sur <strong>Créer le compte</strong>. Les fois suivantes : <strong>Se connecter</strong>.</p>
+      <p class="tiny muted" style="margin:2px 0 0">Les comptes professeurs sont créés par l’administrateur avec leur badge et leur photo. Utilisez ici l’adresse et le mot de passe provisoire qui vous ont été remis.</p>
       <div class="note tiny" style="margin-top:6px">
         Vous pouvez fermer cette fenêtre et travailler <strong>hors ligne</strong> : les données de cet appareil sont
         conservées et seront synchronisées à la prochaine connexion.
@@ -343,11 +383,32 @@
     </div>
     <div class="box-f">
       <button class="btn btn-line" onclick="closeAuth()">Travailler hors ligne</button>
-      <button class="btn btn-line" onclick="doSignup()" title="Première utilisation : crée ici le compte qui protègera tes données">Créer le compte</button>
       <button class="btn btn-blue" onclick="doLogin()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
         Se connecter
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALE NOUVEAU MOT DE PASSE ===================== -->
+<div class="modal" id="password-reset-modal" role="dialog" aria-modal="true" aria-labelledby="password-reset-title">
+  <div class="box" style="max-width:430px">
+    <div class="box-h">
+      <h3 id="password-reset-title" style="font-size:16px">Choisir un nouveau mot de passe</h3>
+      <button class="btn btn-xs btn-line" type="button" onclick="closePasswordReset()">Fermer</button>
+    </div>
+    <div class="box-b">
+      <p class="small" style="color:var(--ink-2);margin-bottom:12px">Après validation de votre lien Supabase, choisissez un nouveau mot de passe pour votre compte professeur.</p>
+      <div style="margin-bottom:10px"><label class="f" for="password-reset-new">Nouveau mot de passe</label>
+        <input type="password" id="password-reset-new" autocomplete="new-password" placeholder="6 caractères minimum"></div>
+      <div style="margin-bottom:10px"><label class="f" for="password-reset-confirm">Confirmer le mot de passe</label>
+        <input type="password" id="password-reset-confirm" autocomplete="new-password" placeholder="Répétez le nouveau mot de passe"></div>
+      <div id="password-reset-err" class="tiny" role="status" aria-live="polite" style="min-height:18px"></div>
+    </div>
+    <div class="box-f">
+      <button class="btn btn-line" type="button" onclick="closePasswordReset()">Annuler</button>
+      <button class="btn btn-blue" id="password-reset-submit" type="button" onclick="updatePasswordFromRecovery()">Enregistrer le nouveau mot de passe</button>
     </div>
   </div>
 </div>
@@ -414,10 +475,12 @@
 <script src="assets/agent-sti.js"></script>
 <script src="assets/cahier-pdf.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/professeur-badge.js"></script>
 <script src="assets/eleves.js"></script>
 <script src="assets/admin.js"></script>
 <script src="assets/sync-merge.js"></script>
 <script src="assets/offline-sync.js"></script>
+<script src="assets/drive-backup.js"></script>
 <script src="assets/theme-classe.js"></script>
 <script src="assets/color-mode.js"></script>
 <script src="assets/cahier-print-data.js"></script>
@@ -432,6 +495,23 @@
       <button type="submit" value="cancel" class="logout-confirm-cancel" autofocus>Annuler</button>
       <button type="submit" value="confirm" class="logout-confirm-accept">Se déconnecter</button>
     </form>
+  </div>
+</dialog>
+<dialog id="drive-backup-dialog" class="drive-backup-dialog" aria-labelledby="drive-backup-title" aria-describedby="drive-backup-description">
+  <div class="drive-backup-content">
+    <div class="drive-backup-mark" aria-hidden="true">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 18H6a4 4 0 0 1-.3-8A6.5 6.5 0 0 1 18 8.5 4.5 4.5 0 0 1 18 17h-1"></path><path d="M12 12v9m-3-3 3 3 3-3"></path></svg></span>
+      <small>SAUVEGARDE PERSONNELLE</small>
+    </div>
+    <h2 id="drive-backup-title">Sauvegarde hebdomadaire dans Google Drive</h2>
+    <p id="drive-backup-description">Chaque copie est privée dans le compte Google Drive que vous choisissez.</p>
+    <div id="drive-backup-message" class="drive-backup-message" role="status" aria-live="polite" hidden></div>
+    <div class="drive-backup-actions">
+      <button id="drive-backup-later" class="btn btn-line" type="button">Fermer</button>
+      <button id="drive-backup-secondary" class="btn btn-soft" type="button" hidden>Désactiver</button>
+      <button id="drive-backup-primary" class="btn btn-primary" type="button" hidden>Continuer</button>
+    </div>
+    <p class="drive-backup-footnote">L’accès Google est limité aux fichiers créés par cette application. L’application ne chiffre pas ces copies en plus : elles sont protégées par les paramètres d’accès de votre compte Google Drive. « Désactiver » arrête les futurs envois sur cet appareil, sans supprimer les copies ni révoquer l’autorisation Google ; pour retirer cette autorisation, utilisez <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">les paramètres de sécurité Google</a>.</p>
   </div>
 </dialog>
 </body>

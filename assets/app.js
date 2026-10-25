@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.9.0-themed-logout-dialog";
+const APP_VER = "v1.13.0-sticky-professor-badge";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -238,7 +238,7 @@ function renderAll(silent){
   renderCompte();
   renderVerChip();
   renderLoginInvite();
-  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:store,sessions:SESSIONS,view:currentTab,term:repTri});
+  if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:Object.assign({},store,{profil:activeProfessorProfile()}),sessions:SESSIONS,view:currentTab,term:repTri});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
   if(connected)restorePrivateWorkspace();else renderPrivateWorkspace();
 }
@@ -306,7 +306,8 @@ function renderDash(){
   const t = todayISO();
   const connected = isProfessorConnected();
   const email = connected ? authUser() : "";
-  const name = connected ? ((store.profil && store.profil.nom) || email.split("@")[0] || "professeur").trim() : "";
+  const profile = connected ? activeProfessorProfile() : null;
+  const name = connected ? ((profile && profile.nom) || email.split("@")[0] || "professeur").trim() : "";
   const welcome = connected ? "Bonjour, " + escapeHtml(name.split(/\s+/)[0]) : "Bonjour professeur, veuillez entrer vos données de connexion.";
   const todaySessions = [];
   ["3SI1","4SI2"].forEach(c => SESSIONS[c].filter(s => s.iso === t).forEach(s => todaySessions.push(s)));
@@ -1110,6 +1111,8 @@ function lundiDe(iso){
   return d.toISOString().slice(0,10);
 }
 function renderCahier(){
+  const cahierBox=document.getElementById("v-cahier");
+  if(!isProfessorConnected()){if(cahierBox)cahierBox.innerHTML="";return;}
   const t = todayISO();
   const period = classesCahier().filter(c=>cahCls==="both"||cahCls===c).flatMap(c=>sessionsOf(c,cahTri));
   const pending = s => { const o=store.seances[s.cls+"|"+s.n]||{};return s.iso<t&&o.done!==true&&o.done!==false; };
@@ -1127,6 +1130,7 @@ function renderCahier(){
   const semaines = [];
   list.forEach(s=>{ const k=lundiDe(s.iso); let g=semaines[semaines.length-1];
     if (!g || g.k !== k) { g={k:k, items:[]}; semaines.push(g); } g.items.push(s); });
+  const signature = String(activeProfessorProfile()?.signature||"").trim();
   const box=document.getElementById("v-cahier");
   box.innerHTML=`
   <div class="sec-head"><div><h2>${ic("pen")} Cahier de textes numérique</h2>
@@ -1164,8 +1168,9 @@ function renderCahier(){
           <span class="badge b-grey">${g.items.length} séance${g.items.length>1?"s":""}</span>
           ${ass?`<span class="badge b-green">${ass} assurée${ass>1?"s":""}</span>`:""}
           ${att?`<span class="badge b-amber">${att} à confirmer</span>`:""}</div>
-        <div class="tl">${g.items.map(s=>{
+        <div class="tl">${g.items.map((s,dayIndex)=>{
       const o=store.seances[s.cls+"|"+s.n]||{},st=seanceState(s),flag=s.blk&&s.blk.k!=="cours",c=complet(s);
+      const finJour=dayIndex===g.items.length-1||g.items[dayIndex+1].iso!==s.iso;
       const verrouSeance = seanceVerrouillee(s);
       const rep = o.report ? `<div class="tiny" style="margin-top:4px;color:var(--rose,#b3261e)">↪ Reportée — motif : ${escapeHtml(o.report.motif)}${o.report.vers?" · remplacée le "+fmtShort(o.report.vers):""}</div>` : "";
       return `<div class="tl-item ${flag?"t-eval":""}" data-cah-key="${s.cls}|${s.n}" data-cah-date="${s.iso}"><div class="spread"><div>
@@ -1187,7 +1192,7 @@ function renderCahier(){
         <div class="row" style="gap:6px">
           <button class="btn btn-xs btn-line" onclick="cahReport('${s.cls}',${s.n})" title="Reporter la séance avec un motif ; le contenu suit">${ic("out")} Reporter</button>
           <button class="btn btn-xs btn-line" onclick="cahDuplicate('${s.cls}',${s.n})" title="Copier le contenu sur la séance suivante de la même classe">${ic("file")} Dupliquer</button>
-        </div>`}</div></div></div>`;
+        </div>`}</div></div></div>${signature&&finJour?`<div class="cah-day-signature"><span>Signature du professeur</span><strong>${escapeHtml(signature)}</strong></div>`:""}`;
     }).join("")||`<p class="muted tiny" id="cah-empty">${cahStatus==="pending"?"Aucune séance passée à confirmer dans ce périmètre. Les séances assurées et reportées restent accessibles avec le filtre d’état.":"Aucune séance pour ces filtres."}</p>`}</div>
         </div></div>`;}).join("")}
   </div></div>`;
@@ -1247,19 +1252,23 @@ function cahierSelection(){
 }
 /* Document imprimable : en-tête, informations, tableau semaine par semaine. */
 function printCahier(){
+  if(!isProfessorConnected()){openAuth();return;}
   const list = cahierSelection();
   if (!list.length){ toast("Aucune séance à imprimer dans ce périmètre."); return; }
   const esc = x => escapeHtml(x==null?"":String(x));
   const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
   const etat = { pending:"À confirmer", all:"Toutes les séances", done:"Séances assurées", reported:"Séances reportées" };
   const semaines = [];
+  const signature = String(activeProfessorProfile()?.signature||"").trim();
   list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n).forEach(s=>{
     const k = lundiDe(s.iso); let g = semaines[semaines.length-1];
     if (!g || g.k !== k){ g = {k:k, items:[]}; semaines.push(g); } g.items.push(s);
   });
   const rows = semaines.map(g=>{
-    const corps = g.items.map(s=>{
+    const corps = g.items.map((s,dayIndex)=>{
       const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
+      const finJour=dayIndex===g.items.length-1||g.items[dayIndex+1].iso!==s.iso;
+      const signatureRow=finJour?`<tr class="day-signature"><td colspan="6"><div><span>Signature du professeur — ${esc(fmtShort(s.iso))}</span><strong>${esc(signature)}</strong></div></td></tr>`:"";
       return `<tr>
         <td class="d">${esc(fmtShort(s.iso))}</td>
         <td class="c">${esc(s.cls)}</td>
@@ -1267,7 +1276,7 @@ function printCahier(){
         <td><b>${esc(titleOf(s,store))}</b>${o.contenu?`<div class="cc">${esc(o.contenu)}</div>`:(s.blk&&s.blk.det?`<div class="cc mut">Prévu : ${esc(s.blk.det)}</div>`:"")}${o.obs?`<div class="cc mut">Obs. : ${esc(o.obs)}</div>`:""}</td>
         <td class="dv">${o.devoirs?esc(o.devoirs):"—"}</td>
         <td class="et ${st==="faite"?"ok":(st==="reportee"?"no":"at")}">${st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")}</td>
-      </tr>`;
+      </tr>${signatureRow}`;
     }).join("");
     return `<tr class="sem"><td colspan="6">Semaine du ${esc(fmtLong(g.k))} — ${g.items.length} séance${g.items.length>1?"s":""}</td></tr>${corps}`;
   }).join("");
@@ -1285,6 +1294,11 @@ function printCahier(){
     th{background:#175C41;color:#fff;font-size:10px;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:5px 6px}
     td{border-bottom:1px solid #e2ddd6;padding:4px 6px;vertical-align:top}
     tr.sem td{background:#FDF4EC;color:#a8541a;font-weight:700;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;border:0;padding:5px 6px}
+    tr.day-signature{break-inside:avoid;page-break-inside:avoid}
+    tr.day-signature td{border:0;border-bottom:1px solid #e2ddd6;padding:2px 6px 8px}
+    tr.day-signature div{display:flex;justify-content:flex-end;align-items:baseline;gap:12px;min-height:24px}
+    tr.day-signature span{font-size:9px;color:#777}
+    tr.day-signature strong{display:inline-block;min-width:150px;border-bottom:1px solid #aaa;padding:0 8px 2px;text-align:center;font:italic 16px/1.25 "Segoe Script","Brush Script MT",cursive;color:#333}
     td.d{white-space:nowrap;width:52px;font-weight:700}
     td.c{width:44px;font-weight:700;color:#14684A}
     td.n{width:22px;text-align:right;color:#666}
@@ -1309,8 +1323,8 @@ function printCahier(){
   </div>
   <table><thead><tr><th>Date</th><th>Cl.</th><th>N°</th><th>Contenu traité</th><th>Travail donné</th><th>État</th></tr></thead>
   <tbody>${rows}</tbody></table>
-  <div class="sig"><div>Visa du chef d’établissement</div><div>Signature de l’enseignant</div></div>
-  <div class="foot"><span>${esc((store.profil&&store.profil.nom)||"Aymen Essouyah")}</span><span>Généré par l’espace pédagogique</span></div>
+  <div class="sig"><div>Visa du chef d’établissement</div></div>
+  <div class="foot"><span>${esc((activeProfessorProfile()?.nom)||authUser()||"Professeur")}</span><span>Généré par l’espace pédagogique</span></div>
   </body></html>`;
   let fr = document.getElementById("cah-print");
   if (fr) fr.remove();
@@ -1324,6 +1338,7 @@ function printCahier(){
 }
 /* Export CSV des séances du cahier */
 function cahierCSV(){
+  if(!isProfessorConnected()){openAuth();return;}
   const list = cahierSelection();
   if (!list.length){ toast("Aucune séance à exporter."); return; }
   const esc = v => '"' + String(v==null?"":v).replace(/"/g,'""') + '"';
@@ -1342,27 +1357,33 @@ function cahierCSV(){
 }
 /* Export PDF du cahier : même mise en page que l'impression (générateur autonome). */
 function cahierPDF(){
+  if(!isProfessorConnected()){openAuth();return;}
   if (!window.STI_PDF || !window.STI_PDF.cahier){ toast("Générateur PDF indisponible : rechargez la page.", "err"); return; }
   const list = cahierSelection();
   if (!list.length){ toast("Aucune séance à exporter dans ce périmètre."); return; }
   const periode = (cahCls==="both"?"3SI1 et 4SI2":cahCls)+" — "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"toute l’année");
   const rows = [], tri = list.slice().sort((a,b)=>a.iso.localeCompare(b.iso)||a.cls.localeCompare(b.cls)||a.n-b.n);
+  const signature = String(activeProfessorProfile()?.signature||"").trim();
+  const jours = window.STI_CAHIER_PRINT_DATA.groupByDate(tri);
   let semaineCourante = null;
-  tri.forEach(s=>{
-    const k = lundiDe(s.iso);
+  jours.forEach(day=>{
+    const k = lundiDe(day.iso);
     if (semaineCourante !== k){
       semaineCourante = k;
       const n = tri.filter(x=>lundiDe(x.iso)===k).length;
       rows.push({type:"sem", label:"Semaine du "+fmtLong(k)+" — "+n+" séance"+(n>1?"s":"")});
     }
-    const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
-    let contenu = titleOf(s,store);
-    if (o.contenu && o.contenu.trim()) contenu += " — " + o.contenu.trim();
-    if (o.obs && o.obs.trim()) contenu += " (obs. : " + o.obs.trim() + ")";
-    rows.push({type:"row",
-      cells:[fmtShort(s.iso), s.cls, String(s.n), contenu, (o.devoirs||"—").trim(),
-             st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")],
-      etat: st==="faite"?"ok":(st==="reportee"?"no":"at")});
+    day.items.forEach(s=>{
+      const o = store.seances[s.cls+"|"+s.n]||{}, st = seanceState(s);
+      let contenu = titleOf(s,store);
+      if (o.contenu && o.contenu.trim()) contenu += " — " + o.contenu.trim();
+      if (o.obs && o.obs.trim()) contenu += " (obs. : " + o.obs.trim() + ")";
+      rows.push({type:"row",
+        cells:[fmtShort(s.iso), s.cls, String(s.n), contenu, (o.devoirs||"—").trim(),
+               st==="faite"?"Assurée":(st==="reportee"?"Reportée":"À confirmer")],
+        etat: st==="faite"?"ok":(st==="reportee"?"no":"at")});
+    });
+    rows.push({type:"signature",label:"Signature — "+fmtShort(day.iso),value:signature});
   });
   const done = list.filter(s=>seanceState(s)==="faite").length;
   const renseignees = list.filter(s=>{ const o=store.seances[s.cls+"|"+s.n]||{}; return o.preparation||o.contenu||o.devoirs; }).length;
@@ -1651,6 +1672,8 @@ function filterRef(v){
 
 /* ---------- compte unique (Supabase Auth) : accès protégé par mot de passe ---------- */
 const SESSION_KEY = "sti_cloud_session";
+const PASSWORD_RECOVERY_REDIRECT_URL = "https://aymenessouyah.github.io/viescolaire/";
+let passwordRecoveryToken = "", badgePromptedUser = "";
 function authSession(){ try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch(e){ return null; } }
 function authSave(sess){ try { localStorage.setItem(SESSION_KEY, JSON.stringify(sess)); } catch(e){} }
 function authClear(){ try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
@@ -1686,11 +1709,21 @@ function isProfessorConnected(){
   try { return !!(authNeeded() && authSession() && authUser()); }
   catch(e) { return false; }
 }
+function activeProfessorProfile(){
+  const session=authSession(),user=session&&session.user,profile=store&&store.profil;
+  if(!isProfessorConnected()||!user||!user.id||!profile||typeof profile!=="object")return null;
+  const profileId=String(profile.prof_id||""),profileEmail=String(profile.email||"").toLowerCase(),userEmail=String(user.email||"").toLowerCase();
+  if(profileId){if(profileId!==String(user.id))return null;}
+  else if(!(profileEmail&&userEmail&&profileEmail===userEmail))return null;
+  return profile;
+}
+window.activeProfessorProfile=activeProfessorProfile;
 function openAuth(){
   const b = document.getElementById("auth-modal");
   if (!b) return;
   b.querySelector("#auth-email").value = authUser();
   b.querySelector("#auth-err").textContent = "";
+  b.querySelector("#auth-err").style.color = "#b02a3a";
   b.classList.add("on");
   setTimeout(() => { const f = b.querySelector(authUser() ? "#auth-pass" : "#auth-email"); if (f) f.focus(); }, 60);
 }
@@ -1700,7 +1733,7 @@ async function doLogin(){
   const email = b.querySelector("#auth-email").value.trim();
   const pass  = b.querySelector("#auth-pass").value;
   const err   = b.querySelector("#auth-err");
-  err.textContent = "";
+  err.style.color = "#b02a3a"; err.textContent = "";
   if (!cloudReady()){ err.textContent = "Commencez par renseigner l'URL et la clé du projet (bouton Configuration)."; return; }
   if (!email || !pass){ err.textContent = "Renseignez l'adresse électronique et le mot de passe."; return; }
   try {
@@ -1725,40 +1758,81 @@ async function doLogin(){
     err.textContent = "Échec de la connexion : " + (e.message || e);
   }
 }
-/* première utilisation : création du compte directement depuis l'application */
+async function sendPasswordRecovery(){
+  const box=document.getElementById("auth-modal"),email=box?.querySelector("#auth-email")?.value.trim()||"",err=box?.querySelector("#auth-err");
+  if(!err)return;
+  err.style.color="#b02a3a";err.textContent="";
+  if(!cloudReady()){err.textContent="La connexion Supabase n’est pas configurée.";return;}
+  if(!email){err.textContent="Saisissez votre adresse électronique pour recevoir le lien de réinitialisation.";box.querySelector("#auth-email")?.focus();return;}
+  try{
+    const c=cloudCfg(),url=c.url.replace(/\/$/,"")+"/auth/v1/recover?redirect_to="+encodeURIComponent(PASSWORD_RECOVERY_REDIRECT_URL);
+    const response=await fetch(url,{method:"POST",headers:{apikey:c.key,"Content-Type":"application/json"},body:JSON.stringify({email})});
+    if(!response.ok){const data=await response.json().catch(()=>({}));const message=data.msg||data.error_description||data.message||data.error||"HTTP "+response.status;throw new Error(message);}
+    err.style.color="#0a7a70";
+    err.textContent="Si cette adresse est associée à un compte, un lien de réinitialisation va être envoyé. Ouvrez-le : vous reviendrez sur la page d’accueil de l’application pour choisir un nouveau mot de passe.";
+  }catch(error){err.style.color="#b02a3a";err.textContent="Envoi impossible : "+(error.message||error);}
+}
+function cleanRecoveryUrl(){
+  try{
+    const target=new URL(PASSWORD_RECOVERY_REDIRECT_URL,window.location.href);
+    if(target.origin===window.location.origin)window.history.replaceState(null,"",target.pathname+target.search);
+    else window.history.replaceState(null,"",window.location.pathname);
+  }catch(error){try{window.history.replaceState(null,"",window.location.pathname);}catch(e){}}
+}
+function showPasswordReset(message=""){
+  const modal=document.getElementById("password-reset-modal"),err=document.getElementById("password-reset-err"),submit=document.getElementById("password-reset-submit");
+  if(err){err.textContent=message;err.style.color=message?"#b02a3a":"";}
+  if(submit)submit.disabled=!passwordRecoveryToken;
+  if(modal)modal.classList.add("on");
+  if(passwordRecoveryToken)setTimeout(()=>document.getElementById("password-reset-new")?.focus(),60);
+}
+function handlePasswordRecoveryRedirect(){
+  const query=new URLSearchParams(window.location.search||""),fragment=new URLSearchParams((window.location.hash||"").replace(/^#/,""));
+  const get=key=>fragment.get(key)||query.get(key),type=get("type");
+  if(type!=="recovery")return;
+  const accessToken=get("access_token"),errorCode=get("error_code"),description=get("error_description")||get("error");
+  cleanRecoveryUrl();
+  if(accessToken){
+    passwordRecoveryToken=accessToken;
+    authClear();
+    showPasswordReset();
+    return;
+  }
+  const message=errorCode==="otp_expired"||/expired|invalid/i.test(description||"")
+    ?"Ce lien est expiré ou invalide. Fermez cette fenêtre puis demandez un nouveau lien avec « Mot de passe oublié ? »."
+    :"Le lien de réinitialisation est incomplet. Demandez-en un nouveau depuis l’écran de connexion.";
+  showPasswordReset(message);
+}
+function closePasswordReset(){
+  passwordRecoveryToken="";
+  const modal=document.getElementById("password-reset-modal");if(modal)modal.classList.remove("on");
+  ["password-reset-new","password-reset-confirm"].forEach(id=>{const field=document.getElementById(id);if(field)field.value="";});
+}
+async function updatePasswordFromRecovery(){
+  const err=document.getElementById("password-reset-err"),submit=document.getElementById("password-reset-submit");
+  const password=document.getElementById("password-reset-new")?.value||"",confirm=document.getElementById("password-reset-confirm")?.value||"";
+  if(!err)return;
+  err.style.color="#b02a3a";err.textContent="";
+  if(!passwordRecoveryToken){err.textContent="Lien expiré ou invalide. Demandez un nouveau lien de réinitialisation.";return;}
+  if(password.length<6){err.textContent="Le nouveau mot de passe doit contenir au moins 6 caractères.";return;}
+  if(password!==confirm){err.textContent="Les deux mots de passe ne correspondent pas.";return;}
+  if(!cloudReady()){err.textContent="La connexion Supabase n’est pas configurée.";return;}
+  if(submit)submit.disabled=true;
+  try{
+    const c=cloudCfg(),response=await fetch(c.url.replace(/\/$/,"")+"/auth/v1/user",{method:"PUT",headers:{apikey:c.key,Authorization:"Bearer "+passwordRecoveryToken,"Content-Type":"application/json"},body:JSON.stringify({password})});
+    if(!response.ok){const data=await response.json().catch(()=>({}));const message=data.msg||data.error_description||data.message||data.error||"HTTP "+response.status;throw Object.assign(new Error(message),{status:response.status});}
+    passwordRecoveryToken="";authClear();window.STI_SYNC?.onLogout?.();window.STI_DRIVE_BACKUP?.onLogout?.();
+    closePasswordReset();toast("Mot de passe modifié. Connectez-vous avec votre nouveau mot de passe.");openAuth();
+  }catch(error){
+    if(error.status===401||error.status===403)passwordRecoveryToken="";
+    err.textContent=error.status===401||error.status===403?"Lien expiré ou invalide. Demandez un nouveau lien de réinitialisation.":"Modification impossible : "+(error.message||error);
+    if(submit)submit.disabled=!passwordRecoveryToken;
+  }
+}
+/* Les comptes professeurs sont créés par l’administrateur avec leur badge et leur photo. */
 async function doSignup(){
-  const b = document.getElementById("auth-modal");
-  const email = b.querySelector("#auth-email").value.trim();
-  const pass  = b.querySelector("#auth-pass").value;
-  const err   = b.querySelector("#auth-err");
-  err.textContent = "";
-  if (!cloudReady()){ err.textContent = "Commencez par renseigner l'URL et la clé du projet (bouton Configuration)."; return; }
-  if (!email || !pass){ err.textContent = "Renseignez l'adresse électronique et le mot de passe (6 caractères au moins)."; return; }
-  if (pass.length < 6){ err.textContent = "Le mot de passe doit contenir au moins 6 caractères."; return; }
-  try {
-    const c = cloudCfg();
-    const r = await fetch(c.url.replace(/\/$/, "") + "/auth/v1/signup", {
-      method: "POST", headers: { "apikey": c.key, "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email, password: pass })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok){
-      const msg = data.msg || data.error_description || data.error || ("HTTP " + r.status);
-      if (/signups? not allowed/i.test(msg)) throw new Error("Les inscriptions sont fermées sur ce projet : chaque professeur reçoit son compte de l'administrateur (Supabase → Authentication → Users → Add user). Demandez-lui de créer le vôtre, puis cliquez sur « Se connecter ».");
-      if (/already registered|already exists/i.test(msg)) throw new Error("Un compte existe déjà avec cette adresse : cliquez sur « Se connecter » (le mot de passe se règle dans Supabase → Authentication → Users).");
-      throw new Error(msg);
-    }
-    if (data.access_token){
-      authApply(data);
-      b.querySelector("#auth-pass").value = "";
-      closeAuth();
-      toast("Compte créé et connecté — " + email);
-      await afterLogin();
-    } else {
-      err.style.color = "#0a7a70";
-      err.textContent = "Compte créé ✔ — ouvrez le courriel « Confirm your signup » envoyé par Supabase, cliquez sur le lien de confirmation, puis revenez ici pour vous connecter.";
-    }
-  } catch(e){ err.textContent = "Création impossible : " + (e.message || e); }
+  const err=document.getElementById("auth-err");
+  if(err){err.style.color="#b02a3a";err.textContent="Les inscriptions directes sont désactivées. Demandez à l’administrateur de créer votre compte avec votre photo et votre badge.";}
 }
 function confirmLogout(){
   const message="Voulez-vous vraiment vous déconnecter ? Vos données resteront enregistrées sur cet appareil.";
@@ -1781,6 +1855,9 @@ async function doLogout(){
   if(!await confirmLogout())return;
   const c = cloudCfg(), s = authSession();
   authClear();
+  badgePromptedUser="";
+  if(window.STI_DRIVE_BACKUP) window.STI_DRIVE_BACKUP.onLogout();
+  if(window.STI_PROF_BADGE) window.STI_PROF_BADGE.onLogout();
   if(window.STI_SYNC) window.STI_SYNC.onLogout();
   window.__afterLogin = null;
   toast("Déconnecté — les données restent sur cet appareil");
@@ -1793,11 +1870,26 @@ async function doLogout(){
     } catch (e) {}
   }
 }
+async function ensureProfessorBadgeProfile(){
+  const user=authSession()?.user,uid=user?.id;
+  if(!uid||!isProfessorConnected()||!navigator.onLine||!window.STI_PROF_BADGE)return;
+  if(window.STI_SYNC?.status?.()?.code==="account")return;
+  const modal=document.getElementById("profil-modal");
+  if(modal?.classList.contains("on"))return;
+  await window.STI_PROF_BADGE.bootstrap();
+  if(!isProfessorConnected()||authSession()?.user?.id!==uid)return;
+  window.renderSiteProfessorBadge?.();
+  if(!activeProfessorProfile()?.photo_path&&badgePromptedUser!==uid&&typeof window.openProfil==="function"){
+    badgePromptedUser=uid;window.openProfil();
+  }
+}
 /* après une connexion réussie : synchronisation dans le bon sens */
 async function afterLogin(){
   window.__afterLogin = null;
   renderAll(true); renderCloudBar(); renderCompte();
   if(window.STI_SYNC) await window.STI_SYNC.onLogin();
+  await ensureProfessorBadgeProfile();
+  if(window.STI_DRIVE_BACKUP) window.STI_DRIVE_BACKUP.workspaceReady();
 }
 
 /* ---------- synchronisation distante (Supabase) ---------- */
@@ -1867,7 +1959,8 @@ function renderCompte(){
   const txt = document.getElementById("compte-txt");
   if (!txt) return;
   if (!cloudReady() || !isProfessorConnected()){ txt.textContent = "Connexion"; return; }
-  const p = (store.profil && store.profil.nom) ? store.profil.nom.split(" ")[0] : "";
+  const profile=activeProfessorProfile();
+  const p = profile&&profile.nom ? profile.nom.split(" ")[0] : "";
   txt.textContent = (typeof estAdmin === "function" && estAdmin()) ? (p || "Admin") : (p || "Connecté");
 }
 /* menu déroulant du compte : connexion, profil, administration, déconnexion */
@@ -1879,7 +1972,8 @@ function toggleCompte(ev){
   m.classList.toggle("hidden", !ouvrir);
   if (ouvrir){
     const estConnecte=isProfessorConnected(),u=estConnecte?authUser():"";
-    const p = estConnecte&&store.profil&&store.profil.nom ? store.profil.nom + " — " + (store.profil.matiere || "") : "";
+    const profile=estConnecte?activeProfessorProfile():null;
+    const p = profile&&profile.nom ? profile.nom + " — " + (profile.matiere || "") : "";
     document.getElementById("mc-id").innerHTML =
       (estConnecte && u ? '<strong>' + escapeHtml(u) + '</strong>' + (p ? '<br>' + escapeHtml(p) : "")
                         : '<strong>Non connecté</strong><br>Connectez-vous pour retrouver vos données');
@@ -1935,11 +2029,11 @@ function cloudWho(){
 }
 function payLoad(){
   return {
-    prof: (store.profil && store.profil.nom) ? store.profil.nom : SCHOOL.prof,
+    prof: activeProfessorProfile()?.nom || authUser() || SCHOOL.prof,
     lycee: SCHOOL.lycee, annee: SCHOOL.annee, device: cloudCfg().device,
     payload: {
       times: store.times, seances: store.seances, saved: store.saved,
-      profil: store.profil, classes: store.classes, eleves: store.eleves,
+      profil: activeProfessorProfile(), classes: store.classes, eleves: store.eleves,
       epreuves: store.epreuves, notes: store.notes, presences: store.presences
     }
   };
@@ -2222,6 +2316,7 @@ function exportJSON(){
 /* ---------------- SYNCHRONISATION DISTANTE, PWA ET DÉMARRAGE ---------------- */
 function cloudCard(){
   const c = cloudCfg();
+  const driveStatus = window.STI_DRIVE_BACKUP?.status?.().text || "Vérification en attente";
   return `
   <div class="card" id="cloud-card">
     <div class="card-h">
@@ -2252,6 +2347,11 @@ function cloudCard(){
         ${typeof estAdmin === "function" && estAdmin() ? '<button class="btn btn-xs btn-blue" onclick="openAdmin()">${ic("users")} Gérer les professeurs</button>' : ""}
         <button class="btn btn-xs btn-line" onclick="exportJSON()">${ic("file")} Export JSON</button>
       </div>
+      <section class="sti-drive-backup-card" aria-labelledby="sti-drive-backup-heading">
+        <div class="spread"><strong class="tiny" id="sti-drive-backup-heading">Sauvegarde hebdomadaire Google Drive</strong><span class="badge b-amber" id="sti-drive-status">${escapeHtml(driveStatus)}</span></div>
+        <p class="tiny muted">Après votre accord, une copie datée sera créée maintenant puis tous les 7 jours au plus. L’envoi a lieu lorsque l’application est ouverte et en ligne ; si elle reste fermée, la copie partira au prochain accès. Toutes les versions précédentes sont conservées.</p>
+        <button class="btn btn-xs btn-line" type="button" onclick="window.STI_DRIVE_BACKUP && window.STI_DRIVE_BACKUP.openSettings()">Gérer la sauvegarde Drive</button>
+      </section>
       <div class="note tiny" style="margin-top:10px">${ic("pin")}
         ${authNeeded() && !authSession() ? 'Accès protégé par mot de passe : connectez-vous pour envoyer et restaurer les données du cloud. ' : ""}
         ${cloudReady()
@@ -2463,6 +2563,8 @@ window.cloudInvite = cloudInvite;
 window.authSession = authSession; window.authToken = authToken; window.authUser = authUser;
 window.authNeeded = authNeeded; window.isProfessorConnected = isProfessorConnected; window.openAuth = openAuth; window.closeAuth = closeAuth; window.openCloud = openCloud;
 window.doLogin = doLogin; window.doSignup = doSignup; window.doLogout = doLogout; window.afterLogin = afterLogin;
+window.sendPasswordRecovery = sendPasswordRecovery; window.updatePasswordFromRecovery = updatePasswordFromRecovery; window.closePasswordReset = closePasswordReset;
+window.ensureProfessorBadgeProfile = ensureProfessorBadgeProfile;
 window.cloudWho = cloudWho;
 window.openCloudSettings = openCloudSettings;
 window.saveCloudSettings = saveCloudSettings;
@@ -2485,6 +2587,7 @@ window.toggleCompte = toggleCompte; window.menuAction = menuAction; window.ferme
 window.APP_VER = APP_VER; window.forceMaj = forceMaj; window.clsCoul = clsCoul; window.KEY = KEY;
 /* Le second rendu démarre après l’exposition des fonctions d’auth utilisées
    par les modules UI chargés avant app.js. Il applique le bon état dès le premier affichage. */
+handlePasswordRecoveryRedirect();
 renderAll(true);renderCloudBar();renderCompte();renderLoginInvite();
 if(typeof applyProfil==="function")applyProfil();
 })();

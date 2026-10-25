@@ -60,7 +60,8 @@ sti-espace/
 ├── icons/                      icônes 192 / 512 / maskable / apple-touch
 └── supabase/
     ├── schema.sql              table et règles de sécurité (à exécuter une fois)
-    └── config.js               configuration Supabase facultative (vide par défaut)
+    ├── migration-professeur-badge.sql  profils, bucket privé et politiques photo
+    └── config.js               configuration Supabase et Client ID OAuth Google Drive public
 ```
 
 Les données sont chargées par `data/*.js` **avant** `assets/app.js` : pour corriger une date, un bloc de
@@ -120,14 +121,18 @@ et la fonction SQL de synchronisation y sont installées.
 Pour une **nouvelle base** :
 
 1. Créer un projet Supabase, puis ouvrir **SQL Editor → New query**.
-2. Copier et exécuter tout `supabase/schema.sql`. Ce script crée la table, les règles RLS, les droits
-   minimaux et la fonction atomique `sti_sync_snapshot` utilisée par l’application.
-3. Dans **Authentication → Users**, créer le compte de chaque professeur (*Add user → Create new user*,
-   mot de passe provisoire et **Auto Confirm User**). Fermer ensuite les inscriptions publiques si elles
-   ne sont pas nécessaires.
-4. Dans **Project Settings → API**, relever le *Project URL* et la clé publique (*anon / publishable*).
+2. Copier et exécuter tout `supabase/schema.sql`. Ce script crée la table de sauvegarde, les règles RLS,
+   les droits minimaux et la fonction atomique `sti_sync_snapshot` utilisée par l’application.
+3. Exécuter aussi `supabase/migration-professeur-badge.sql` pour créer la table des profils, le bucket privé
+   des portraits et leurs règles RLS.
+4. Créer le compte administrateur dans **Authentication → Users** (*Add user → Create new user*, mot de
+   passe provisoire et **Auto Confirm User**). C’est le seul compte initial créé directement dans Supabase.
+5. Configurer le secret Edge `ADMIN_EMAILS` avec l’adresse de l’administrateur, puis déployer la fonction
+   depuis un projet Supabase lié : `supabase functions deploy admin-users`.
+6. Dans **Project Settings → API**, relever le *Project URL* et la clé publique (*anon / publishable*).
    Renseigner ces valeurs dans `supabase/config.js`, puis publier la mise à jour. **Ne jamais utiliser ni
-   publier la clé `service_role`.**
+   publier la clé `service_role`.** Garder les inscriptions publiques désactivées : les comptes professeurs
+   doivent passer par **Gérer les professeurs** pour que le portrait obligatoire soit enregistré.
 
 Pour un **projet déjà créé**, ne relancez pas aveuglément `supabase/schema.sql` :
 
@@ -152,7 +157,8 @@ window.STI_SUPABASE = {
   table: "espace_pedagogique",
   device: "",  // laisser vide : un nom local distinct est proposé sur chaque appareil
   auto: true,
-  auth: true
+  auth: true,
+  googleDriveClientId: "" // à remplir après configuration OAuth Google (Client ID public, sans secret)
 };
 ```
 
@@ -161,7 +167,35 @@ données. Après publication, tous les appareils utilisent le même lien et le m
 Cloud locale permet de donner à chaque appareil un nom personnalisé (par exemple **Téléphone personnel**
 ou **PC du lycée**) ; ce nom sert à reconnaître l’origine des instantanés.
 
-### 5.3 Connecter un deuxième appareil
+Pour activer **« Mot de passe oublié ? »**, ouvrez **Authentication → URL Configuration → Redirect URLs** dans Supabase et autorisez exactement :
+
+```text
+https://aymenessouyah.github.io/viescolaire/
+```
+
+Le lien de récupération revient à cette page d’accueil ; l’application y ouvre le formulaire de nouveau mot de passe. Si le site est publié sous une autre URL, il faut modifier `PASSWORD_RECOVERY_REDIRECT_URL` dans `assets/app.js` et autoriser cette même URL dans Supabase.
+
+La signature du professeur se règle dans **Mon profil**. Le champ actuel est une saisie textuelle ; lorsqu’elle est renseignée, elle apparaît à la fin des séances de chaque date dans le cahier affiché, imprimé ou exporté en PDF.
+
+### 5.3 Badges et photos des professeurs
+
+Pour une base déjà existante, exécuter `supabase/migration-professeur-badge.sql` dans **SQL Editor**, puis
+redéployer la fonction Edge `admin-users` (`supabase functions deploy admin-users`). Cette migration crée
+`profils_professeurs` et le bucket privé `professeur-photos`, avec des règles qui limitent chaque photo au
+compte propriétaire.
+
+Dans **Gérer les professeurs**, l’administrateur saisit le nom, la fonction, la discipline et la photo avant
+la création du compte. La photo est compressée dans le navigateur puis envoyée en JPEG au bucket privé; elle
+n’est pas copiée en Base64 dans les sauvegardes pédagogiques. Un professeur déjà inscrit sans portrait est
+invité à le choisir à sa prochaine connexion, puis peut le remplacer dans **Mon profil**. Le compte
+administrateur initial créé dans Supabase reçoit lui aussi cette demande à sa première connexion.
+
+Après connexion, un mini-badge personnel reste affiché dans la barre supérieure à droite; sur mobile, il apparaît sous
+**« + Nouvelle séance »**. Il est légèrement incliné et ouvre **Mon profil** au toucher/clic. Le badge complet
+reprend le modèle fourni : portrait circulaire, identité, fonction, identifiant STI, courriel et établissement.
+Il s’imprime au format portrait **54 × 86 mm**. Aucun groupe sanguin ni autre donnée médicale n’est demandé.
+
+### 5.4 Connecter un deuxième appareil
 
 1. Ouvrir le même lien sur l’autre appareil :
    <https://aymenessouyah.github.io/viescolaire/>.
@@ -187,18 +221,58 @@ et ne remplace pas les données locales sans contrôle. Les copies locales ne so
 sur un appareil partagé, protéger la session système et exporter régulièrement une sauvegarde JSON depuis
 **Exporter** ou **Hors ligne & synchronisation**.
 
-### 5.4 Sécurité et plusieurs professeurs
+### 5.5 Sécurité et plusieurs professeurs
 
 Chaque professeur se connecte avec son propre compte et ne voit que ses sauvegardes (`prof_id = auth.uid()`)
 ; les calendriers, répartitions et ressources pédagogiques restent communs. La table n’est pas accessible
 aux utilisateurs anonymes. Ne mettez jamais un mot de passe de base de données ou une clé `service_role`
 dans `supabase/config.js`.
 
-Pour ajouter un collègue, l’administrateur du projet crée son compte dans **Supabase → Authentication →
-Users → Add user** et lui transmet l’adresse du site, son identifiant et un mot de passe provisoire. À sa
-première connexion, le collègue renseigne son profil dans l’application.
+Pour ajouter un collègue, l’administrateur connecté utilise **Compte & sauvegarde → Gérer les professeurs**,
+remplit son nom, sa discipline et sa fonction, puis ajoute son portrait avant la création du compte. Il lui
+transmet ensuite l’adresse du site, son adresse électronique et un mot de passe provisoire. La fonction Edge
+`admin-users` doit avoir été redéployée après la migration des badges. Un professeur déjà inscrit complète
+ou remplace sa photo depuis **Mon profil**.
 
-### 5.5 Dépannage de la synchronisation multi-appareils
+### 5.6 Sauvegarde hebdomadaire dans le Google Drive de chaque professeur
+
+Après configuration Google et connexion au compte professeur, l’application demande explicitement à chaque
+professeur s’il souhaite activer cette sauvegarde. En cas d’accord, une première copie JSON datée est créée
+immédiatement, puis l’application vérifie le Drive et crée une nouvelle copie si la dernière remonte à au
+moins **7 jours**. Les fichiers sont déposés dans le dossier privé **Espace pédagogique STI - Sauvegardes**;
+aucune ancienne copie n’est supprimée. Une sauvegarde manuelle peut aussi créer une version supplémentaire.
+
+La cadence recommandée est donc **une copie tous les 7 jours**, calculée depuis la dernière copie réellement
+présente dans le Drive. Le transfert s’effectue quand la PWA est ouverte, le compte professeur est lié et
+Internet est disponible. Une PWA fermée ne peut pas lancer une tâche hebdomadaire en arrière-plan : si
+l’application reste fermée au moment prévu, la copie partira à sa prochaine ouverture en ligne. Une garantie
+même application fermée demanderait un service planifié côté serveur et une architecture OAuth serveur.
+
+Chaque sauvegarde ne contient que les données métier du professeur connecté et son année scolaire — jamais
+son mot de passe, jeton Supabase ni jeton Google. L’accès OAuth demandé est limité aux fichiers créés par
+l’application (`drive.file`). Les fichiers ne sont pas chiffrés par l’application : ils bénéficient des
+paramètres d’accès du compte Google choisi. L’accord et l’activation sont mémorisés dans ce navigateur ;
+un autre appareil demandera donc aussi son propre accord. Désactiver sur un appareil n’arrête pas une
+activation faite sur un autre. Un professeur peut gérer cette sauvegarde depuis la carte **Sauvegarde
+hebdomadaire Google Drive** ; pour retirer l’autorisation Google elle-même, utiliser
+<https://myaccount.google.com/permissions>.
+
+**Configuration OAuth à faire avant de demander l’accord aux professeurs :**
+
+1. Dans Google Cloud Console, choisir un projet et activer **Google Drive API**.
+2. Configurer l’écran de consentement OAuth. En mode test, ajouter les comptes Google des professeurs comme
+   utilisateurs de test.
+3. Créer un identifiant OAuth de type **Application Web** et ajouter comme origine JavaScript autorisée
+   `https://aymenessouyah.github.io` (et `http://localhost:8000` uniquement pour les tests locaux).
+4. Copier le **Client ID** — pas de secret client — dans `googleDriveClientId` du fichier
+   `supabase/config.js`, publier le changement, puis vérifier le premier consentement avec un compte test.
+
+Le Client ID est public et peut être inclus dans le site ; aucun secret OAuth ne doit être ajouté au dépôt.
+Tant que `googleDriveClientId` est vide, les sauvegardes Drive restent inactives et l’interface indique que
+la configuration Google est requise. Le connecteur Google Drive de l’assistant ne peut pas remplacer cette
+autorisation : chaque professeur doit choisir et autoriser son propre compte dans l’application.
+
+### 5.7 Dépannage de la synchronisation multi-appareils
 
 | Message / symptôme | Vérification |
 |---|---|
