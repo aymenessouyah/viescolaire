@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1020" role="img" aria-labelledby="title desc">
   <title id="title">Parcours de l’Agent Vie Scolaire AI</title>
-  <desc id="desc">Le professeur se connecte, prépare une demande, Supabase vérifie la session avant l’appel Gemini, puis le résultat est relu et validé avant remplacement, insertion, impression ou export. Chaque document reçoit son lycée, son enseignant et sa classe.</desc>
+  <desc id="desc">Le professeur se connecte, prépare une demande, Supabase vérifie la session avant l’appel Gemini, puis compare et valide le résultat. Pour les documents libres, la confirmation enregistre des versions locales restaurables sans modifier le fichier externe. Chaque document reçoit son lycée, son enseignant et sa classe.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f9faf6"/><stop offset="1" stop-color="#edf3ed"/></linearGradient>
     <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#143d30"/><stop offset="1" stop-color="#2b7659"/></linearGradient>
@@ -67,7 +67,7 @@
     <circle class="num" cx="491" cy="262" r="19"/><text class="numText" x="491" y="268">2</text>
     <text class="kicker" x="522" y="267">PRÉPARATION</text>
     <text class="head" x="478" y="311">Formulaire de l’agent</text>
-    <text class="body" x="478" y="342">Fiche · cahier · exercices ·</text><text class="body" x="478" y="367">correction · répartition.</text>
+    <text class="body" x="478" y="342">Fiche · cahier · exercices ·</text><text class="body" x="478" y="367">correction · répartition · document.</text>
     <text class="body" x="478" y="399" font-size="14">Les fichiers sont joints au choix.</text>
   </g>
   <g>
@@ -95,13 +95,13 @@
     <circle class="num" cx="881" cy="607" r="19"/><text class="numText" x="881" y="613">6</text>
     <text class="kicker" x="912" y="612">RELECTURE</text>
     <text class="head" x="868" y="655">L’enseignant vérifie</text>
-    <text class="body" x="868" y="686">Relit, corrige et confirme</text><text class="body" x="868" y="711">les passages incertains.</text>
+    <text class="body" x="868" y="686">Compare la source et la proposition,</text><text class="body" x="868" y="711">puis vérifie les changements.</text>
   </g>
   <g>
     <circle class="num" cx="491" cy="607" r="19"/><text class="numText" x="491" y="613">7</text>
     <text class="kicker" x="522" y="612">DÉCISION</text>
     <text class="head" x="478" y="655">À votre initiative</text>
-    <text class="body" x="478" y="686">Remplacer · insérer · imprimer</text><text class="body" x="478" y="711">ou exporter le document.</text>
+    <text class="body" x="478" y="686">Confirmer · exporter · imprimer</text><text class="body" x="478" y="711">ou restaurer une version locale.</text>
   </g>
   <g>
     <circle class="num" cx="101" cy="607" r="19"/><text class="numText" x="101" y="613">8</text>
@@ -117,7 +117,7 @@
   <text class="footText" x="108" y="881">• Chaque requête POST reste authentifiée (Bearer + vérification Supabase Auth).</text>
   <text class="footText" x="108" y="906">• Nom et lycée ajoutés dans le navigateur; non transmis à Gemini pour l’en-tête.</text>
   <text class="footText" x="820" y="881">• Seuls le contexte utile et les pièces jointes choisies sont transmis au modèle.</text>
-  <text class="footText" x="820" y="906">• Aucune modification n’est appliquée sans action explicite de l’enseignant.</text>
+  <text class="footText" x="820" y="906">• Le fichier externe reste inchangé; les versions locales sont restaurables.</text>
   <text x="64" y="986" fill="#829084" font-size="12" font-weight="600">Agent Vie Scolaire AI · Sciences et technologies de l’informatique</text>
   <text x="1535" y="986" fill="#829084" font-size="12" font-weight="600" text-anchor="end">Schéma de fonctionnement · 2026–2027</text>
 </svg>

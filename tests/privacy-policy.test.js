@@ -37,7 +37,7 @@ test('la politique expose les choix et limites essentiels de sauvegarde et de co
 
 test('la politique est incluse au cache hors ligne et les versions d’interface concordent', () => {
   assert.match(worker, /"\.\/politique-confidentialite\.html"/);
-  const expected = 'v1.19.0-agent-vie-scolaire-ai';
+  const expected = 'v1.20.0-agent-document-revision';
   assert.ok(index.includes(expected));
   assert.ok(app.includes(expected));
   assert.ok(worker.includes('sti-espace-' + expected));

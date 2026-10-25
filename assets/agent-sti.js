@@ -7,16 +7,18 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.0.0-vie-scolaire-ai';
+const VERSION = '2.1.0-document-revision';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
+const MAX_DOCUMENT_CHARS = 80000;
 const TASKS = {
   fiche: { label: 'Fiche pédagogique', short: 'Fiche', icon: 'file', desc: 'Préparer une séance complète à partir du planning.' },
   exercices: { label: 'Séries d’exercices', short: 'Exercices', icon: 'layers', desc: 'Créer des exercices théoriques ou pratiques avec corrigés.' },
   correction: { label: 'Correction de copies', short: 'Correction', icon: 'check', desc: 'Analyser texte, photos ou code avec un barème validé.' },
   cahier: { label: 'Cahier de textes', short: 'Cahier', icon: 'book', desc: 'Rédiger une entrée à partir du réalisé déclaré.' },
-  repartition: { label: 'Répartition', short: 'Répartition', icon: 'calendar', desc: 'Proposer une progression sans changer les dates.' }
+  repartition: { label: 'Répartition', short: 'Répartition', icon: 'calendar', desc: 'Proposer une progression sans changer les dates.' },
+  document: { label: 'Autres documents', short: 'Document libre', icon: 'file', desc: 'Comparer une révision avec un texte source et conserver les versions.' }
 };
 const ICONS = {
   spark: '<path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z"/><path d="m19 14 .8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/><path d="m5 14 .8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14Z"/>',
@@ -54,7 +56,8 @@ function defaultForms() {
     exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '', notions: [], competences: [], remplacement_id: '', document_existant: '' },
     correction: { type_devoir: 'théorique', mode_bareme: 'fourni', identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
     cahier: { session: '', realise: '', devoirs: '', observations: '', remplacer: false },
-    repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' }
+    repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' },
+    document: { titre: '', type_document: 'Document libre', document_existant: '', consignes: '', remplacement_id: '', fichier_nom: '' }
   };
 }
 const forms = defaultForms();
@@ -102,7 +105,8 @@ function readHistory() {
   } catch (e) { return []; }
 }
 function writeHistory() {
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch (e) { /* Le résultat reste disponible à l'écran. */ }
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); return true; }
+  catch (e) { return false; }
 }
 function currentHistory() {
   const owner = activeTeacherKey();
@@ -111,11 +115,81 @@ function currentHistory() {
 function saveCurrentHistory(entries) {
   const owner = activeTeacherKey();
   if (!owner) return false;
+  const previous = history;
   const mine = entries.filter(item => item && item.owner_key === owner).slice(0, 8);
   const others = history.filter(item => item.owner_key !== owner);
   history = [...mine, ...others];
-  writeHistory();
+  if (!writeHistory()) { history = previous; return false; }
   return true;
+}
+function documentVersions(entry) {
+  if (Array.isArray(entry?.versions) && entry.versions.length) return entry.versions;
+  return entry?.result && typeof entry.result.contenu === 'string'
+    ? [{ label: 'Version actuelle', created: entry.created, result: entry.result }]
+    : [];
+}
+function currentDocumentVersionIndex(entry, versions = documentVersions(entry)) {
+  const index = Number(entry?.current_version);
+  return Number.isInteger(index) && index >= 0 && index < versions.length ? index : versions.length - 1;
+}
+function currentDocumentVersion(entry) {
+  const versions = documentVersions(entry);
+  return versions[currentDocumentVersionIndex(entry, versions)] || null;
+}
+function newDocumentHistoryEntry(owner, meta, result, sourceContent) {
+  const created = new Date().toISOString();
+  const original = {
+    titre: String(meta.titre || result.titre || 'Document libre'),
+    type_document: String(meta.type_document || result.type_document || 'Document libre'),
+    contenu: String(sourceContent || ''),
+    changements: [],
+    points_a_verifier: []
+  };
+  const id = root.crypto?.randomUUID?.() || `agent-doc-${Date.now()}`;
+  const savedMeta = { ...meta, document_replacement_id: '', document_history_id: id, document_source_content: original.contenu, document_saved: true };
+  delete savedMeta.document_target_content;
+  return {
+    id, owner_key: owner, task: 'document', classe: meta.classe,
+    title: String(result.titre || meta.titre || 'Document libre').slice(0, 140),
+    created, result, meta: savedMeta,
+    versions: [
+      { label: 'Document source', created, result: original },
+      { label: 'Version révisée 1', created, result }
+    ],
+    current_version: 1
+  };
+}
+function appendDocumentHistoryVersion(entry, meta, result, sourceContent) {
+  const versions = documentVersions(entry);
+  const created = new Date().toISOString();
+  const snapshot = { label: `Version révisée ${versions.length}`, created, result };
+  const savedMeta = { ...meta, document_replacement_id: '', document_history_id: entry.id, document_source_content: String(sourceContent || ''), document_saved: true };
+  delete savedMeta.document_target_content;
+  return {
+    ...entry,
+    title: String(result.titre || entry.title || 'Document libre').slice(0, 140),
+    created, result, meta: savedMeta,
+    versions: [...versions, snapshot],
+    current_version: versions.length
+  };
+}
+function restoreDocumentHistoryVersion(entry) {
+  const versions = documentVersions(entry);
+  const index = currentDocumentVersionIndex(entry, versions);
+  const current = versions[index];
+  if (index <= 0 || !current) return null;
+  const previous = versions[index - 1];
+  const created = new Date().toISOString();
+  const restored = { label: `Restauration de ${previous.label || 'la version précédente'}`, created, result: previous.result };
+  const meta = {
+    ...(entry.meta || {}), document_replacement_id: '', document_history_id: entry.id,
+    document_source_content: String(current?.result?.contenu || ''), document_saved: true
+  };
+  return {
+    ...entry, title: String(previous.result?.titre || entry.title || 'Document libre').slice(0, 140),
+    created, result: previous.result, meta,
+    versions: [...versions, restored], current_version: versions.length
+  };
 }
 function findSession(key, cls = classe) {
   return (ctx?.sessions?.[cls] || []).find(s => keyOf(s) === key) || null;
@@ -287,6 +361,9 @@ function contextCard() {
     if (tool === 'exercices') {
       return `<div class="agent-context-card"><span>Référentiel disponible</span><strong>Programme ${classe}</strong><p>L’agent peut mobiliser les compétences et les notions du Smart Book liées à votre sujet.</p></div>`;
     }
+    if (tool === 'document') {
+      return `<div class="agent-context-card"><span>Source protégée</span><strong>Texte révisé, fichier inchangé</strong><p>La comparaison et les versions restent dans l’historique local de votre compte. Exportez le résultat pour remplacer vous-même le fichier source.</p></div>`;
+    }
     return `<div class="agent-context-card"><span>Confidentialité</span><strong>Copie anonymisée</strong><p>Utilisez un identifiant de copie plutôt que le nom complet de l’élève. Aucune note n’est enregistrée automatiquement.</p></div>`;
   }
   const s = findSession(forms[tool].session);
@@ -354,6 +431,19 @@ function formHtml() {
       <label class="agent-field"><span>Classe et calendrier</span><input value="${classe} · dates et numéros conservés" disabled></label>
       <label class="agent-field full"><span>Objectifs de la réorganisation</span><textarea data-agent-field="consignes" rows="5">${esc(f.consignes)}</textarea></label>
     </div><div class="agent-truth-note">${icon('calendar')}<div><strong>Dates, vacances et évaluations restent repérables.</strong><span>L’application n’écrase ni le contenu réalisé ni les séances assurées. L’application de la proposition ne concerne que les séances à venir.</span></div></div>${generateButton('Proposer la répartition')}`;
+  if (tool === 'document') {
+    const savedDocuments = currentHistory().filter(item => item.task === 'document' && item.result && item.classe === classe);
+    return `<div class="agent-truth-note">${icon('shield')}<div><strong>Le fichier original ne sera jamais modifié par l’agent.</strong><span>Collez votre texte ou importez un fichier TXT, Markdown ou HTML. Pour un PDF ou Word, copiez le texte. La comparaison, l’export et l’historique restent sous votre contrôle.</span></div></div>
+    <div class="agent-form-grid">
+      <label class="agent-field"><span>Titre du document</span><input data-agent-field="titre" value="${esc(f.titre)}" maxlength="140" required placeholder="Ex. : Note aux parents · sortie pédagogique"></label>
+      <label class="agent-field"><span>Type de document</span><input data-agent-field="type_document" value="${esc(f.type_document)}" maxlength="80" required placeholder="Ex. : note, compte rendu, courrier administratif…"></label>
+      <label class="agent-field full"><span>Document enregistré à réviser <em>facultatif</em></span><select data-agent-field="remplacement_id"><option value="">Réviser un nouveau texte collé ou importé</option>${savedDocuments.map(item => `<option value="${esc(item.id)}" ${f.remplacement_id === item.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.classe)} · ${esc(new Date(item.created).toLocaleDateString('fr-FR'))}</option>`).join('')}</select><small>Une version précédente de cet historique sera gardée et pourra être restaurée. La source externe ne sera pas modifiée.</small></label>
+      <label class="agent-field full agent-upload"><span>Importer un fichier texte <em>facultatif</em></span><input id="agent-document-file" type="file" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html"><small>TXT, Markdown ou HTML · ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères maximum · aucun fichier binaire ni donnée non textuelle.</small></label>
+      ${f.fichier_nom ? `<div class="agent-attachments full"><span>${esc(f.fichier_nom)}</span></div>` : ''}
+      <label class="agent-field full"><span>Texte source à réviser</span><textarea data-agent-field="document_existant" rows="12" maxlength="${MAX_DOCUMENT_CHARS}" required placeholder="Collez ici le contenu complet du document à réviser…">${esc(f.document_existant)}</textarea><small><span id="agent-document-count">${f.document_existant.length.toLocaleString('fr-FR')} / ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères</span> · Le texte source est transmis à Gemini seulement quand vous lancez la révision.</small></label>
+      <label class="agent-field full"><span>Modifications souhaitées <em>facultatif</em></span><textarea data-agent-field="consignes" rows="4" placeholder="Ex. : clarifier les dates, corriger la langue et conserver toutes les consignes administratives…">${esc(f.consignes)}</textarea></label>
+    </div>${generateButton(f.remplacement_id ? 'Comparer et proposer le remplacement' : 'Comparer et réviser le document')}`;
+  }
   const practical = f.type_devoir === 'pratique';
   const proposeRubric = f.mode_bareme === 'proposer';
   const rubricFirst = proposeRubric && !f.bareme.trim();
@@ -374,8 +464,8 @@ function formHtml() {
     </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${transcriptionReview ? '<div class="agent-form-footer"><span>La transcription est prête. Relisez-la et poursuivez depuis l’avertissement ci-dessous.</span></div>' : generateButton(rubricFirst ? 'Proposer d’abord le barème' : handwritingFirst ? 'Transcrire avant correction' : 'Analyser et proposer une correction')}`;
 }
 
-function resultHeader(title, subtitle, applyLabel = '') {
-  return `<div class="agent-result-top agent-no-print"><div><span>PROPOSITION DE L’AGENT · À VÉRIFIER</span><strong>${esc(title)}</strong>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</div><div class="agent-result-actions">${applyLabel ? `<button class="btn btn-primary" data-agent-apply>${icon('arrow')} ${esc(applyLabel)}</button>` : ''}<button class="btn btn-ghost" data-agent-download>${icon('download')} Exporter</button><button class="btn btn-ghost" data-agent-print>${icon('print')} Imprimer</button></div></div>`;
+function resultHeader(title, subtitle, applyLabel = '', restoreLabel = '', statusLabel = 'PROPOSITION DE L’AGENT · À VÉRIFIER') {
+  return `<div class="agent-result-top agent-no-print"><div><span>${esc(statusLabel)}</span><strong>${esc(title)}</strong>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</div><div class="agent-result-actions">${applyLabel ? `<button type="button" class="btn btn-primary" data-agent-apply>${icon('arrow')} ${esc(applyLabel)}</button>` : ''}${restoreLabel ? `<button type="button" class="btn btn-ghost" data-agent-restore-document>${icon('arrow')} ${esc(restoreLabel)}</button>` : ''}<button type="button" class="btn btn-ghost" data-agent-download>${icon('download')} Exporter</button><button type="button" class="btn btn-ghost" data-agent-print>${icon('print')} Imprimer</button></div></div>`;
 }
 function chipList(items) {
   return `<div class="agent-tags">${asArray(items).map(x => `<span>${esc(x)}</span>`).join('') || '<span>Non renseigné</span>'}</div>`;
@@ -448,6 +538,32 @@ function renderTranscriptionReview() {
     <div class="agent-transcription-actions"><button class="btn btn-primary" type="button" data-agent-transcription-proceed ${needsAck && !transcriptionAcknowledged ? 'disabled' : ''}>${needsAck ? 'Continuer malgré les incertitudes' : 'Valider la transcription et corriger'}</button><button class="btn btn-ghost" type="button" data-agent-transcription-reset>Relire les photos</button></div>
   </section>`;
 }
+function renderDocument(r, meta) {
+  const title = String(r.titre || meta.titre || 'Document révisé');
+  const source = String(meta.document_source_content || '');
+  const savedEntry = meta.document_history_id
+    ? currentHistory().find(item => item.id === meta.document_history_id && item.task === 'document' && item.classe === meta.classe)
+    : null;
+  const versions = savedEntry ? documentVersions(savedEntry) : [];
+  const currentIndex = savedEntry ? currentDocumentVersionIndex(savedEntry, versions) : -1;
+  const current = currentIndex >= 0 ? versions[currentIndex] : null;
+  const canRestore = Boolean(meta.document_saved && current && currentIndex > 0);
+  const applyLabel = meta.document_saved
+    ? ''
+    : (meta.document_replacement_id ? 'Confirmer le remplacement local' : 'Enregistrer dans l’historique');
+  return `${resultHeader(title, `${meta.type_document || r.type_document || 'Document libre'} · ${meta.classe} · comparaison avant/après`, applyLabel, canRestore ? 'Restaurer la version précédente' : '', meta.document_saved ? 'VERSION ENREGISTRÉE · HISTORIQUE LOCAL' : 'PROPOSITION DE L’AGENT · À VÉRIFIER')}
+    <div class="agent-document-comparison agent-no-print" aria-label="Comparaison du document source et de la proposition">
+      <section class="agent-comparison-panel"><div class="agent-comparison-heading"><span>AVANT</span><strong>${meta.document_saved ? 'Version remplacée' : 'Document source'}</strong></div><pre>${esc(source || 'Texte source indisponible.')}</pre></section>
+      <section class="agent-comparison-panel proposed"><div class="agent-comparison-heading"><span>APRÈS</span><strong>Révision proposée</strong></div><pre>${esc(r.contenu || '')}</pre></section>
+    </div>
+    <div id="agent-result" class="agent-document">
+      ${documentIdentityHtml(meta)}
+      <div class="agent-doc-heading"><span>${esc(String(r.type_document || meta.type_document || 'DOCUMENT LIBRE').toUpperCase())} · ${esc(meta.classe)}</span><h2>${esc(title)}</h2><p>${meta.document_saved ? 'Version enregistrée dans l’historique local' : 'Proposition à vérifier avant enregistrement'}</p></div>
+      <section class="agent-document-content"><h3>Texte révisé</h3><pre>${esc(r.contenu || '')}</pre></section>
+      ${asArray(r.changements).length ? `<section><h3>Principales modifications</h3>${bulletList(r.changements)}</section>` : ''}
+      ${asArray(r.points_a_verifier).length ? `<div class="agent-uncertainties"><strong>Points à vérifier avant utilisation</strong>${bulletList(r.points_a_verifier)}</div>` : ''}
+    </div>`;
+}
 function renderCorrection(r, meta) {
   const questions = asArray(r.questions);
   const uncertain = asArray(r.transcription_incertaine);
@@ -471,6 +587,7 @@ function renderResult() {
     if (tool === 'exercices') return renderExercices(r, meta);
     if (tool === 'cahier') return renderCahier(r, meta);
     if (tool === 'repartition') return renderRepartition(r, meta);
+    if (tool === 'document') return renderDocument(r, meta);
     return renderCorrection(r, meta);
   } catch (e) {
     return `${resultHeader('Résultat de l’agent', 'Affichage brut')}<div id="agent-result" class="agent-document">${documentIdentityHtml(meta)}<pre class="agent-raw">${esc(JSON.stringify(r, null, 2))}</pre></div>`;
@@ -515,6 +632,14 @@ function validate() {
     if (!f.realise.trim() && !String(record(s).contenu || '').trim()) return 'Décrivez ce qui a réellement été fait, ou renseignez d’abord le contenu de la fiche. L’agent ne doit pas inventer le déroulement d’une séance.';
   }
   if (tool === 'exercices' && !f.sujet.trim()) return 'Indiquez la notion ou le thème des exercices.';
+  if (tool === 'document') {
+    if (!f.titre.trim()) return 'Donnez un titre au document à réviser.';
+    if (!f.type_document.trim()) return 'Indiquez le type de document à réviser.';
+    if (f.type_document.length > 80) return 'Le type du document ne peut pas dépasser 80 caractères.';
+    if (!f.document_existant.trim()) return 'Collez ou importez le texte source du document.';
+    if (f.document_existant.length > MAX_DOCUMENT_CHARS) return `Le document dépasse la limite de ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères.`;
+    if (f.remplacement_id && !currentHistory().some(item => item.id === f.remplacement_id && item.task === 'document' && item.classe === classe)) return 'Le document sélectionné n’est plus présent dans votre historique local.';
+  }
   if (tool === 'correction') {
     if (!f.sujet.trim()) return 'Ajoutez le sujet et, si possible, le corrigé de référence.';
     const rubricFirst = f.mode_bareme === 'proposer' && !f.bareme.trim();
@@ -533,11 +658,14 @@ function makeMeta() {
   if (tool === 'repartition') return { ...base, trimestre: Number(forms.repartition.trimestre) };
   if (tool === 'correction') return { ...base, type_devoir: forms.correction.type_devoir, mode_bareme: forms.correction.mode_bareme, identifiant: forms.correction.identifiant.trim() || 'Copie anonyme', sur: Number(forms.correction.sur) || 20 };
   if (tool === 'exercices') return { ...base, type_devoir: forms.exercices.type_devoir, remplacement_id: forms.exercices.remplacement_id || '' };
+  if (tool === 'document') return { ...base, titre: forms.document.titre.trim(), type_document: forms.document.type_document, document_replacement_id: forms.document.remplacement_id || '' };
   return base;
 }
 function buildPayload(meta) {
   const f = forms[tool];
-  const base = { context: { ...commonContext(), ...meta }, input: {} };
+  const contextMeta = { ...meta };
+  if (tool === 'document') delete contextMeta.document_replacement_id;
+  const base = { context: { ...commonContext(), ...contextMeta }, input: {} };
   if (tool === 'fiche') {
     const notionsSelectionnees = curriculumSelection('notions', f.notions);
     const competencesSelectionnees = curriculumSelection('competences', f.competences);
@@ -590,6 +718,14 @@ function buildPayload(meta) {
       trimestre: Number(f.trimestre), consignes: f.consignes,
       seances: sessions().filter(s => s.tri === Number(f.trimestre)).map(sessionData),
       calendrier: { vacances: root.VACANCES || [], fin_annee: root.SCHOOL?.finAnnee }
+    };
+  } else if (tool === 'document') {
+    base.input = {
+      titre: f.titre.trim(),
+      type_document: f.type_document,
+      mode_document: 'remplacement',
+      document_a_remplacer: f.document_existant,
+      consignes: f.consignes.trim()
     };
   } else {
     const uncertain = asArray(transcriptionReview?.transcription_incertaine);
@@ -683,6 +819,10 @@ async function generate() {
   const handwritingFirst = tool === 'correction' && shouldTranscribeHandwriting(forms.correction, attachments.length) && !transcriptionReview;
   const task = rubricFirst ? 'bareme' : handwritingFirst ? 'transcription' : tool;
   const meta = makeMeta();
+  const documentTarget = tool === 'document' && meta.document_replacement_id
+    ? currentHistory().find(item => item.id === meta.document_replacement_id && item.task === 'document' && item.classe === meta.classe)
+    : null;
+  const documentTargetContent = documentTarget ? String(currentDocumentVersion(documentTarget)?.result?.contenu || '') : '';
   const payload = rubricFirst ? buildRubricPayload(meta) : handwritingFirst ? buildTranscriptionPayload() : buildPayload(meta);
   const requestOwner = activeTeacherKey();
   const requestToken = generationToken;
@@ -692,6 +832,10 @@ async function generate() {
   try {
     const data = await callAgent(task, payload);
     if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+    if (task === 'document' && meta.document_replacement_id) {
+      const latestTarget = currentHistory().find(item => item.id === meta.document_replacement_id && item.task === 'document' && item.classe === meta.classe);
+      if (!latestTarget || String(currentDocumentVersion(latestTarget)?.result?.contenu || '') !== documentTargetContent) throw new Error('Ce document a changé dans votre historique pendant la révision. Rouvrez sa dernière version avant de recommencer.');
+    }
     if (!data.result || typeof data.result !== 'object') throw new Error('La réponse de l’agent ne contient pas de document exploitable.');
     status = { configured: true, model: data.meta?.model || status?.model };
     if (rubricFirst) {
@@ -713,10 +857,21 @@ async function generate() {
       return;
     }
     if (task === 'correction' && transcriptionReview) preserveTranscriptionWarnings(data.result, transcriptionReview, transcriptionAcknowledged);
+    const teacherHistory = currentHistory();
+    const localMeta = task === 'document' ? {
+      ...meta,
+      document_history_id: meta.document_replacement_id || '',
+      document_source_content: String(payload.input.document_a_remplacer || ''),
+      document_target_content: documentTargetContent,
+      document_saved: false
+    } : meta;
     results[tool] = data.result;
-    resultMeta[tool] = meta;
-    if (task !== 'correction') {
-      const teacherHistory = currentHistory();
+    resultMeta[tool] = localMeta;
+    if (task === 'document') {
+      notice = meta.document_replacement_id
+        ? 'Comparez la source et la proposition. Le remplacement dans votre historique restera réversible et demandera votre confirmation.'
+        : 'Comparez la source et la proposition. L’original restera intact; la nouvelle version sera enregistrée localement après confirmation.';
+    } else if (task !== 'correction') {
       const replacementPending = task === 'exercices' && meta.remplacement_id && teacherHistory.some(item => item.id === meta.remplacement_id && item.task === 'exercices' && item.classe === meta.classe);
       if (replacementPending) {
         notice = 'La version de remplacement est prête. Vérifiez-la, puis utilisez « Remplacer la série sélectionnée » pour confirmer.';
@@ -828,6 +983,46 @@ async function applyResult() {
     }
     return;
   }
+  if (tool === 'document') {
+    const sourceContent = String(meta.document_source_content || '');
+    if (!sourceContent.trim() || !String(r.contenu || '').trim()) { error = 'La source ou la proposition est vide; aucune version n’a été enregistrée.'; draw(); return; }
+    const targetId = meta.document_history_id || meta.document_replacement_id || '';
+    let target = targetId ? currentHistory().find(item => item.id === targetId && item.task === 'document' && item.classe === meta.classe) : null;
+    if (targetId && !target) { error = 'Le document n’est plus présent dans votre historique local. Rouvrez sa dernière version avant de continuer.'; draw(); return; }
+    if (target && meta.document_target_content !== undefined && String(currentDocumentVersion(target)?.result?.contenu || '') !== String(meta.document_target_content)) {
+      error = 'Ce document a changé dans votre historique pendant la révision. Rouvrez sa dernière version avant de recommencer.'; draw(); return;
+    }
+    const accepted = await confirmReplacement(
+      target ? 'Confirmer le remplacement local ?' : 'Enregistrer ce document révisé ?',
+      target
+        ? `La proposition remplacera « ${target.title} » uniquement dans l’historique local de cet appareil. La version précédente sera conservée et restaurable. Le fichier externe restera inchangé.`
+        : `La proposition sera ajoutée à votre historique local avec le texte source conservé comme version précédente. Aucun fichier externe ne sera modifié; exportez le résultat pour le remplacer vous-même.`,
+      target ? 'Enregistrer la nouvelle version' : 'Enregistrer dans l’historique'
+    );
+    if (!accepted || requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+    const latestTarget = targetId ? currentHistory().find(item => item.id === targetId && item.task === 'document' && item.classe === meta.classe) : null;
+    if (targetId && (!latestTarget || (meta.document_target_content !== undefined && String(currentDocumentVersion(latestTarget)?.result?.contenu || '') !== String(meta.document_target_content)))) {
+      error = 'Le document a été modifié avant la confirmation. Rouvrez sa dernière version pour éviter d’écraser vos changements.'; draw(); return;
+    }
+    const updated = latestTarget
+      ? appendDocumentHistoryVersion(latestTarget, meta, r, sourceContent)
+      : newDocumentHistoryEntry(requestOwner, meta, r, sourceContent);
+    const saved = saveCurrentHistory(latestTarget
+      ? currentHistory().map(item => item.id === latestTarget.id ? updated : item)
+      : [updated, ...currentHistory()]);
+    if (!saved) { error = 'Impossible d’enregistrer dans l’historique local de ce compte.'; draw(); return; }
+    results.document = updated.result;
+    resultMeta.document = updated.meta;
+    forms.document.titre = String(updated.result.titre || updated.title || meta.titre || '');
+    forms.document.type_document = String(updated.result.type_document || meta.type_document || 'Document libre');
+    forms.document.document_existant = String(updated.result.contenu || '');
+    forms.document.remplacement_id = updated.id;
+    forms.document.fichier_nom = '';
+    notice = latestTarget ? 'La version révisée a été enregistrée. La version précédente reste dans l’historique et peut être restaurée.' : 'Le document révisé et le texte source ont été enregistrés dans votre historique local. Le fichier original n’a pas été touché.';
+    error = '';
+    draw();
+    return;
+  }
   if (tool === 'exercices' && meta.remplacement_id) {
     const target = currentHistory().find(item => item.id === meta.remplacement_id && item.task === 'exercices' && item.classe === meta.classe);
     if (!target) { error = 'La série choisie n’est plus présente dans votre historique local pour cette classe. Sélectionnez-en une autre.'; draw(); return; }
@@ -862,6 +1057,47 @@ async function applyResult() {
     root.go('v-rep');
     root.toast(`${candidates.length} séance(s) à venir mise(s) à jour.`);
   }
+}
+async function restoreDocumentVersion() {
+  const meta = resultMeta.document;
+  const requestOwner = activeTeacherKey();
+  const requestToken = generationToken;
+  const targetId = meta?.document_history_id || '';
+  if (!meta?.document_saved || !requestOwner || !targetId) return;
+  const target = currentHistory().find(item => item.id === targetId && item.owner_key === requestOwner && item.task === 'document' && item.classe === meta.classe);
+  if (!target) { error = 'Ce document n’est plus présent dans votre historique local.'; draw(); return; }
+  const versions = documentVersions(target);
+  const index = currentDocumentVersionIndex(target, versions);
+  const current = versions[index];
+  if (index <= 0 || !current) { error = 'Aucune version précédente à restaurer.'; draw(); return; }
+  const currentContent = String(current?.result?.contenu || '');
+  const previous = versions[index - 1];
+  const accepted = await confirmReplacement(
+    'Restaurer la version précédente ?',
+    `Restaurer « ${previous.label || 'la version précédente'} » de « ${target.title} » dans l’historique local ? La version actuelle sera conservée et restera restaurable. Le fichier externe ne sera pas modifié.`,
+    'Restaurer cette version'
+  );
+  if (!accepted || requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+  const latest = currentHistory().find(item => item.id === targetId && item.owner_key === requestOwner && item.task === 'document' && item.classe === meta.classe);
+  const latestIndex = latest ? currentDocumentVersionIndex(latest) : -1;
+  if (!latest || latestIndex !== index || String(currentDocumentVersion(latest)?.result?.contenu || '') !== currentContent) {
+    error = 'Le document a changé avant la confirmation. Rouvrez sa dernière version pour éviter de restaurer un état obsolète.'; draw(); return;
+  }
+  const restored = restoreDocumentHistoryVersion(latest);
+  if (!restored) { error = 'Impossible de restaurer la version précédente.'; draw(); return; }
+  if (!saveCurrentHistory(currentHistory().map(item => item.id === targetId ? restored : item))) {
+    error = 'Impossible d’enregistrer la restauration dans l’historique local.'; draw(); return;
+  }
+  results.document = restored.result;
+  resultMeta.document = restored.meta;
+  forms.document.titre = String(restored.result?.titre || restored.title || '');
+  forms.document.type_document = String(restored.result?.type_document || restored.meta?.type_document || 'Document libre');
+  forms.document.document_existant = String(restored.result?.contenu || '');
+  forms.document.remplacement_id = restored.id;
+  forms.document.fichier_nom = '';
+  notice = 'La version précédente est restaurée dans l’historique local. La version remplacée est toujours conservée et peut être rétablie.';
+  error = '';
+  draw();
 }
 function downloadResult() {
   const content = el('agent-result');
@@ -941,6 +1177,33 @@ async function addCodeFiles(fileList) {
   } catch (e) { error = e.message || 'Impossible de lire ce fichier de code.'; }
   finally { busy = false; draw(); }
 }
+async function readDocumentFile(fileList) {
+  const file = Array.from(fileList || [])[0];
+  if (!file) return;
+  const requestOwner = activeTeacherKey();
+  const requestToken = generationToken;
+  const extension = String(file.name || '').split('.').pop().toLocaleLowerCase('en');
+  if (!['txt', 'md', 'markdown', 'html', 'htm'].includes(extension)) { error = 'Importez uniquement un fichier TXT, Markdown ou HTML. Pour un PDF ou Word, copiez son texte dans le champ source.'; draw(); return; }
+  if (file.size > MAX_DOCUMENT_CHARS * 4) { error = `Le fichier dépasse ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères maximum.`; draw(); return; }
+  try {
+    const text = await file.text();
+    if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+    if (text.includes('\u0000')) throw new Error('Ce fichier semble binaire; seul le texte brut est accepté.');
+    if (text.length > MAX_DOCUMENT_CHARS) throw new Error(`Le document dépasse ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères.`);
+    forms.document.document_existant = text;
+    forms.document.fichier_nom = String(file.name || '').slice(0, 180);
+    forms.document.remplacement_id = '';
+    if (!forms.document.titre.trim()) forms.document.titre = String(file.name || 'Document importé').replace(/\.[^.]+$/, '').slice(0, 140);
+    results.document = null;
+    resultMeta.document = null;
+    error = '';
+    notice = `Texte importé depuis « ${forms.document.fichier_nom} ». Le fichier reste inchangé.`;
+  } catch (e) {
+    if (requestToken === generationToken && requestOwner === activeTeacherKey()) error = e.message || 'Impossible de lire ce fichier texte.';
+  } finally {
+    if (requestToken === generationToken && requestOwner === activeTeacherKey()) draw();
+  }
+}
 async function addImages(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length || busy) return;
@@ -985,6 +1248,15 @@ document.addEventListener('input', e => {
   const field = e.target.closest('[data-agent-field]');
   if (!field || !forms[tool] || !(field.dataset.agentField in forms[tool])) return;
   forms[tool][field.dataset.agentField] = fieldValue(field);
+  if (tool === 'document') {
+    results.document = null;
+    resultMeta.document = null;
+    notice = '';
+    if (field.dataset.agentField === 'document_existant') {
+      const counter = el('agent-document-count');
+      if (counter) counter.textContent = `${forms.document.document_existant.length.toLocaleString('fr-FR')} / ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères`;
+    }
+  }
   if (tool === 'correction' && field.dataset.agentField === 'copie' && transcriptionReview) {
     transcriptionAcknowledged = false;
     const checkbox = el('agent-transcription-ack');
@@ -994,6 +1266,7 @@ document.addEventListener('input', e => {
   }
 });
 document.addEventListener('change', e => {
+  if (e.target.id === 'agent-document-file') { readDocumentFile(e.target.files); return; }
   const selection = e.target.closest('[data-agent-selection]');
   if (selection && ['notions', 'competences'].includes(selection.dataset.agentSelection) && forms[tool]) {
     const kind = selection.dataset.agentSelection;
@@ -1010,6 +1283,8 @@ document.addEventListener('change', e => {
     forms.fiche.session = ''; forms.fiche.notions = []; forms.fiche.competences = []; forms.fiche.remplacer = false;
     forms.exercices.notions = []; forms.exercices.competences = []; forms.exercices.remplacement_id = '';
     forms.cahier.session = ''; forms.cahier.remplacer = false;
+    forms.document.remplacement_id = '';
+    results.document = null; resultMeta.document = null;
     error = ''; notice = '';
     draw(); return;
   }
@@ -1024,6 +1299,22 @@ document.addEventListener('change', e => {
   const field = e.target.closest('[data-agent-field]');
   if (field && field.tagName === 'SELECT') {
     forms[tool][field.dataset.agentField] = fieldValue(field);
+    if (tool === 'document') {
+      results.document = null; resultMeta.document = null;
+      if (field.dataset.agentField === 'remplacement_id' && forms.document.remplacement_id) {
+        const target = currentHistory().find(item => item.id === forms.document.remplacement_id && item.task === 'document' && item.classe === classe);
+        const version = target && currentDocumentVersion(target);
+        if (version?.result) {
+          forms.document.titre = String(version.result.titre || target.title || '');
+          forms.document.type_document = String(version.result.type_document || target.meta?.type_document || 'Document libre');
+          forms.document.document_existant = String(version.result.contenu || '');
+          forms.document.fichier_nom = '';
+        } else {
+          forms.document.remplacement_id = '';
+          error = 'La version choisie n’est plus disponible dans votre historique.';
+        }
+      }
+    }
     if (tool === 'fiche' && field.dataset.agentField === 'session') { forms.fiche.notions = storedNotionsForSession(forms.fiche.session); forms.fiche.remplacer = false; }
     if (tool === 'cahier' && field.dataset.agentField === 'session') forms.cahier.remplacer = false;
     if (tool === 'correction' && ['type_devoir', 'mode_bareme'].includes(field.dataset.agentField)) results.correction = null;
@@ -1035,7 +1326,7 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
@@ -1044,13 +1335,27 @@ document.addEventListener('click', e => {
   if (button.hasAttribute('data-agent-test')) testConnection();
   if (button.hasAttribute('data-agent-profile')) root.openProfil?.();
   if (button.hasAttribute('data-agent-apply')) applyResult();
+  if (button.hasAttribute('data-agent-restore-document')) restoreDocumentVersion();
   if (button.hasAttribute('data-agent-download')) downloadResult();
   if (button.hasAttribute('data-agent-print')) printResult();
   if (button.dataset.agentRemove !== undefined) { attachments.splice(Number(button.dataset.agentRemove), 1); draw(); }
   if (button.dataset.agentRemoveCode !== undefined) { codeFiles.splice(Number(button.dataset.agentRemoveCode), 1); draw(); }
   if (button.dataset.agentHistory) {
     const item = currentHistory().find(x => x.id === button.dataset.agentHistory);
-    if (item) { tool = item.task; classe = item.classe; results[tool] = item.result; resultMeta[tool] = item.meta; error = ''; notice = ''; draw(); }
+    if (item) {
+      tool = item.task; classe = item.classe;
+      if (item.task === 'document') {
+        const version = currentDocumentVersion(item);
+        results.document = version?.result || item.result;
+        resultMeta.document = { ...(item.meta || {}), document_history_id: item.id, document_saved: true };
+        forms.document.titre = String(results.document?.titre || item.title || '');
+        forms.document.type_document = String(results.document?.type_document || item.meta?.type_document || 'Document libre');
+        forms.document.document_existant = String(results.document?.contenu || '');
+        forms.document.remplacement_id = item.id;
+        forms.document.fichier_nom = '';
+      } else { results[tool] = item.result; resultMeta[tool] = item.meta; }
+      error = ''; notice = ''; draw();
+    }
   }
   if (button.hasAttribute('data-agent-clear-history') && confirm('Effacer vos documents récents enregistrés localement sur cet appareil ?')) { saveCurrentHistory([]); draw(); }
 });
@@ -1071,7 +1376,10 @@ root.STI_AGENT = {
     shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings,
     documentIdentity, documentIdentityHtml, rubricToText,
     currentHistory, activeTeacherKey, saveCurrentHistory,
-    renderers: { fiche: renderFiche, exercices: renderExercices, cahier: renderCahier, repartition: renderRepartition, correction: renderCorrection },
+    documentVersions, currentDocumentVersion, currentDocumentVersionIndex, newDocumentHistoryEntry, appendDocumentHistoryVersion, restoreDocumentHistoryVersion,
+    applyResult, restoreDocumentVersion, readDocumentFile,
+    setResult: (task, result, meta) => { results[task] = result; resultMeta[task] = meta; tool = task; },
+    renderers: { fiche: renderFiche, exercices: renderExercices, cahier: renderCahier, repartition: renderRepartition, document: renderDocument, correction: renderCorrection },
     formFor: task => { const previous = tool; tool = task; try { return formHtml(); } finally { tool = previous; } },
     buildPayloadFor: task => { const previous = tool; tool = task; try { return buildPayload(makeMeta()); } finally { tool = previous; } },
     buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload
