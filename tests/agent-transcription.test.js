@@ -91,7 +91,8 @@ test('la fonction Agent STI appelle Gemini avec les images inline et une sortie 
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_MODEL"\)/);
   assert.match(edgeSource, /generativelanguage\.googleapis\.com\/v1beta\/models/);
   assert.match(edgeSource, /"x-goog-api-key": apiKey/);
-  assert.match(edgeSource, /inlineData: \{ mimeType: image\[1\], data: image\[2\] \}/);
+  assert.match(edgeSource, /const \[header, encoded\] = item\.data\.split\(",", 2\)/);
+  assert.match(edgeSource, /inlineData: \{ mimeType: header\.slice\(5, header\.indexOf\(";"\)\), data \}/);
   assert.match(edgeSource, /responseMimeType: "application\/json"/);
   assert.match(edgeSource, /providerData\?\.candidates\?\.\[0\]\?\.content\?\.parts/);
   assert.match(edgeSource, /clearTimeout\(timer\)/);

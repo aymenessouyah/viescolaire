@@ -359,7 +359,9 @@ function validAttachments(input: any): Array<{ name: string; mime: string; data:
   return input.slice(0, MAX_IMAGES).filter(item => {
     if (!item || typeof item.data !== "string") return false;
     if (item.data.length > 2_000_000) return false;
-    return /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(item.data);
+    const [header, encoded] = item.data.split(",", 2);
+    return ["data:image/jpeg;base64", "data:image/png;base64", "data:image/webp;base64"].includes(header)
+      && /^[A-Za-z0-9+/=]+$/.test(encoded || "");
   }).map(item => ({
     name: cleanText(item.name, 120),
     mime: cleanText(item.mime, 30),
@@ -411,8 +413,10 @@ Deno.serve(async request => {
   const systemInstruction = `${COMMON_RULES}\n${TASK_PROMPTS[task]}`;
   const userParts: any[] = [{ text: `Données de travail JSON :\n${JSON.stringify(safePayload)}` }];
   attachments.forEach(item => {
-    const image = /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/.exec(item.data);
-    if (image) userParts.push({ inlineData: { mimeType: image[1], data: image[2] } });
+    const [header, data] = item.data.split(",", 2);
+    if (["data:image/jpeg;base64", "data:image/png;base64", "data:image/webp;base64"].includes(header)) {
+      userParts.push({ inlineData: { mimeType: header.slice(5, header.indexOf(";")), data } });
+    }
   });
 
   const defaultOutputTokens = task === "repartition" ? 7000 : 5000;
