@@ -431,25 +431,32 @@ function importerRosterCSV(cid,input){
     const rows = plan.rows.map(row => {
       const current=row.matchId?elevesDe(cid).find(student=>student.id===row.matchId):null;
       const previewStudent=Object.assign({},current||{},row.student);
+      const actionLabel=row.action==="delete"?"Suppression":row.action==="add"?"Nouvel élève":"Mise à jour";
       return {
         action:row.action,
         student:row.student,
-        cells:[row.action === "add" ? "Nouvel élève" : "Mise à jour",(previewStudent.nom||"") + " " + (previewStudent.prenom||""),previewStudent.groupe||1,previewStudent.pc||""]
+        cells:[actionLabel,(previewStudent.nom||"") + " " + (previewStudent.prenom||""),previewStudent.groupe||1,previewStudent.pc||""]
       };
     });
     afficherApercuCSV({
       title:"Importer la liste de " + classeDe(cid).nom,
-      summary:file.name + " — " + plan.adds + " ajout(s), " + plan.updates + " mise(s) à jour. Conservez la colonne ID; les cellules vides préservent les données et les élèves absents du fichier sont conservés.",
+      summary:file.name + " — " + plan.adds + " ajout(s), " + plan.updates + " mise(s) à jour, " + plan.deletes + " suppression(s) explicite(s). Laissez action vide pour ajouter ou mettre à jour; écrivez « supprimer » avec l’ID pour retirer un élève. Les champs vides et les élèves absents du fichier sont conservés; les notes et présences historiques ne sont pas supprimées.",
+      applyLabel:plan.deletes?"Confirmer l’import et les suppressions":"Appliquer l’import",
       headers:["Action","Élève","Groupe","N° PC"],rows,errors:plan.errors,
       onApply:() => {
         if (!requireStudentAccount()) return false;
         const current = elevesDe(cid);
+        const staleRow=plan.rows.find(row=>["update","delete"].includes(row.action)&&!current.some(student=>student.id===row.matchId));
+        if(staleRow){toast("La liste a changé depuis l’aperçu. Réimportez le fichier avant de confirmer.");return false;}
+        let deleted=0;
         plan.rows.forEach(row => {
           const index = current.findIndex(student => student.id === row.matchId);
-          if (row.action === "update" && index >= 0) current[index] = Object.assign({},current[index],row.student);
-          else current.push(Object.assign({id:uidEl()},row.student));
+          if(row.action==="delete"){current.splice(index,1);deleted++;}
+          else if(row.action === "update") current[index] = Object.assign({},current[index],row.student);
+          else if(row.action === "add") current.push(Object.assign({id:uidEl()},row.student));
         });
-        save(true); renderEleves(); toast(plan.rows.length + " ligne(s) importée(s) — aucun élève supprimé");
+        save(true); renderEleves();
+        toast(plan.adds + " ajout(s), " + plan.updates + " mise(s) à jour, " + deleted + " retrait(s) — historique conservé");
       }
     });
   });

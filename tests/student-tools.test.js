@@ -18,14 +18,33 @@ test('le parseur CSV gère le BOM, le point-virgule, les guillemets et les retou
 
 test('le modèle CSV de classe met à jour par ID ou nom sans supprimer les élèves absents du fichier', () => {
   const csv = studentCsv.exportRoster(roster).replace('P01','P11');
+  assert.equal(studentCsv.parseRows(csv)[0].slice(-1)[0], 'action');
   const plan = studentCsv.planRosterImport(csv, roster, 2);
   assert.equal(plan.errors.length, 0);
   assert.equal(plan.updates, 2);
   assert.equal(plan.adds, 0);
+  assert.equal(plan.deletes, 0);
   assert.equal(plan.rows[0].student.pc, 'P11');
   assert.equal(plan.rows[1].matchId, 'student-2');
   const partial = studentCsv.planRosterImport('id;nom;prenom;groupe\nstudent-1;Ben Ali;;', roster, 2);
   assert.deepEqual(partial.rows[0].student, {nom:'Ben Ali'});
+});
+
+test('la suppression CSV exige une action explicite et l’ID d’un élève de la classe', () => {
+  const plan = studentCsv.planRosterImport('id;action\nstudent-2;supprimer', roster, 2);
+  assert.equal(plan.errors.length, 0);
+  assert.equal(plan.adds, 0);
+  assert.equal(plan.updates, 0);
+  assert.equal(plan.deletes, 1);
+  assert.equal(plan.rows[0].action, 'delete');
+  assert.equal(plan.rows[0].matchId, 'student-2');
+
+  const missingId = studentCsv.planRosterImport('id;action\n;supprimer', roster, 2);
+  assert.match(missingId.errors[0], /ID obligatoire/);
+  const unknownId = studentCsv.planRosterImport('id;action\nnot-in-class;supprimer', roster, 2);
+  assert.match(unknownId.errors[0], /absent de cette classe/);
+  const implicit = studentCsv.planRosterImport('id;nom\nstudent-1;Ben Ali', roster, 2);
+  assert.equal(implicit.deletes, 0);
 });
 
 test('l’import de classe bloque les groupes invalides et les doublons de noms', () => {

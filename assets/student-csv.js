@@ -75,9 +75,9 @@
   }
 
   function exportRoster(students){
-    const rows = [['id','nom','prenom','nom_ar','prenom_ar','groupe','pc']];
+    const rows = [['id','nom','prenom','nom_ar','prenom_ar','groupe','pc','action']];
     (students || []).forEach(student => rows.push([
-      student.id, student.nom, student.prenom, student.nomAr, student.prenomAr, student.groupe, student.pc
+      student.id, student.nom, student.prenom, student.nomAr, student.prenomAr, student.groupe, student.pc, ''
     ]));
     return encodeCsv(rows);
   }
@@ -93,40 +93,59 @@
     nomAr:['nomar','nomarabe','arabiclastname'],
     prenomAr:['prenomar','prenomarabe','arabicfirstname'],
     groupe:['groupe','group','groupeno','groupenumber'],
-    pc:['pc','numeropc','npc','posteenclasse']
+    pc:['pc','numeropc','npc','posteenclasse'],
+    action:['action','operation','commande','traitement']
   };
 
   function planRosterImport(text, students, groupCount){
     let table;
     try { table = readTable(text); }
-    catch (error){ return { rows:[], errors:[error.message], adds:0, updates:0, total:0 }; }
+    catch (error){ return { rows:[], errors:[error.message], adds:0, updates:0, deletes:0, total:0 }; }
     const columns = columnIndexes(table.headers, ROSTER_COLUMNS);
-    if (columns.nom < 0) return { rows:[], errors:['Colonne obligatoire manquante : nom.'], adds:0, updates:0, total:table.rows.length };
+    if (columns.nom < 0 && columns.action < 0)
+      return { rows:[], errors:['Colonne obligatoire manquante : nom.'], adds:0, updates:0, deletes:0, total:table.rows.length };
 
     const existingStudents = Array.isArray(students) ? students : [];
     const maxGroup = Math.max(1, Number(groupCount) || 1);
     const namesSeen = new Set(), idsSeen = new Set(), planned = [], errors = [];
+    const deleteActions = new Set(['delete','remove','supprimer','supprime','retirer','retrait']);
     table.rows.forEach((cells,index) => {
       const value = key => columns[key] < 0 ? '' : String(cells[columns[key]] || '').trim();
+      const line = index+2;
+      const importedId = value('id');
+      const requestedAction = normalizeName(value('action'));
+      if (requestedAction && !deleteActions.has(requestedAction)){
+        errors.push('Ligne ' + line + ' : action inconnue. Pour retirer un élève, utilisez « supprimer ».'); return;
+      }
+      if (requestedAction){
+        if (!importedId){ errors.push('Ligne ' + line + ' : ID obligatoire pour supprimer un élève.'); return; }
+        if (idsSeen.has(importedId)){ errors.push('Ligne ' + line + ' : identifiant répété dans le fichier.'); return; }
+        idsSeen.add(importedId);
+        const existing = existingStudents.find(student => String(student.id) === importedId);
+        if (!existing){ errors.push('Ligne ' + line + ' : ID « ' + importedId + ' » absent de cette classe; suppression refusée.'); return; }
+        planned.push({ action:'delete', matchId:existing.id, sourceRow:line, student:existing });
+        return;
+      }
+
+      if (columns.nom < 0){ errors.push('Ligne ' + line + ' : colonne nom manquante pour ajouter ou modifier un élève.'); return; }
       const nom = value('nom'), prenom = value('prenom');
-      if (!nom){ errors.push('Ligne ' + (index+2) + ' : nom manquant.'); return; }
+      if (!nom){ errors.push('Ligne ' + line + ' : nom manquant.'); return; }
       const rawGroup = value('groupe');
       const groupe = rawGroup ? Number(rawGroup) : 1;
       if (!Number.isInteger(groupe) || groupe < 1 || groupe > maxGroup){
-        errors.push('Ligne ' + (index+2) + ' : groupe invalide (1 à ' + maxGroup + ').'); return;
+        errors.push('Ligne ' + line + ' : groupe invalide (1 à ' + maxGroup + ').'); return;
       }
       const identity = normalizeName(nom) + '|' + normalizeName(prenom);
-      if (namesSeen.has(identity)){ errors.push('Ligne ' + (index+2) + ' : doublon de nom dans le fichier.'); return; }
+      if (namesSeen.has(identity)){ errors.push('Ligne ' + line + ' : doublon de nom dans le fichier.'); return; }
       namesSeen.add(identity);
 
-      const importedId = value('id');
-      if (importedId && idsSeen.has(importedId)){ errors.push('Ligne ' + (index+2) + ' : identifiant répété dans le fichier.'); return; }
+      if (importedId && idsSeen.has(importedId)){ errors.push('Ligne ' + line + ' : identifiant répété dans le fichier.'); return; }
       if (importedId) idsSeen.add(importedId);
       const matchesById = importedId ? existingStudents.filter(student => String(student.id) === importedId) : [];
       const matchesByName = existingStudents.filter(student => normalizeName(student.nom) === normalizeName(nom) && normalizeName(student.prenom) === normalizeName(prenom));
       let existing = matchesById[0] || null;
       if (!existing && matchesByName.length === 1) existing = matchesByName[0];
-      else if (!existing && matchesByName.length > 1){ errors.push('Ligne ' + (index+2) + ' : plusieurs élèves portent ce nom ; ajoutez leur ID exporté.'); return; }
+      else if (!existing && matchesByName.length > 1){ errors.push('Ligne ' + line + ' : plusieurs élèves portent ce nom ; ajoutez leur ID exporté.'); return; }
 
       const student = { nom };
       const optionalFields = ['prenom','nomAr','prenomAr','pc'];
@@ -141,7 +160,7 @@
       planned.push({
         action:existing ? 'update' : 'add',
         matchId:existing ? existing.id : null,
-        sourceRow:index+2,
+        sourceRow:line,
         student
       });
     });
@@ -150,6 +169,7 @@
       errors,
       adds:planned.filter(row => row.action === 'add').length,
       updates:planned.filter(row => row.action === 'update').length,
+      deletes:planned.filter(row => row.action === 'delete').length,
       total:table.rows.length
     };
   }
