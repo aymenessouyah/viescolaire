@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '1.3.0-curriculum-selection';
+const VERSION = '1.4.0-gemini-api';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -217,8 +217,8 @@ function commonContext() {
 
 function statusHtml() {
   if (!status) return '<span class="agent-status neutral"><i></i> Connexion sécurisée à tester</span>';
-  if (status.configured) return `<span class="agent-status ok"><i></i> Configuration IA détectée · ${esc(status.model || 'modèle configuré')}</span>`;
-  return '<span class="agent-status warn"><i></i> Fonction déployée · clé IA à configurer</span>';
+  if (status.configured) return `<span class="agent-status ok"><i></i> Gemini configuré · ${esc(status.model || 'modèle configuré')}</span>`;
+  return '<span class="agent-status warn"><i></i> Fonction déployée · secret Gemini à configurer</span>';
 }
 function contextCard() {
   if (!['fiche', 'cahier'].includes(tool)) {
@@ -631,7 +631,7 @@ async function testConnection() {
   try {
     const data = await callAgent('status');
     status = data;
-    notice = data.configured ? `Fonction Supabase accessible et configuration détectée pour « ${data.model} ». Lancez une courte génération pour valider aussi le compte du fournisseur IA.` : 'La fonction Supabase répond, mais le secret AI_API_KEY ou le modèle IA doit encore être configuré. Suivez le guide AGENT_IA.md.';
+    notice = data.configured ? `Fonction Supabase accessible et configuration détectée pour « ${data.model} ». Lancez une courte génération pour valider aussi l’accès à Gemini.` : 'La fonction Supabase répond, mais le secret GEMINI_API_KEY manque ou le modèle Gemini doit être vérifié. Suivez le guide AGENT_IA.md.';
   } catch (e) { error = e.message || String(e); }
   finally { busy = false; draw(); }
 }

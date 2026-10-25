@@ -19,7 +19,8 @@ test('la politique décrit les traitements locaux, Supabase, Google Drive et IA'
   assert.match(policy, /stockage du navigateur/);
   assert.match(policy, /Supabase/);
   assert.match(policy, /drive\.file/);
-  assert.match(policy, /fournisseur d’intelligence artificielle configuré/);
+  assert.match(policy, /API Google Gemini configurée pour l’Agent STI/);
+  assert.match(policy, /Conditions d’utilisation de l’API Gemini/);
   assert.match(policy, /aymenessouyah@gmail\.com/);
 });
 
@@ -32,7 +33,7 @@ test('la politique expose les choix et limites essentiels de sauvegarde et de co
 
 test('la politique est incluse au cache hors ligne et les versions d’interface concordent', () => {
   assert.match(worker, /"\.\/politique-confidentialite\.html"/);
-  const expected = 'v1.18.0-agent-curriculum-selection';
+  const expected = 'v1.18.1-gemini-agent';
   assert.ok(index.includes(expected));
   assert.ok(app.includes(expected));
   assert.ok(worker.includes('sti-espace-' + expected));
