@@ -22,8 +22,12 @@ function isDue(createdAt,now=Date.now()){
 }
 function setStatus(text,kind='pending'){
   statusValue={text,kind};
-  const node=el('sti-drive-status');
-  if(node){node.textContent=text;node.dataset.state=kind;node.classList.remove('b-green','b-amber','b-blue','b-grey','b-rose');node.classList.add(({ok:'b-green',warning:'b-amber',pending:'b-blue',idle:'b-grey'})[kind]||'b-grey');}
+  ['sti-drive-status','pf-drive-status'].forEach(id=>{
+    const node=el(id);if(!node)return;
+    node.textContent=text;node.dataset.state=kind;
+    node.classList.remove('b-green','b-amber','b-blue','b-grey','b-rose');
+    node.classList.add(({ok:'b-green',warning:'b-amber',pending:'b-blue',idle:'b-grey'})[kind]||'b-grey');
+  });
 }
 function status(){return {...statusValue};}
 function dialog(){return el('drive-backup-dialog');}
