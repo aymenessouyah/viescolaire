@@ -83,8 +83,10 @@ test('la fonction IA valide une transcription sans note et exige au moins une im
 });
 
 test('la fonction Agent STI appelle Gemini avec les images inline et une sortie JSON', () => {
-  assert.match(supabaseConfig, /verify_jwt\s*=\s*true/);
-  assert.match(edgeSource, /const authError = await authenticatedUser\(request\)/);
+  assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
+  assert.match(edgeSource, /if \(request\.method === "OPTIONS"\)[\s\S]*?const authError = await authenticatedUser\(request\)/);
+  assert.match(edgeSource, /if \(!authorization\?\.startsWith\("Bearer "\)\) return json/);
+  assert.match(edgeSource, /\/auth\/v1\/user/);
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_API_KEY"\)/);
   assert.match(edgeSource, /Deno\.env\.get\("GEMINI_MODEL"\)/);
   assert.match(edgeSource, /generativelanguage\.googleapis\.com\/v1beta\/models/);
