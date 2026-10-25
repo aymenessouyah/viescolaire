@@ -135,6 +135,19 @@
 #v-agent .agent-grade p{margin:0;color:var(--agent-muted);font-size:11px}
 #v-agent .agent-uncertainties{margin:15px 0;padding:12px 14px;border:1px solid #e6c991;border-radius:10px;color:#78521b;background:#fff8e9;font-size:11px}
 #v-agent .agent-uncertainties>strong{display:block;margin-bottom:5px}
+#v-agent .agent-transcription-review{padding:18px;border:1px solid var(--agent-line);border-radius:16px;color:var(--agent-ink);background:var(--agent-card);box-shadow:0 12px 32px -28px rgba(30,48,39,.55)}
+#v-agent .agent-transcription-heading{display:flex;align-items:center;gap:11px}
+#v-agent .agent-transcription-heading>span{display:grid;place-items:center;width:36px;height:36px;flex:none;border-radius:10px;color:var(--agent-green);background:#e7f0e9}
+#v-agent .agent-transcription-heading small{color:var(--agent-muted);font-size:9px;font-weight:800;letter-spacing:.1em}
+#v-agent .agent-transcription-heading h3{margin:2px 0 0;font-size:15px}
+#v-agent .agent-transcription-review .agent-uncertainties ul{margin:5px 0 0;padding-left:20px}
+#v-agent .agent-transcription-help{margin:14px 0;color:var(--agent-muted);font-size:11px;line-height:1.55}
+#v-agent .agent-transcription-ack{display:flex;align-items:flex-start;gap:9px;margin:12px 0;padding:12px;border:1px solid #e6c991;border-radius:10px;color:#78521b;background:#fff8e9;font-size:11px;line-height:1.5}
+#v-agent .agent-transcription-ack input{width:18px;height:18px;flex:none;margin:0;accent-color:var(--agent-green)}
+#v-agent .agent-transcription-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:15px}
+#v-agent .agent-transcription-actions button:disabled{cursor:not-allowed;opacity:.48}
+:root[data-color-mode="dark"] #v-agent .agent-transcription-heading>span{color:#a8d9ba;background:#203629}
+:root[data-color-mode="dark"] #v-agent .agent-transcription-ack{border-color:#705a32;color:#f0d393;background:#352b1b}
 #v-agent .agent-raw{overflow:auto;max-height:650px;padding:20px;border:1px solid var(--agent-line);border-radius:0 0 15px 15px;background:var(--agent-card);font:11px/1.5 ui-monospace,monospace;white-space:pre-wrap}
 #v-agent .agent-history{padding:20px;border:1px solid var(--agent-line);border-radius:17px;background:var(--agent-card)}
 #v-agent .agent-history-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:13px}

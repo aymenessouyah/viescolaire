@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.17.4-site-business-card";
+const APP_VER = "v1.17.5-agent-handwriting-review";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
