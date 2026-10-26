@@ -7,11 +7,12 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.3.0-gemini-timeout';
+const VERSION = '2.4.0-shared-prompts';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
 const MAX_DOCUMENT_CHARS = 80000;
+const MAX_SHARED_PROMPTS = 5;
 const TASKS = {
   fiche: { label: 'Fiche pédagogique', short: 'Fiche', icon: 'file', desc: 'Préparer une séance complète à partir du planning.' },
   exercices: { label: 'Séries d’exercices', short: 'Exercices', icon: 'layers', desc: 'Créer des exercices théoriques ou pratiques avec corrigés.' },
@@ -50,6 +51,12 @@ let resultMeta = {};
 let history = readHistory();
 let workspaceOwnerKey = '';
 let generationToken = 0;
+let sharedPrompts = [];
+let sharedPromptState = 'idle';
+let sharedPromptError = '';
+let sharedPromptPromise = null;
+let sharedPromptUser = '';
+const selectedSharedPromptIds = {};
 function defaultForms() {
   return {
     fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '', notions: [], competences: [], remplacer: false },
@@ -350,6 +357,7 @@ function resetTeacherWorkspace() {
   transcriptionAcknowledged = false;
   results = {};
   resultMeta = {};
+  Object.keys(selectedSharedPromptIds).forEach(task => delete selectedSharedPromptIds[task]);
   Object.assign(forms, defaultForms());
 }
 function documentIdentity(meta = {}) {
@@ -407,8 +415,87 @@ function sessionOptions() {
 function assignmentTypeOptions(value) {
   return ['théorique', 'pratique'].map(x => `<option value="${x}" ${value === x ? 'selected' : ''}>${x === 'pratique' ? 'Pratique' : 'Théorique'}</option>`).join('');
 }
+function loadSharedPromptLibrary(force = false) {
+  const user = typeof root.authUser === 'function' ? String(root.authUser() || '').trim().toLocaleLowerCase('en') : '';
+  if (typeof root.cloudReady !== 'function' || !root.cloudReady() || !user) {
+    sharedPromptState = 'error';
+    sharedPromptError = 'Connectez-vous à Supabase pour consulter la bibliothèque partagée.';
+    return Promise.resolve([]);
+  }
+  if (sharedPromptUser !== user) {
+    sharedPrompts = [];
+    sharedPromptState = 'idle';
+    sharedPromptError = '';
+    sharedPromptUser = user;
+    Object.keys(selectedSharedPromptIds).forEach(task => delete selectedSharedPromptIds[task]);
+  }
+  if (sharedPromptPromise) return sharedPromptPromise;
+  if (!force && ['loaded', 'error'].includes(sharedPromptState)) return Promise.resolve(sharedPrompts);
+  sharedPromptState = 'loading';
+  sharedPromptError = '';
+  sharedPromptPromise = (async () => {
+    try {
+      const token = await root.authToken();
+      if (!token) throw new Error('Session professeur absente ou expirée. Reconnectez-vous.');
+      const cfg = root.cloudCfg();
+      const response = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/prompt-manager`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: cfg.key, Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'list' })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+      sharedPrompts = asArray(data.prompts).filter(item => item && item.id && TASKS[item.task] && item.title && item.prompt).map(item => ({
+        id: String(item.id), task: String(item.task), title: String(item.title).slice(0, 120),
+        description: String(item.description || '').slice(0, 300), prompt: String(item.prompt).slice(0, 4000)
+      }));
+      Object.keys(selectedSharedPromptIds).forEach(task => {
+        const availableIds = new Set(sharedPrompts.filter(item => item.task === task).map(item => item.id));
+        selectedSharedPromptIds[task] = asArray(selectedSharedPromptIds[task]).filter(id => availableIds.has(String(id)));
+      });
+      sharedPromptState = 'loaded';
+      return sharedPrompts;
+    } catch (e) {
+      sharedPrompts = [];
+      sharedPromptState = 'error';
+      sharedPromptError = String(e?.message || e || 'Bibliothèque partagée indisponible.');
+      return [];
+    } finally {
+      sharedPromptPromise = null;
+    }
+  })();
+  return sharedPromptPromise;
+}
+function reloadSharedPromptLibrary() {
+  sharedPromptState = 'idle';
+  sharedPromptError = '';
+  sharedPrompts = [];
+  loadSharedPromptLibrary(true).then(() => { if (ctx?.view === 'v-agent') draw(); });
+}
+function selectedPromptsForTask(task) {
+  const ids = new Set(asArray(selectedSharedPromptIds[task]).map(String));
+  return sharedPrompts.filter(item => item.task === task && ids.has(item.id)).slice(0, MAX_SHARED_PROMPTS);
+}
+function sharedPromptPickerHtml() {
+  if (!TASKS[tool] || sharedPromptState === 'idle') return '';
+  const available = sharedPrompts.filter(item => item.task === tool);
+  let content = '';
+  if (sharedPromptState === 'loading') {
+    content = '<p class="agent-shared-prompts-empty" role="status">Chargement de la bibliothèque partagée…</p>';
+  } else if (sharedPromptState === 'error') {
+    content = `<div class="agent-shared-prompts-empty" role="status">La bibliothèque n’est pas disponible : ${esc(sharedPromptError)} <button type="button" class="btn btn-ghost" data-agent-prompts-reload>Réessayer</button><small>Vous pouvez continuer à utiliser Gemini sans prompt partagé.</small></div>`;
+  } else if (!available.length) {
+    content = '<p class="agent-shared-prompts-empty">Aucun prompt approuvé pour cet outil. Les consignes intégrées restent actives.</p>';
+  } else {
+    const selected = new Set(asArray(selectedSharedPromptIds[tool]).map(String));
+    content = `<div class="agent-shared-prompts-list">${available.map(item => `<article class="agent-shared-prompt-option"><label><input type="checkbox" data-agent-prompt-selection value="${esc(item.id)}" ${selected.has(item.id) ? 'checked' : ''}><span><strong>${esc(item.title)}</strong><small>${esc(item.description || 'Prompt approuvé et partagé')}</small></span></label><details><summary>Voir le prompt</summary><pre>${esc(item.prompt)}</pre></details></article>`).join('')}</div>`;
+  }
+  const count = selectedPromptsForTask(tool).length;
+  const correctionNote = tool === 'correction' ? '<small>Pour les copies manuscrites ou un barème proposé, ces prompts seront appliqués uniquement à l’analyse finale, pas à la prélecture ni à la proposition de barème.</small>' : '';
+  return `<section class="agent-shared-prompts agent-no-print" aria-label="Prompts approuvés pour Gemini"><div class="agent-shared-prompts-heading"><div><strong>Prompts approuvés pour Gemini</strong><span>Bibliothèque partagée · <span data-agent-prompt-count="${esc(tool)}">${count}</span> sélectionné(s), ${MAX_SHARED_PROMPTS} maximum</span></div><span class="agent-shared-prompts-lock">Validés avant partage</span></div><p>Les prompts cochés seront ajoutés comme consignes complémentaires à Gemini. Claude sert uniquement à créer des brouillons génériques en amont : il ne reçoit pas vos demandes, copies, images ni données d’élèves.</p>${correctionNote}${content}</section>`;
+}
 function generateButton(label = 'Générer avec mon agent') {
-  return `${contextReviewHtml()}<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
+  return `${sharedPromptPickerHtml()}${contextReviewHtml()}<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
 }
 function formHtml() {
   const f = forms[tool];
@@ -799,7 +886,9 @@ function buildRequestSpec() {
   const meta = makeMeta();
   const payload = rubricFirst ? buildRubricPayload() : handwritingFirst ? buildTranscriptionPayload() : buildPayload();
   const requestAttachments = task === 'transcription' || (task === 'correction' && !transcriptionReview) ? attachments.map(item => ({ ...item })) : [];
-  return { task, meta, payload, attachments: requestAttachments };
+  const prompts = task === tool ? selectedPromptsForTask(tool) : [];
+  payload.prompt_ids = prompts.map(item => item.id);
+  return { task, meta, payload, attachments: requestAttachments, prompts };
 }
 function requestTaskLabel(task) {
   if (task === 'transcription') return 'Transcription préalable';
@@ -891,12 +980,24 @@ function contextDisclosureText(request) {
   const images = asArray(request.attachments).length
     ? `${request.attachments.length} image(s) seront transmises séparément à cette étape; leurs données binaires ne figurent pas dans l’aperçu JSON.`
     : 'Aucune image n’est jointe à cette étape.';
-  return `Le nom du professeur et le lycée de son profil ne sont pas ajoutés automatiquement. S’ils figurent dans les champs ou images transmis, ils partiront avec ce contenu. ${images}`;
+  const prompts = asArray(request.prompts).length
+    ? `${request.prompts.length} prompt(s) approuvé(s) seront récupérés depuis la bibliothèque puis ajoutés aux consignes Gemini.`
+    : 'Aucun prompt partagé n’est ajouté à cette demande.';
+  return `Le nom du professeur et le lycée de son profil ne sont pas ajoutés automatiquement. S’ils figurent dans les champs ou images transmis, ils partiront avec ce contenu. ${images} ${prompts} Claude sert uniquement à rédiger des brouillons génériques en amont; il ne reçoit ni cette demande, ni copie, image ou donnée d’élève.`;
+}
+function requestPreview(request) {
+  return {
+    task: request.task,
+    prompt_ids: asArray(request.payload.prompt_ids),
+    prompts_approved: asArray(request.prompts).map(item => ({ id: item.id, title: item.title, prompt: item.prompt })),
+    context: request.payload.context,
+    input: request.payload.input
+  };
 }
 function contextReviewHtml() {
   const request = buildRequestSpec();
   const warnings = contextWarnings(request);
-  const preview = { task: request.task, context: request.payload.context, input: request.payload.input };
+  const preview = requestPreview(request);
   return `<section class="agent-context-review agent-no-print" data-agent-context-review aria-label="Aperçu des données transmises">
     <div class="agent-context-review-heading"><div><span>AVANT L’ENVOI</span><strong>Données de la demande</strong></div><small data-agent-context-task>${esc(requestTaskLabel(request.task))}</small></div>
     <div data-agent-context-warnings aria-live="polite">${contextWarningsHtml(warnings)}</div>
@@ -910,7 +1011,7 @@ function refreshContextReview() {
   if (!review) return;
   try {
     const request = buildRequestSpec();
-    const preview = { task: request.task, context: request.payload.context, input: request.payload.input };
+    const preview = requestPreview(request);
     const warnings = review.querySelector('[data-agent-context-warnings]');
     const taskLabel = review.querySelector('[data-agent-context-task]');
     const disclosure = review.querySelector('[data-agent-context-disclosure]');
@@ -1429,6 +1530,22 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'agent-document-file') { readDocumentFile(e.target.files); return; }
+  const promptSelection = e.target.closest('[data-agent-prompt-selection]');
+  if (promptSelection?.dataset?.agentPromptSelection !== undefined && TASKS[tool]) {
+    const selected = new Set(asArray(selectedSharedPromptIds[tool]).map(String));
+    if (promptSelection.checked && selected.size >= MAX_SHARED_PROMPTS && !selected.has(String(promptSelection.value))) {
+      promptSelection.checked = false;
+      root.toast?.(`Vous pouvez sélectionner au maximum ${MAX_SHARED_PROMPTS} prompts.`);
+      return;
+    }
+    if (promptSelection.checked) selected.add(String(promptSelection.value));
+    else selected.delete(String(promptSelection.value));
+    selectedSharedPromptIds[tool] = [...selected];
+    const count = document.querySelector(`[data-agent-prompt-count="${tool}"]`);
+    if (count) count.textContent = String(selected.size);
+    refreshContextReview();
+    return;
+  }
   const selection = e.target.closest('[data-agent-selection]');
   if (selection && ['notions', 'competences'].includes(selection.dataset.agentSelection) && forms[tool]) {
     const kind = selection.dataset.agentSelection;
@@ -1490,13 +1607,14 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
   if (button.hasAttribute('data-agent-transcription-proceed')) continueFromTranscription();
   if (button.hasAttribute('data-agent-transcription-reset')) restartTranscription();
   if (button.hasAttribute('data-agent-test')) testConnection();
+  if (button.hasAttribute('data-agent-prompts-reload')) reloadSharedPromptLibrary();
   if (button.hasAttribute('data-agent-profile')) root.openProfil?.();
   if (button.hasAttribute('data-agent-apply')) applyResult();
   if (button.hasAttribute('data-agent-restore-document')) restoreDocumentVersion();
@@ -1533,13 +1651,27 @@ root.STI_AGENT = {
       workspaceOwnerKey = owner;
       resetTeacherWorkspace();
     }
+    const signedInEmail = typeof root.authUser === 'function' ? String(root.authUser() || '').trim().toLocaleLowerCase('en') : '';
+    if (ctx?.view === 'v-agent' && !signedInEmail) {
+      sharedPrompts = [];
+      sharedPromptUser = '';
+      sharedPromptState = 'error';
+      sharedPromptError = 'Connectez-vous à Supabase pour consulter la bibliothèque partagée.';
+      Object.keys(selectedSharedPromptIds).forEach(task => delete selectedSharedPromptIds[task]);
+    } else if (ctx?.view === 'v-agent' && (sharedPromptState === 'idle' || signedInEmail !== sharedPromptUser)) {
+      loadSharedPromptLibrary().then(() => { if (ctx?.view === 'v-agent') draw(); });
+    }
     draw();
   },
+  reloadPrompts: reloadSharedPromptLibrary,
   _test: {
     ficheText, relatedNotions, relatedCompetences, sessionData, curriculumCatalog, curriculumSelection, validate,
     shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings,
     documentIdentity, documentIdentityHtml, rubricToText, buildRequestSpec, contextWarnings, containsPossiblePersonalIdentifier, contextDisclosureText, contextReviewHtml,
     currentHistory, activeTeacherKey, saveCurrentHistory,
+    setSharedPrompts: prompts => { sharedPrompts = Array.isArray(prompts) ? prompts : []; sharedPromptState = 'loaded'; },
+    setSelectedSharedPromptIds: (task, ids) => { selectedSharedPromptIds[task] = Array.isArray(ids) ? ids : []; },
+    selectedPromptsForTask, sharedPromptPickerHtml, requestPreview,
     documentVersions, currentDocumentVersion, currentDocumentVersionIndex, newDocumentHistoryEntry, appendDocumentHistoryVersion, restoreDocumentHistoryVersion,
     applyResult, restoreDocumentVersion, readDocumentFile,
     setResult: (task, result, meta) => { results[task] = result; resultMeta[task] = meta; tool = task; },

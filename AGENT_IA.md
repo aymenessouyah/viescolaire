@@ -12,6 +12,7 @@ Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Cla
 - **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; une entrée déjà remplie peut être remplacée après confirmation, sans confirmer automatiquement la séance.
 - **Répartition** : proposition séance par séance avec dates et numéros inchangés ; seules les séances futures peuvent recevoir la proposition.
 - **Autres documents** : texte collé ou import TXT, Markdown et HTML (PDF/DOCX non extraits). La source et la version complète proposée sont comparées côte à côte. Une confirmation explicite enregistre le résultat et la source dans l’historique local; chaque version précédente reste restaurable. L’agent ne modifie pas le fichier externe : exportez le résultat pour le remplacer vous-même.
+- **Prompts partagés** : l’administrateur peut demander trois brouillons génériques à Claude, les modifier, puis en approuver un ou plusieurs. Les professeurs connectés choisissent ensuite jusqu’à cinq prompts publiés pour les demandes Gemini correspondantes.
 
 ## Architecture
 
@@ -27,6 +28,26 @@ Professeur connecté
 ![Schéma du parcours de l’Agent Vie Scolaire AI](assets/agent-vie-scolaire-flux.svg)
 
 La clé de l’IA est un **secret Supabase**. Elle n’apparaît ni dans GitHub, ni dans le JavaScript, ni dans les réponses de la fonction. Le nom complet de l’enseignant et le lycée sont ajoutés à l’en-tête côté navigateur; ils ne sont pas transmis au modèle pour cette mise en forme.
+
+## Prompts partagés : Claude → validation → Gemini
+
+Le flux est volontairement séparé en deux fournisseurs :
+
+```text
+Administrateur → prompt-manager côté serveur → Claude : outil + description générique fixe
+             ← trois brouillons privés ←
+Administrateur relit/modifie et clique « Approuver et partager »
+             → bibliothèque Supabase commune (prompts publiés uniquement)
+Professeur connecté choisit des prompts → assistant-ia vérifie leurs identifiants et leur statut
+             → Gemini reçoit la demande pédagogique et les consignes approuvées
+```
+
+- Claude n’est appelé que lorsque l’administrateur clique sur **Demander 3 brouillons génériques à Claude**. La fonction serveur construit une consigne fixe à partir de l’outil choisi, de son objectif général et du format JSON attendu. Elle ignore les autres champs de la requête : aucune demande, sujet réel, copie, image, document, donnée d’élève ou profil professeur ne lui est transmis.
+- Les propositions restent des brouillons privés jusqu’à l’action **Approuver et partager**. L’administrateur peut les modifier avant publication. Les professeurs peuvent sélectionner plusieurs prompts publiés (cinq au maximum) pour une tâche; l’Agent les vérifie à nouveau côté serveur et les ajoute uniquement aux consignes envoyées à Gemini.
+- Les appels Claude sont **payants** selon l’offre Anthropic. Claude ne participe jamais au traitement d’une demande pédagogique et ne peut pas résoudre une surcharge ou un code 503 Gemini.
+- La clé ne doit jamais être ajoutée au navigateur, au dépôt ou au chat. Dans Supabase → Edge Functions → Secrets, configurer `ANTHROPIC_API_KEY` et `ANTHROPIC_MODEL` (un identifiant de modèle disponible sur le compte Anthropic). Le modèle doit être configuré explicitement; il n’y a pas de valeur supposée par défaut.
+- La migration préparée `supabase/migrations/20261026_agent_prompt_library.sql` crée la table commune et ses règles RLS. **Elle n’a pas été appliquée** : demander une confirmation explicite avant toute exécution sur la base Supabase distante. Le fichier `supabase/schema.sql` inclut également cette structure pour une nouvelle base.
+- Après approbation de la migration et configuration des secrets, déployer `prompt-manager` et redéployer `assistant-ia`. `prompt-manager` garde sa vérification JWT par défaut et vérifie aussi la session et `ADMIN_EMAILS`; la configuration `verify_jwt = false` reste limitée à `assistant-ia`, qui conserve son contrôle interne `authenticatedUser()`.
 
 ## 1. Choisir le modèle
 
@@ -60,6 +81,15 @@ supabase functions deploy assistant-ia --project-ref oaahxobzbnmaohcmdrbu
 ```
 
 La fonction utilise `verify_jwt = false` au gateway pour que le précontrôle CORS `OPTIONS`, qui ne contient pas de jeton, puisse atteindre la fonction. Cela ne rend pas les générations anonymes : `assistant-ia/index.ts` exige un Bearer token et vérifie chaque `POST` auprès de Supabase Auth. Ne supprimez pas ce contrôle d’authentification dans le code.
+
+Pour activer la bibliothèque partagée, appliquer d’abord la migration uniquement après confirmation explicite, configurer les secrets Claude côté Supabase, puis déployer :
+
+```bash
+supabase functions deploy prompt-manager --project-ref oaahxobzbnmaohcmdrbu
+supabase functions deploy assistant-ia --project-ref oaahxobzbnmaohcmdrbu
+```
+
+Ne créez pas de réglage `verify_jwt = false` pour `prompt-manager`. Cette nouvelle fonction vérifie elle-même la session; seules les opérations de brouillon, publication et retrait exigent en plus un courriel présent dans `ADMIN_EMAILS`.
 
 Après le déploiement, la fonction est appelée automatiquement à partir de l'URL Supabase déjà configurée dans l'application :
 

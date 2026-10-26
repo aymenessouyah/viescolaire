@@ -120,7 +120,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.22.0-gemini-timeout";
+  var ATTENDU = "v1.23.0-shared-prompts";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -316,6 +316,31 @@
       </div>
       <div id="ad-msg" class="tiny" role="status" aria-live="polite" style="min-height:18px;margin-bottom:8px"></div>
       <div id="admin-liste"><p class="tiny muted">Chargement…</p></div>
+      <section class="admin-prompt-manager" aria-labelledby="admin-prompt-title">
+        <div class="admin-prompt-manager-heading">
+          <div><span class="tiny muted">BIBLIOTHÈQUE COMMUNE</span><h4 id="admin-prompt-title">Prompts pédagogiques pour Gemini</h4></div>
+          <span class="badge b-navy">Administration</span>
+        </div>
+        <p class="small">Claude propose des brouillons génériques à valider. Seul l’outil choisi et sa description générale lui sont transmis : aucune demande pédagogique, copie, image, donnée d’élève ou document n’est envoyé à Claude. Les prompts approuvés sont ensuite partagés avec les professeurs et ajoutés uniquement aux demandes Gemini.</p>
+        <div class="admin-prompt-cost note warn tiny">L’API Claude est facturée selon votre offre Anthropic. Configuration serveur requise dans les secrets des fonctions Edge Supabase : <code>ANTHROPIC_API_KEY</code> et <code>ANTHROPIC_MODEL</code>. Ne mettez jamais la clé dans le site ou dans une conversation.</div>
+        <div class="admin-prompt-generate-row">
+          <label class="f" for="ad-prompt-task">Outil à préparer
+            <select id="ad-prompt-task">
+              <option value="fiche">Fiche pédagogique</option>
+              <option value="exercices">Séries d’exercices</option>
+              <option value="correction">Correction de copies</option>
+              <option value="cahier">Cahier de textes</option>
+              <option value="repartition">Répartition</option>
+              <option value="document">Autres documents</option>
+            </select>
+          </label>
+          <button class="btn btn-blue" id="ad-prompt-generate" type="button" onclick="adminPromptsGenerer()">Demander 3 brouillons génériques à Claude</button>
+        </div>
+        <div id="ad-prompt-msg" class="tiny" role="status" aria-live="polite" style="min-height:18px;margin:6px 0"></div>
+        <div id="ad-prompt-drafts" class="admin-prompt-drafts" aria-live="polite"></div>
+        <div class="admin-prompt-library-heading"><h5>Prompts approuvés et partagés</h5><button class="btn btn-xs btn-line" type="button" onclick="adminPromptsLister()">Actualiser</button></div>
+        <div id="ad-prompt-library"><p class="tiny muted">Chargement de la bibliothèque…</p></div>
+      </section>
     </div>
     <div class="box-f">
       <button class="btn btn-line" onclick="closeAdmin()">Fermer</button>
