@@ -70,6 +70,8 @@ supabase secrets set GEMINI_MODEL="MODELE_GEMINI_DISPONIBLE"
 
 La clé API reste un secret côté serveur; ne la communiquez pas dans une conversation, un ticket ou un fichier du dépôt. Si `GEMINI_API_KEY` n’existe pas ou doit être renouvelée, ajoutez-la directement dans Supabase → Edge Functions → Secrets.
 
+Pour éviter qu’une requête longue dépasse le délai du runtime Edge, la vérification de session et celle de la bibliothèque ont chacune une limite de 10 secondes; l’appel Gemini est borné à 90 secondes et le navigateur attend jusqu’à 120 secondes pour laisser le serveur renvoyer une erreur contrôlée. Si l’agent renvoie un délai dépassé, réessayez ou réduisez la longueur du document et le nombre d’images.
+
 ## 2. Déployer la fonction
 
 Depuis la racine du projet, avec la CLI Supabase et un compte ayant accès au projet :

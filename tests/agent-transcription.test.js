@@ -115,10 +115,15 @@ test('la fonction Edge réessaie les erreurs Gemini transitoires avec temporisat
   assert.match(edgeSource, /Les tentatives automatiques n’ont pas abouti/);
 });
 
-test('les délais serveur et navigateur laissent la fonction finir et indiquent comment réduire une demande lente', () => {
-  assert.match(edgeSource, /controller\.abort\(\), 120_000/);
-  assert.match(edgeSource, /Gemini n'a pas répondu après \$\{geminiAttempts\} tentative/);
-  assert.match(agentSource, /controller\.abort\(\), 130000/);
+test('les délais serveur et navigateur laissent la fonction finir avec une marge avant la limite de plateforme', () => {
+  assert.match(edgeSource, /GEMINI_REQUEST_TIMEOUT_MS = 90_000/);
+  assert.match(edgeSource, /controller\.abort\(\), GEMINI_REQUEST_TIMEOUT_MS/);
+  assert.match(edgeSource, /retryDelay \+ 5_000 >= remainingMs/);
+  assert.match(edgeSource, /GEMINI n'a pas répondu après \$\{geminiAttempts\} tentative/i);
+  assert.match(agentSource, /controller\.abort\(\), 120000/);
+  assert.match(agentSource, /sb-request-id/);
+  assert.match(edgeSource, /AUTH_CHECK_TIMEOUT_MS = 10_000/);
+  assert.match(edgeSource, /PROMPT_LOOKUP_TIMEOUT_MS = 10_000/);
 });
 
 test('la fonction Agent Vie Scolaire AI appelle Gemini avec les images inline et une sortie JSON', () => {

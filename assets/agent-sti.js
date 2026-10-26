@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.4.0-shared-prompts';
+const VERSION = '2.5.0-gemini-deadline';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -1042,7 +1042,7 @@ async function callAgent(task, payload = {}, requestAttachments = []) {
   }
   const cfg = root.cloudCfg();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 130000);
+  const timer = setTimeout(() => controller.abort(), 120000);
   try {
     const response = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/assistant-ia`, {
       method: 'POST',
@@ -1051,7 +1051,11 @@ async function callAgent(task, payload = {}, requestAttachments = []) {
       signal: controller.signal
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Le serveur de l’agent a répondu avec le code ${response.status}.`);
+    if (!response.ok) {
+      const requestId = response.headers.get('sb-request-id') || response.headers.get('x-request-id');
+      const fallback = `Le serveur de l’agent a répondu avec le code ${response.status}${requestId ? ` (référence ${requestId})` : ''}.`;
+      throw new Error(data.error || fallback);
+    }
     return data;
   } catch (e) {
     if (e.name === 'AbortError') throw new Error('Le délai d’attente est dépassé. Vérifiez la fonction Supabase et réessayez avec une demande plus courte.');
