@@ -115,6 +115,12 @@ test('la fonction Edge réessaie les erreurs Gemini transitoires avec temporisat
   assert.match(edgeSource, /Les tentatives automatiques n’ont pas abouti/);
 });
 
+test('les délais serveur et navigateur laissent la fonction finir et indiquent comment réduire une demande lente', () => {
+  assert.match(edgeSource, /controller\.abort\(\), 120_000/);
+  assert.match(edgeSource, /Gemini n'a pas répondu après \$\{geminiAttempts\} tentative/);
+  assert.match(agentSource, /controller\.abort\(\), 130000/);
+});
+
 test('la fonction Agent Vie Scolaire AI appelle Gemini avec les images inline et une sortie JSON', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.match(edgeSource, /if \(request\.method === "OPTIONS"\)[\s\S]*?const authError = await authenticatedUser\(request\)/);

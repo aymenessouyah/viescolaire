@@ -546,7 +546,7 @@ Deno.serve(async request => {
     ? Math.max(1000, Math.min(12000, Math.trunc(configuredOutputTokens)))
     : defaultOutputTokens;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 95_000);
+  const timer = setTimeout(() => controller.abort(), 120_000);
 
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -617,7 +617,10 @@ Deno.serve(async request => {
     });
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "AbortError";
-    return json({ error: timedOut ? "Gemini a dépassé le délai d'attente." : "Le service Gemini est momentanément injoignable." }, 504);
+    const message = timedOut
+      ? `Gemini n'a pas répondu après ${geminiAttempts} tentative(s) dans le délai imparti. Réessayez; pour un document volumineux, réduisez le texte ou le nombre d'images.`
+      : "Le service Gemini est momentanément injoignable.";
+    return json({ error: message }, 504);
   } finally {
     clearTimeout(timer);
   }
