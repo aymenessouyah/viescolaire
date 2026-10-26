@@ -70,7 +70,8 @@ test('le flux de revue propose une transcription éditable et une confirmation e
   assert.match(agentSource, /data-agent-transcription-ack/);
   assert.match(agentSource, /Continuer malgré les incertitudes/);
   assert.match(agentSource, /transcription_preverifiee: Boolean\(transcriptionReview\)/);
-  assert.match(agentSource, /attachments: \(task === 'transcription' \|\| \(task === 'correction' && !transcriptionReview\)\) \? attachments : \[\]/);
+  assert.match(agentSource, /const requestAttachments = task === 'transcription' \|\| \(task === 'correction' && !transcriptionReview\)/);
+  assert.match(agentSource, /body: JSON\.stringify\(\{ task, \.\.\.payload, attachments: requestAttachments \}\)/);
 });
 
 test('la fonction IA valide une transcription sans note et exige au moins une image', () => {
@@ -92,6 +93,15 @@ test('la tâche document exige un texte source borné et renvoie un document com
   assert.match(edgeSource, /document_a_remplacer: cleanText\(input\.document_a_remplacer, MAX_DOCUMENT_CHARS\)/);
   assert.match(agentSource, /accept="\.txt,\.md,\.markdown,\.html,\.htm,text\/plain,text\/markdown,text\/html"/);
   assert.match(agentSource, /data-agent-restore-document/);
+});
+
+test('la fonction Edge applique une liste blanche au contexte et retire les métadonnées locales', () => {
+  assert.match(edgeSource, /function safeModelContext\(task: string, value: unknown\)/);
+  assert.match(edgeSource, /task === "document"\s*\?\s*\{ agent: 80 \}/);
+  assert.match(edgeSource, /context: safeModelContext\(task, rawContext\)/);
+  assert.match(edgeSource, /LOCAL_ONLY_FIELDS/);
+  assert.match(edgeSource, /input: removeLocalOnlyFields\(rawInput\)/);
+  assert.match(agentSource, /Le nom du professeur et le lycée de son profil ne sont pas ajoutés/);
 });
 
 test('la fonction Agent Vie Scolaire AI appelle Gemini avec les images inline et une sortie JSON', () => {

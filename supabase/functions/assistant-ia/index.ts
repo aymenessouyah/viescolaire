@@ -25,6 +25,41 @@ function cleanText(value: unknown, max = 800): string {
   return String(value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").slice(0, max);
 }
 
+function safeModelContext(task: string, value: unknown): Record<string, string> {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const limits: Record<string, number> = task === "document"
+    ? { agent: 80 }
+    : { agent: 80, matiere: 120, programme: 140, annee_scolaire: 20, classe: 20, date_du_jour: 10 };
+  const context: Record<string, string> = {};
+  for (const [field, max] of Object.entries(limits)) {
+    const text = cleanText(source[field], max).trim();
+    if (text) context[field] = text;
+  }
+  context.task = task;
+  return context;
+}
+
+const LOCAL_ONLY_FIELDS = new Set([
+  "teacher", "teachername", "teacherid", "teacheremail", "professor", "professorname", "professorid",
+  "professeur", "nomprofesseur", "emailprofesseur", "enseignant", "nomenseignant", "profid",
+  "school", "schoolname", "schoolid", "lycee", "lyceeid", "etablissement",
+  "identifiant", "identifiantlocal", "replacementid", "documentreplacementid", "remplacementid", "ownerkey",
+  "nomeleve", "prenomeleve", "eleveid", "eleveemail", "elevephone", "studentname", "studentid", "studentemail", "studentphone",
+]);
+function normalizedFieldName(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr").replace(/[^a-z0-9]/g, "");
+}
+function removeLocalOnlyFields(value: any): any {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const filtered: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (LOCAL_ONLY_FIELDS.has(normalizedFieldName(key))) continue;
+    // Preserve nested teacher-authored text and code; filter only application metadata.
+    filtered[key] = item;
+  }
+  return filtered;
+}
+
 const COMMON_RULES = `
 Tu es « Agent Vie Scolaire AI », l'agent pédagogique personnel d'un enseignant tunisien de
 Sciences et technologies de l’informatique (STI), en 3SI1 et 4SI2.
@@ -63,7 +98,9 @@ Ne remplis pas le contenu réellement effectué : il s'agit d'une préparation.
   pas d'autres notions qui élargissent le contenu au-delà de la séance.
 - Si input.competences_selectionnees contient des entrées, construis les objectifs
   et l'évaluation autour de ces compétences et reporte-les dans le champ « competences ».
-  Si les sélections sont vides, appuie-toi sur la séance et le contexte transmis sans inventer.
+- Sinon, input.competences peut contenir jusqu'à quatre correspondances automatiques
+  avec la séance : n'utilise que celles qui sont clairement pertinentes. Si aucune ne
+  correspond, appuie-toi sur la séance et le contexte transmis sans inventer.
 
 FORMAT JSON EXACT :
 {
@@ -110,8 +147,10 @@ les questions et expliquer les étapes utiles, y compris le code complet si dema
   de ces notions, reporte-les dans le champ « notions » et ne les élargis pas à des
   notions sans rapport. Sinon, utilise les suggestions de input.notions_du_referentiel.
 - Si input.competences_selectionnees contient des entrées, évalue explicitement ces
-  compétences et reporte-les dans le champ « competences »; sinon, appuie-toi sur le
-  contexte transmis.
+  compétences et reporte-les dans le champ « competences ».
+- Sinon, input.competences peut contenir jusqu'à quatre correspondances automatiques
+  avec le sujet : utilise-les seulement si elles sont clairement pertinentes et, si
+  aucune ne correspond, appuie-toi sur le sujet sans inventer de compétence officielle.
 
 FORMAT JSON EXACT :
 {
@@ -460,10 +499,12 @@ Deno.serve(async request => {
     return json({ error: "Aucune réponse d'élève lisible n'a été transmise." }, 400);
   }
 
+  const rawContext = payload?.context && typeof payload.context === "object" && !Array.isArray(payload.context) ? payload.context : {};
+  const rawInput = payload?.input && typeof payload.input === "object" && !Array.isArray(payload.input) ? payload.input : {};
   const safePayload = {
     task,
-    context: payload?.context && typeof payload.context === "object" ? payload.context : {},
-    input: payload?.input && typeof payload.input === "object" ? payload.input : {},
+    context: safeModelContext(task, rawContext),
+    input: removeLocalOnlyFields(rawInput),
   };
   if (task === "document") {
     const input = safePayload.input as any;

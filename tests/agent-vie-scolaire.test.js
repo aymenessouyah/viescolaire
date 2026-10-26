@@ -74,6 +74,91 @@ test('l’identité destinée à l’en-tête est ajoutée côté navigateur, sa
   assert.doesNotMatch(editableRubric, /Ada Lovelace|Lycée de Carthage/);
 });
 
+test('le contexte de la fiche est réduit aux données de séance utiles et le profil reste absent de l’aperçu envoyé', () => {
+  const data = {
+    reference: { SCHOOL: { lycee: 'Lycée de démonstration' } },
+    livresSTI: { '3SI1': { items: [{ id: 'html-form', label: 'Formulaires HTML', domain: 'HTML5', description: 'Contrôle de saisie' }] } },
+    competences: { '3SI1': [{ code: 'D', t: 'Créer un site interactif', domaine: 'Web', sous: 'HTML5, JavaScript et formulaires', attendu: ['Contrôler un formulaire'] }] }
+  };
+  const { agent } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada', lycee: 'Lycée de Carthage' }, data });
+  const session = { cls: '3SI1', n: 5, iso: '2026-10-26', tri: 1, blk: { t: 'Formulaire HTML', d: 'HTML5', det: 'Contrôle de saisie' } };
+  agent.render({ sessions: { '3SI1': [session] }, store: { seances: { '3SI1|5': {
+    preparation: 'Fiche précédente confidentielle', contenu: 'Compte rendu déjà réalisé', devoirs: 'Exercice 2', obs: 'Observation de suivi', done: false, notions: ['html-form']
+  } } } });
+  const payload = JSON.parse(JSON.stringify(agent._test.buildPayloadFor('fiche')));
+  assert.deepEqual(Object.keys(payload.input.seance), ['classe', 'numero', 'date', 'trimestre', 'titre', 'reference']);
+  assert.equal(payload.input.notions_selectionnees[0].id, 'html-form');
+  assert.equal(Object.hasOwn(payload.input.seance, 'notions'), false);
+  assert.equal(payload.input.document_a_remplacer, '');
+  assert.doesNotMatch(JSON.stringify(payload), /Fiche précédente confidentielle|Compte rendu déjà réalisé|Exercice 2|Observation de suivi|Ada Lovelace|Lycée de Carthage/);
+  const preview = agent._test.contextReviewHtml();
+  assert.match(preview, /Afficher les champs exacts de la demande/);
+  assert.match(preview, /Le nom du professeur et le lycée de son profil ne sont pas ajoutés/);
+  assert.doesNotMatch(preview, /Ada Lovelace|Lycée de Carthage|Fiche précédente confidentielle/);
+  const noImageNotice = agent._test.contextDisclosureText({ attachments: [] });
+  const imageNotice = agent._test.contextDisclosureText({ attachments: [{ name: 'copie.jpg' }] });
+  assert.match(noImageNotice, /Aucune image n’est jointe/);
+  assert.match(imageNotice, /1 image\(s\) seront transmises séparément/);
+  assert.doesNotMatch(imageNotice, /copie\.jpg/);
+});
+
+test('les compétences automatiques sont limitées aux correspondances lexicales du sujet', () => {
+  const { agent } = loadAgent({ data: {
+    competences: { '3SI1': [
+      { code: 'D', t: 'Créer un site interactif', domaine: 'Web', sous: 'HTML5, JavaScript et formulaires', attendu: ['Contrôler un formulaire'] },
+      { code: 'B', t: 'Exploiter un système d’exploitation', domaine: 'Systèmes', sous: 'Installation et sécurité', attendu: ['Configurer un système'] }
+    ] }
+  } });
+  const related = Array.from(agent._test.relatedCompetences('JavaScript et formulaire HTML5'));
+  assert.equal(related.length, 1);
+  assert.equal(related[0].code, 'D');
+  assert.deepEqual(Array.from(agent._test.relatedCompetences('poésie et géométrie')), []);
+});
+
+test('l’aperçu signale les suggestions lexicales sans masquer les sélections manuelles', () => {
+  const { agent } = loadAgent();
+  const ficheWarnings = Array.from(agent._test.contextWarnings({
+    task: 'fiche', payload: { context: {}, input: {
+      objectif_prioritaire: 'Valider un formulaire HTML', notions_selectionnees: [{ notion: 'Formulaires HTML' }],
+      competences: [{ competence: 'Créer un site interactif' }]
+    } }, attachments: []
+  }));
+  assert.match(ficheWarnings.join(' '), /1 compétence\(s\) sont suggérées automatiquement/);
+  assert.doesNotMatch(ficheWarnings.join(' '), /Aucune notion ou compétence n’a été ciblée/);
+  const exerciseWarnings = Array.from(agent._test.contextWarnings({
+    task: 'exercices', payload: { context: {}, input: {
+      notions_du_referentiel: [{ notion: 'Formulaires HTML' }], competences: [{ competence: 'Créer un site interactif' }]
+    } }, attachments: []
+  }));
+  assert.match(exerciseWarnings.join(' '), /1 notion\(s\) du référentiel sont suggérées par correspondance lexicale/);
+  assert.match(exerciseWarnings.join(' '), /1 compétence\(s\) sont suggérées automatiquement/);
+});
+
+test('l’aperçu signale les classes ou statuts contradictoires et les données nominatives possibles', () => {
+  const { agent } = loadAgent();
+  const warnings = Array.from(agent._test.contextWarnings({
+    task: 'repartition',
+    payload: { context: { classe: '3SI1' }, input: { seances: [
+      { classe: '4SI2', numero: 8, statut: 'assurée', contenu_reellement_declare: '' },
+      { classe: '3SI1', numero: 9, statut: 'reportée', contenu_reellement_declare: 'Un cours a pourtant été déclaré.' }
+    ] } },
+    attachments: []
+  }));
+  assert.equal(warnings.length, 3);
+  assert.match(warnings.join(' '), /ne correspond pas/);
+  assert.match(warnings.join(' '), /sans compte rendu réel/);
+  assert.match(warnings.join(' '), /marquée « reportée »/);
+  assert.equal(agent._test.containsPossiblePersonalIdentifier({ copie: 'Courriel : eleve@example.tn, CIN : 12345678' }), true);
+  assert.equal(agent._test.containsPossiblePersonalIdentifier({ sujet: 'Créer une page HTML valide.' }), false);
+});
+
+test('l’identifiant local de copie et les métadonnées de profil ne sont pas envoyés dans la demande de correction', () => {
+  const { agent } = loadAgent({ profile: { nom: 'Ada Lovelace', prof_id: 'teacher-ada', lycee: 'Lycée de Carthage' } });
+  const payload = JSON.parse(JSON.stringify(agent._test.buildPayloadFor('correction')));
+  assert.equal(Object.hasOwn(payload.input, 'identifiant'), false);
+  assert.doesNotMatch(JSON.stringify(payload), /Ada Lovelace|teacher-ada|Lycée de Carthage|Copie 1/);
+});
+
 test('une fiche déjà présente peut être révisée en transmettant son ancien contenu comme référence', () => {
   const { agent, listeners, zone } = loadAgent({
     profile: { nom: 'Ada Lovelace' },
@@ -174,7 +259,7 @@ test('l’import lit uniquement les fichiers texte admis et ne tente pas d’ext
   await agent._test.readDocumentFile([{ name: 'note.html', size: 32, text: async () => '<p>Réunion le 12 mai.</p>' }]);
   const payload = JSON.parse(JSON.stringify(agent._test.buildPayload()));
   assert.equal(payload.input.document_a_remplacer, '<p>Réunion le 12 mai.</p>');
-  assert.equal(payload.context.titre, 'note');
+  assert.equal(payload.input.titre, 'note');
   assert.match(zone.innerHTML, /note\.html/);
   assert.match(zone.innerHTML, /fichier reste inchangé/);
 
