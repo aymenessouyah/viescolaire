@@ -59,7 +59,10 @@ sti-espace/
 ├── legacy/                     ancienne version autonome en un seul fichier (secours)
 ├── icons/                      icônes 192 / 512 / maskable / apple-touch
 └── supabase/
-    ├── schema.sql              table et règles de sécurité (à exécuter une fois)
+    ├── schema.sql              schéma initial et règles de sécurité
+    ├── migrations/              migrations versionnées; appliquer après confirmation
+    │   └── 20261026_agent_prompt_library.sql
+    ├── functions/                fonctions Edge sécurisées (Gemini, prompts et administration)
     ├── migration-professeur-badge.sql  profils, bucket privé et politiques photo
     └── config.js               configuration Supabase et Client ID OAuth Google Drive public
 ```
@@ -321,6 +324,8 @@ L’outil de document libre accepte du texte collé ou des fichiers TXT, Markdow
 Chaque document affiche le nom du lycée, le nom complet de l’enseignant connecté et la classe. Ces éléments d’en-tête sont ajoutés dans le navigateur et ne sont pas transmis à Gemini. Une fiche et une entrée du cahier déjà enregistrées peuvent être remplacées après confirmation; une série d’exercices de l’historique local peut aussi être remplacée après relecture et confirmation. L’historique est local à l’appareil et isolé par compte professeur; les anciennes entrées sans identité de compte restent stockées mais sont masquées.
 
 L’interface appelle la fonction sécurisée `supabase/functions/assistant-ia`, qui utilise l’API Google Gemini. La clé privée reste dans les secrets Supabase et n’est jamais publiée sur GitHub Pages. Chaque résultat est affiché pour vérification ; l’agent ne confirme pas une séance et n’enregistre pas une note automatiquement. [Voir le schéma visuel du parcours](assets/agent-vie-scolaire-flux.svg).
+
+L’administrateur peut aussi demander à Claude trois brouillons de **prompts génériques**. L’API Claude est payante et appelée côté serveur : elle ne reçoit jamais de demande pédagogique réelle, sujet, copie, image, document ou donnée d’élève. Aucun brouillon n’est partagé avant la validation explicite de l’administrateur; les prompts publiés sont communs et peuvent être ajoutés aux requêtes Gemini. La migration `supabase/migrations/20261026_agent_prompt_library.sql` est préparée, mais ne doit pas être exécutée sur le projet distant sans confirmation explicite. Les secrets `ANTHROPIC_API_KEY` et `ANTHROPIC_MODEL` se configurent uniquement dans Supabase, jamais dans le site ou le dépôt.
 
 **Installation, choix du modèle, déploiement et vérifications : consultez [`AGENT_IA.md`](AGENT_IA.md).**
 

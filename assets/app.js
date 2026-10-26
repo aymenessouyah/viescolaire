@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.22.0-gemini-timeout";
+const APP_VER = "v1.23.0-shared-prompts";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

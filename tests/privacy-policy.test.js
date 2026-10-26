@@ -28,6 +28,11 @@ test('la politique décrit les traitements locaux, Supabase, Google Drive et IA'
   assert.match(policy, /un compte ne voit que son propre historique/);
   assert.match(policy, /anciennes entrées sans identité de compte sont masquées/);
   assert.match(policy, /Conditions d’utilisation de l’API Gemini/);
+  assert.match(policy, /API Anthropic Claude de proposer trois brouillons de prompts génériques/);
+  assert.match(policy, /Bibliothèque commune de prompts/);
+  assert.match(policy, /ne transmet jamais le formulaire de demande, le sujet réel, le texte d’une copie, une image, un document/);
+  assert.match(policy, /Politique de confidentialité d’Anthropic/);
+  assert.match(policy, /le bouton « Retirer » les masque aux professeurs, mais conserve leur texte côté serveur/i);
   assert.match(policy, /aymenessouyah@gmail\.com/);
 });
 
@@ -40,7 +45,7 @@ test('la politique expose les choix et limites essentiels de sauvegarde et de co
 
 test('la politique est incluse au cache hors ligne et les versions d’interface concordent', () => {
   assert.match(worker, /"\.\/politique-confidentialite\.html"/);
-  const expected = 'v1.22.0-gemini-timeout';
+  const expected = 'v1.23.0-shared-prompts';
   assert.ok(index.includes(expected));
   assert.ok(app.includes(expected));
   assert.ok(worker.includes('sti-espace-' + expected));
