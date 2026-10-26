@@ -6,6 +6,7 @@ const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Expose-Headers": "sb-request-id, x-request-id",
   "Cache-Control": "no-store",
 };
 
@@ -16,6 +17,9 @@ const MAX_DOCUMENT_CHARS = 80_000;
 const GEMINI_MAX_ATTEMPTS = 3;
 const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
 const MAX_RETRY_AFTER_MS = 30_000;
+const AUTH_CHECK_TIMEOUT_MS = 10_000;
+const PROMPT_LOOKUP_TIMEOUT_MS = 10_000;
+const GEMINI_REQUEST_TIMEOUT_MS = 90_000;
 const SHARED_PROMPT_TASKS = new Set(["fiche", "exercices", "correction", "cahier", "repartition", "document"]);
 const MAX_SHARED_PROMPTS = 5;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -448,14 +452,22 @@ async function authenticatedUser(request: Request): Promise<Response | null> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   if (!supabaseUrl || !anonKey) return json({ error: "Configuration Supabase de la fonction incomplète." }, 500);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AUTH_CHECK_TIMEOUT_MS);
   try {
     const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/auth/v1/user`, {
       headers: { apikey: anonKey, Authorization: authorization },
+      signal: controller.signal,
     });
     if (!response.ok) return json({ error: "Session professeur invalide ou expirée." }, 401);
     return null;
-  } catch (_) {
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      return json({ error: "La vérification de la session Supabase a dépassé 10 secondes. Vérifiez la connexion puis réessayez." }, 503);
+    }
     return json({ error: "Impossible de vérifier la session professeur." }, 503);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -479,9 +491,12 @@ async function approvedSharedPrompts(request: Request, task: string, rawIds: unk
   query.set("id", `in.(${ids.join(",")})`);
   query.set("task", `eq.${task}`);
   query.set("published", "eq.true");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROMPT_LOOKUP_TIMEOUT_MS);
   try {
     const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/agent_prompt_library?${query.toString()}`, {
       headers: { apikey: anonKey, Authorization: authorization },
+      signal: controller.signal,
     });
     if (!response.ok) return { prompts: [], error: json({ error: "Impossible de vérifier la bibliothèque de prompts approuvés. Vérifiez que la migration a été appliquée." }, 503) };
     const rows = await response.json();
@@ -497,8 +512,13 @@ async function approvedSharedPrompts(request: Request, task: string, rawIds: unk
         prompt: cleanText(row.prompt, 4_000).trim(),
       })),
     };
-  } catch (_) {
-    return { prompts: [], error: json({ error: "Impossible de joindre la bibliothèque de prompts approuvés." }, 503) };
+  } catch (error) {
+    const message = error instanceof Error && error.name === "AbortError"
+      ? "La vérification de la bibliothèque de prompts a dépassé 10 secondes. Réessayez sans sélectionner de prompt, ou actualisez la bibliothèque."
+      : "Impossible de joindre la bibliothèque de prompts approuvés.";
+    return { prompts: [], error: json({ error: message }, 503) };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -601,7 +621,9 @@ Deno.serve(async request => {
     ? Math.max(1000, Math.min(12000, Math.trunc(configuredOutputTokens)))
     : defaultOutputTokens;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 120_000);
+  const requestStartedAt = Date.now();
+  const requestDeadline = requestStartedAt + GEMINI_REQUEST_TIMEOUT_MS;
+  const timer = setTimeout(() => controller.abort(), GEMINI_REQUEST_TIMEOUT_MS);
 
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
@@ -628,7 +650,9 @@ Deno.serve(async request => {
       raw = await geminiResponse.text();
       if (geminiResponse.ok || !RETRYABLE_GEMINI_STATUSES.has(geminiResponse.status) || attempt + 1 >= GEMINI_MAX_ATTEMPTS) break;
       const retryDelay = geminiRetryDelayMs(geminiResponse, attempt);
-      if (retryDelay === null) break;
+      const remainingMs = requestDeadline - Date.now();
+      // Do not spend the remaining platform budget sleeping before a retry.
+      if (retryDelay === null || retryDelay + 5_000 >= remainingMs) break;
       await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
 

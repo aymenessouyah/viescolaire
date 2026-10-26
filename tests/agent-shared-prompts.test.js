@@ -123,7 +123,7 @@ test('la migration réserve l’écriture à service_role et limite la lecture a
 test('la vérification verify_jwt=false reste limitée à assistant-ia et le cache statique est renouvelé', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.doesNotMatch(supabaseConfig, /\[functions\.prompt-manager\]/);
-  assert.match(appSource, /v1\.23\.0-shared-prompts/);
-  assert.match(indexSource, /var ATTENDU = "v1\.23\.0-shared-prompts"/);
-  assert.match(workerSource, /sti-espace-v1\.23\.0-shared-prompts/);
+  assert.match(appSource, /v1\.24\.0-gemini-deadline/);
+  assert.match(indexSource, /var ATTENDU = "v1\.24\.0-gemini-deadline"/);
+  assert.match(workerSource, /sti-espace-v1\.24\.0-gemini-deadline/);
 });
