@@ -13,11 +13,11 @@ const TASKS = new Set(["fiche", "exercices", "correction", "transcription", "bar
 const MAX_BODY = 12 * 1024 * 1024;
 const MAX_IMAGES = 6;
 const MAX_DOCUMENT_CHARS = 80_000;
-const GEMINI_MAX_ATTEMPTS = 2;
+const GEMINI_MAX_ATTEMPTS = 3;
 const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
-const MAX_RETRY_AFTER_MS = 5_000;
+const MAX_RETRY_AFTER_MS = 30_000;
 
-function geminiRetryDelayMs(response: Response): number | null {
+function geminiRetryDelayMs(response: Response, attempt: number): number | null {
   const retryAfter = response.headers.get("retry-after");
   if (retryAfter) {
     const seconds = Number(retryAfter);
@@ -26,7 +26,7 @@ function geminiRetryDelayMs(response: Response): number | null {
       return requestedDelay <= MAX_RETRY_AFTER_MS ? requestedDelay : null;
     }
   }
-  return 1_800;
+  return attempt === 0 ? 1_800 : 5_000;
 }
 
 function json(data: unknown, status = 200) {
@@ -572,7 +572,7 @@ Deno.serve(async request => {
       });
       raw = await geminiResponse.text();
       if (geminiResponse.ok || !RETRYABLE_GEMINI_STATUSES.has(geminiResponse.status) || attempt + 1 >= GEMINI_MAX_ATTEMPTS) break;
-      const retryDelay = geminiRetryDelayMs(geminiResponse);
+      const retryDelay = geminiRetryDelayMs(geminiResponse, attempt);
       if (retryDelay === null) break;
       await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
@@ -584,7 +584,7 @@ Deno.serve(async request => {
         const parsed = JSON.parse(raw);
         message += ` ${cleanText(parsed?.error?.message || parsed?.message, 500)}`;
       } catch (_) { /* ne pas renvoyer une page HTML complète */ }
-      if (geminiAttempts > 1) message += " Une nouvelle tentative automatique n’a pas abouti; réessayez dans quelques instants.";
+      if (geminiAttempts > 1) message += " Les tentatives automatiques n’ont pas abouti; réessayez dans quelques instants.";
       return json({ error: message.trim() }, 502);
     }
 
