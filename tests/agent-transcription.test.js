@@ -104,6 +104,15 @@ test('la fonction Edge applique une liste blanche au contexte et retire les mét
   assert.match(agentSource, /Le nom du professeur et le lycée de son profil ne sont pas ajoutés/);
 });
 
+test('la fonction Edge réessaie une fois les erreurs Gemini transitoires et respecte Retry-After', () => {
+  assert.match(edgeSource, /GEMINI_MAX_ATTEMPTS = 2/);
+  assert.match(edgeSource, /RETRYABLE_GEMINI_STATUSES = new Set\(\[429, 500, 502, 503, 504\]\)/);
+  assert.match(edgeSource, /function geminiRetryDelayMs\(response: Response\): number \| null/);
+  assert.match(edgeSource, /response\.headers\.get\("retry-after"\)/);
+  assert.match(edgeSource, /geminiResponse\.ok \|\| !RETRYABLE_GEMINI_STATUSES\.has\(geminiResponse\.status\)/);
+  assert.match(edgeSource, /Une nouvelle tentative automatique n’a pas abouti/);
+});
+
 test('la fonction Agent Vie Scolaire AI appelle Gemini avec les images inline et une sortie JSON', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.match(edgeSource, /if \(request\.method === "OPTIONS"\)[\s\S]*?const authError = await authenticatedUser\(request\)/);
