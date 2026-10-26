@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.5.0-gemini-deadline';
+const VERSION = '2.6.0-deepseek';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -386,9 +386,24 @@ function commonContext(task = tool) {
 }
 
 function statusHtml() {
-  if (!status) return '<span class="agent-status neutral"><i></i> Connexion sécurisée à tester</span>';
-  if (status.configured) return `<span class="agent-status ok"><i></i> Gemini configuré · ${esc(status.model || 'modèle configuré')}</span>`;
-  return '<span class="agent-status warn"><i></i> Fonction déployée · secret Gemini à configurer</span>';
+  if (!status) return '<span class="agent-status neutral"><i></i> Fournisseur distant à vérifier</span>';
+  const provider = String(status.provider || '').trim();
+  if (provider && provider !== 'DeepSeek') return `<span class="agent-status warn"><i></i> Fonction distante : ${esc(provider)} · portage DeepSeek non déployé</span>`;
+  if (!provider) return '<span class="agent-status warn"><i></i> Fournisseur distant non confirmé · tester la connexion</span>';
+  if (status.configured) return `<span class="agent-status ok"><i></i> DeepSeek configuré · ${esc(status.model || 'modèle configuré')}</span>`;
+  return '<span class="agent-status warn"><i></i> Fonction DeepSeek déployée · secret à configurer</span>';
+}
+async function verifyDeepSeekDeployment() {
+  const remoteStatus = await callAgent('status');
+  status = remoteStatus;
+  if (remoteStatus?.provider !== 'DeepSeek') {
+    const provider = String(remoteStatus?.provider || 'inconnu').trim();
+    throw new Error(`La fonction Supabase distante signale « ${provider} ». Le portage DeepSeek n’est pas déployé; aucune génération n’a été envoyée.`);
+  }
+  if (!remoteStatus.configured) {
+    throw new Error('La fonction Supabase utilise DeepSeek, mais DEEPSEEK_API_KEY n’est pas configurée.');
+  }
+  return remoteStatus;
 }
 function contextCard() {
   if (!['fiche', 'cahier'].includes(tool)) {
@@ -483,7 +498,7 @@ function sharedPromptPickerHtml() {
   if (sharedPromptState === 'loading') {
     content = '<p class="agent-shared-prompts-empty" role="status">Chargement de la bibliothèque partagée…</p>';
   } else if (sharedPromptState === 'error') {
-    content = `<div class="agent-shared-prompts-empty" role="status">La bibliothèque n’est pas disponible : ${esc(sharedPromptError)} <button type="button" class="btn btn-ghost" data-agent-prompts-reload>Réessayer</button><small>Vous pouvez continuer à utiliser Gemini sans prompt partagé.</small></div>`;
+    content = `<div class="agent-shared-prompts-empty" role="status">La bibliothèque n’est pas disponible : ${esc(sharedPromptError)} <button type="button" class="btn btn-ghost" data-agent-prompts-reload>Réessayer</button><small>Vous pouvez continuer à utiliser DeepSeek sans prompt partagé.</small></div>`;
   } else if (!available.length) {
     content = '<p class="agent-shared-prompts-empty">Aucun prompt approuvé pour cet outil. Les consignes intégrées restent actives.</p>';
   } else {
@@ -492,7 +507,7 @@ function sharedPromptPickerHtml() {
   }
   const count = selectedPromptsForTask(tool).length;
   const correctionNote = tool === 'correction' ? '<small>Pour les copies manuscrites ou un barème proposé, ces prompts seront appliqués uniquement à l’analyse finale, pas à la prélecture ni à la proposition de barème.</small>' : '';
-  return `<section class="agent-shared-prompts agent-no-print" aria-label="Prompts approuvés pour Gemini"><div class="agent-shared-prompts-heading"><div><strong>Prompts approuvés pour Gemini</strong><span>Bibliothèque partagée · <span data-agent-prompt-count="${esc(tool)}">${count}</span> sélectionné(s), ${MAX_SHARED_PROMPTS} maximum</span></div><span class="agent-shared-prompts-lock">Validés avant partage</span></div><p>Les prompts cochés seront ajoutés comme consignes complémentaires à Gemini. Claude sert uniquement à créer des brouillons génériques en amont : il ne reçoit pas vos demandes, copies, images ni données d’élèves.</p>${correctionNote}${content}</section>`;
+  return `<section class="agent-shared-prompts agent-no-print" aria-label="Prompts approuvés pour DeepSeek"><div class="agent-shared-prompts-heading"><div><strong>Prompts approuvés pour DeepSeek</strong><span>Bibliothèque partagée · <span data-agent-prompt-count="${esc(tool)}">${count}</span> sélectionné(s), ${MAX_SHARED_PROMPTS} maximum</span></div><span class="agent-shared-prompts-lock">Validés avant partage</span></div><p>Les prompts cochés seront ajoutés comme consignes complémentaires à DeepSeek. Claude sert uniquement à créer des brouillons génériques en amont : il ne reçoit pas vos demandes, copies, images ni données d’élèves.</p>${correctionNote}${content}</section>`;
 }
 function generateButton(label = 'Générer avec mon agent') {
   return `${sharedPromptPickerHtml()}${contextReviewHtml()}<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
@@ -557,7 +572,7 @@ function formHtml() {
       <label class="agent-field full"><span>Document enregistré à réviser <em>facultatif</em></span><select data-agent-field="remplacement_id"><option value="">Réviser un nouveau texte collé ou importé</option>${savedDocuments.map(item => `<option value="${esc(item.id)}" ${f.remplacement_id === item.id ? 'selected' : ''}>${esc(item.title)} · ${esc(item.classe)} · ${esc(new Date(item.created).toLocaleDateString('fr-FR'))}</option>`).join('')}</select><small>Une version précédente de cet historique sera gardée et pourra être restaurée. La source externe ne sera pas modifiée.</small></label>
       <label class="agent-field full agent-upload"><span>Importer un fichier texte <em>facultatif</em></span><input id="agent-document-file" type="file" accept=".txt,.md,.markdown,.html,.htm,text/plain,text/markdown,text/html"><small>TXT, Markdown ou HTML · ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères maximum · aucun fichier binaire ni donnée non textuelle.</small></label>
       ${f.fichier_nom ? `<div class="agent-attachments full"><span>${esc(f.fichier_nom)}</span></div>` : ''}
-      <label class="agent-field full"><span>Texte source à réviser</span><textarea data-agent-field="document_existant" rows="12" maxlength="${MAX_DOCUMENT_CHARS}" required placeholder="Collez ici le contenu complet du document à réviser…">${esc(f.document_existant)}</textarea><small><span id="agent-document-count">${f.document_existant.length.toLocaleString('fr-FR')} / ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères</span> · Le texte source est transmis à Gemini seulement quand vous lancez la révision.</small></label>
+      <label class="agent-field full"><span>Texte source à réviser</span><textarea data-agent-field="document_existant" rows="12" maxlength="${MAX_DOCUMENT_CHARS}" required placeholder="Collez ici le contenu complet du document à réviser…">${esc(f.document_existant)}</textarea><small><span id="agent-document-count">${f.document_existant.length.toLocaleString('fr-FR')} / ${MAX_DOCUMENT_CHARS.toLocaleString('fr-FR')} caractères</span> · Le texte source est transmis à DeepSeek seulement quand vous lancez la révision.</small></label>
       <label class="agent-field full"><span>Modifications souhaitées <em>facultatif</em></span><textarea data-agent-field="consignes" rows="4" placeholder="Ex. : clarifier les dates, corriger la langue et conserver toutes les consignes administratives…">${esc(f.consignes)}</textarea></label>
     </div>${generateButton(f.remplacement_id ? 'Comparer et proposer le remplacement' : 'Comparer et réviser le document')}`;
   }
@@ -716,7 +731,7 @@ function historyHtml() {
   return `<section class="agent-history agent-no-print"><div class="agent-history-head"><div><span>VOS DOCUMENTS</span><h2>Générations récentes</h2></div><button class="btn btn-ghost" data-agent-clear-history>${icon('trash', 15)} Effacer mon historique</button></div><div class="agent-history-list">${entries.map(h => `<button data-agent-history="${esc(h.id)}"><span>${icon(TASKS[h.task].icon)}</span><div><strong>${esc(h.title)}</strong><small>${esc(TASKS[h.task].short)} · ${esc(h.classe)} · ${esc(new Date(h.created).toLocaleDateString('fr-FR'))}</small></div>${icon('arrow', 15)}</button>`).join('')}</div><p>Historique local à ce navigateur, associé au professeur connecté. Les corrections de copies ne sont pas ajoutées.</p></section>`;
 }
 function flowHtml() {
-  return `<details class="agent-flow agent-no-print" id="agent-flow"><summary><span><small>COMPRENDRE LE PARCOURS</small><strong>Comment l’Agent Vie Scolaire AI produit un document</strong></span><span class="agent-flow-toggle">Afficher le schéma</span></summary><div class="agent-flow-content"><img src="assets/agent-vie-scolaire-flux.svg" alt="Schéma du parcours : professeur connecté, formulaire de l’agent, vérification Supabase, génération Gemini, réponse structurée, relecture et validation par l’enseignant, puis remplacement, insertion, impression ou export." loading="lazy" width="1600" height="950"><a href="assets/agent-vie-scolaire-flux.svg" download="schema-agent-vie-scolaire-ai.svg">Télécharger l’image du schéma (SVG)</a></div></details>`;
+  return `<details class="agent-flow agent-no-print" id="agent-flow"><summary><span><small>COMPRENDRE LE PARCOURS</small><strong>Comment l’Agent Vie Scolaire AI produit un document</strong></span><span class="agent-flow-toggle">Afficher le schéma</span></summary><div class="agent-flow-content"><img src="assets/agent-vie-scolaire-flux.svg" alt="Schéma du parcours : professeur connecté, formulaire de l’agent, vérification Supabase, génération DeepSeek, réponse structurée, relecture et validation par l’enseignant, puis remplacement, insertion, impression ou export." loading="lazy" width="1600" height="950"><a href="assets/agent-vie-scolaire-flux.svg" download="schema-agent-vie-scolaire-ai.svg">Télécharger l’image du schéma (SVG)</a></div></details>`;
 }
 function draw() {
   const zone = el('v-agent');
@@ -970,7 +985,7 @@ function contextWarnings(request) {
 function requestAttachmentHtml(request) {
   const images = asArray(request.attachments);
   if (!images.length) return '<p class="agent-context-attachments-empty">Aucune image jointe pour cette étape.</p>';
-  return `<div class="agent-context-attachments"><strong>${images.length} image(s) transmises séparément à Gemini</strong><ul>${images.map(image => `<li>${esc(image.name || 'Image')} · ${esc(image.mime || 'image')}</li>`).join('')}</ul><small>Le contenu de l’image est envoyé; son nom de fichier n’est pas inclus dans le texte donné au modèle.</small></div>`;
+  return `<div class="agent-context-attachments"><strong>${images.length} image(s) transmises séparément à DeepSeek</strong><ul>${images.map(image => `<li>${esc(image.name || 'Image')} · ${esc(image.mime || 'image')}</li>`).join('')}</ul><small>Le contenu de l’image est envoyé; son nom de fichier n’est pas inclus dans le texte donné au modèle.</small></div>`;
 }
 function contextWarningsHtml(warnings) {
   if (!warnings.length) return '<p class="agent-context-ok">Aucun manque ou conflit simple repéré. Vérifiez tout de même les données ci-dessous.</p>';
@@ -981,7 +996,7 @@ function contextDisclosureText(request) {
     ? `${request.attachments.length} image(s) seront transmises séparément à cette étape; leurs données binaires ne figurent pas dans l’aperçu JSON.`
     : 'Aucune image n’est jointe à cette étape.';
   const prompts = asArray(request.prompts).length
-    ? `${request.prompts.length} prompt(s) approuvé(s) seront récupérés depuis la bibliothèque puis ajoutés aux consignes Gemini.`
+    ? `${request.prompts.length} prompt(s) approuvé(s) seront récupérés depuis la bibliothèque puis ajoutés aux consignes DeepSeek.`
     : 'Aucun prompt partagé n’est ajouté à cette demande.';
   return `Le nom du professeur et le lycée de son profil ne sont pas ajoutés automatiquement. S’ils figurent dans les champs ou images transmis, ils partiront avec ce contenu. ${images} ${prompts} Claude sert uniquement à rédiger des brouillons génériques en amont; il ne reçoit ni cette demande, ni copie, image ou donnée d’élève.`;
 }
@@ -1096,14 +1111,20 @@ async function generate() {
   results[tool] = null;
   draw();
   try {
+    await verifyDeepSeekDeployment();
     const data = await callAgent(task, payload, request.attachments);
     if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
+    if (data.meta?.provider !== 'DeepSeek') {
+      const provider = String(data.meta?.provider || 'inconnu').trim();
+      status = { configured: false, provider, model: data.meta?.model };
+      throw new Error(`La réponse ne confirme pas DeepSeek côté serveur (fournisseur : ${provider}); aucun résultat n’a été appliqué. Vérifiez le déploiement de la fonction.`);
+    }
     if (task === 'document' && meta.document_replacement_id) {
       const latestTarget = currentHistory().find(item => item.id === meta.document_replacement_id && item.task === 'document' && item.classe === meta.classe);
       if (!latestTarget || String(currentDocumentVersion(latestTarget)?.result?.contenu || '') !== documentTargetContent) throw new Error('Ce document a changé dans votre historique pendant la révision. Rouvrez sa dernière version avant de recommencer.');
     }
     if (!data.result || typeof data.result !== 'object') throw new Error('La réponse de l’agent ne contient pas de document exploitable.');
-    status = { configured: true, model: data.meta?.model || status?.model };
+    status = { configured: true, provider: data.meta.provider, model: data.meta?.model || status?.model };
     if (rubricFirst) {
       forms.correction.bareme = rubricToText(data.result);
       notice = 'Le barème proposé est maintenant dans le champ modifiable. Relisez-le, ajustez les points si nécessaire, puis lancez la correction avec ce barème.';
@@ -1192,7 +1213,14 @@ async function testConnection() {
     const data = await callAgent('status');
     if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
     status = data;
-    notice = data.configured ? `Fonction Supabase accessible et configuration détectée pour « ${data.model} ». Lancez une courte génération pour valider aussi l’accès à Gemini.` : 'La fonction Supabase répond, mais le secret GEMINI_API_KEY manque ou le modèle Gemini doit être vérifié. Suivez le guide AGENT_IA.md.';
+    if (data.provider !== 'DeepSeek') {
+      const provider = String(data.provider || 'inconnu').trim();
+      notice = `La fonction distante signale « ${provider} » : le portage DeepSeek n’est pas encore déployé. Ce test n’a lancé aucune génération.`;
+    } else if (data.configured) {
+      notice = `Fonction Supabase accessible et DeepSeek configuré avec « ${data.model} ».`;
+    } else {
+      notice = 'La fonction Supabase répond, mais DEEPSEEK_API_KEY manque ou le modèle DeepSeek doit être vérifié. Suivez le guide AGENT_IA.md.';
+    }
   } catch (e) {
     if (requestToken === generationToken && requestOwner === activeTeacherKey()) error = e.message || String(e);
   } finally {

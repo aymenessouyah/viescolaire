@@ -111,7 +111,7 @@ async function adminPromptPublier(index){
     await adminPromptAppel("publish", { task: draft.task, title: draft.title, description: draft.description, prompt: draft.prompt });
     adminPromptDrafts.splice(index, 1);
     adminPromptRenderDrafts();
-    adminPromptStatus("Prompt approuvé et ajouté à la bibliothèque commune. Il est maintenant disponible dans l’Agent Gemini.", true);
+    adminPromptStatus("Prompt approuvé et ajouté à la bibliothèque commune. Il est maintenant disponible dans l’Agent DeepSeek.", true);
     await adminPromptsLister();
     window.STI_AGENT?.reloadPrompts?.();
   } catch(e){

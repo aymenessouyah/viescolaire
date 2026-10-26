@@ -43,7 +43,7 @@ test('le formulaire affiche seulement les prompts partagés du bon outil et perm
   ]);
   agent._test.setSelectedSharedPromptIds('fiche', [uuid(1)]);
   const html = agent._test.formFor('fiche');
-  assert.match(html, /Prompts approuvés pour Gemini/);
+  assert.match(html, /Prompts approuvés pour DeepSeek/);
   assert.match(html, /Fiche concise/);
   assert.match(html, /value="00000000-0000-4000-8000-000000000001" checked/);
   assert.doesNotMatch(html, /Exercices progressifs/);
@@ -123,7 +123,7 @@ test('la migration réserve l’écriture à service_role et limite la lecture a
 test('la vérification verify_jwt=false reste limitée à assistant-ia et le cache statique est renouvelé', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.doesNotMatch(supabaseConfig, /\[functions\.prompt-manager\]/);
-  assert.match(appSource, /v1\.24\.0-gemini-deadline/);
-  assert.match(indexSource, /var ATTENDU = "v1\.24\.0-gemini-deadline"/);
-  assert.match(workerSource, /sti-espace-v1\.24\.0-gemini-deadline/);
+  assert.match(appSource, /v1\.25\.0-deepseek/);
+  assert.match(indexSource, /var ATTENDU = "v1\.25\.0-deepseek"/);
+  assert.match(workerSource, /sti-espace-v1\.25\.0-deepseek/);
 });

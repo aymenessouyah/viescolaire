@@ -1,7 +1,8 @@
 // Agent Vie Scolaire AI — Supabase Edge Function (Deno)
-// Secrets requis : GEMINI_API_KEY. Le modèle Gemini reste configurable par secret.
+// Secret requis : DEEPSEEK_API_KEY. Le modèle DeepSeek reste configurable par secret.
 // Aucune donnée reçue n'est journalisée par cette fonction.
-import { GEMINI_RESPONSE_SCHEMAS, requestConsistencyError, validateResult } from "./quality.mjs";
+import { requestConsistencyError, validateResult } from "./quality.mjs";
+import { buildDeepSeekRequestBody, extractDeepSeekContent } from "./deepseek-api.mjs";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -15,26 +16,20 @@ const TASKS = new Set(["fiche", "exercices", "correction", "transcription", "bar
 const MAX_BODY = 12 * 1024 * 1024;
 const MAX_IMAGES = 6;
 const MAX_DOCUMENT_CHARS = 80_000;
-const GEMINI_MAX_ATTEMPTS = 3;
-const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
-const MAX_RETRY_AFTER_MS = 30_000;
 const AUTH_CHECK_TIMEOUT_MS = 10_000;
 const PROMPT_LOOKUP_TIMEOUT_MS = 10_000;
-const GEMINI_REQUEST_TIMEOUT_MS = 90_000;
+const DEEPSEEK_REQUEST_TIMEOUT_MS = 90_000;
 const SHARED_PROMPT_TASKS = new Set(["fiche", "exercices", "correction", "cahier", "repartition", "document"]);
 const MAX_SHARED_PROMPTS = 5;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function geminiRetryDelayMs(response: Response, attempt: number): number | null {
-  const retryAfter = response.headers.get("retry-after");
-  if (retryAfter) {
-    const seconds = Number(retryAfter);
-    const requestedDelay = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now();
-    if (Number.isFinite(requestedDelay) && requestedDelay >= 0) {
-      return requestedDelay <= MAX_RETRY_AFTER_MS ? requestedDelay : null;
-    }
+function providerErrorDetail(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw);
+    return cleanText(parsed?.error?.message || parsed?.message, 500).trim();
+  } catch (_) {
+    return "";
   }
-  return attempt === 0 ? 1_800 : 5_000;
 }
 
 function json(data: unknown, status = 200) {
@@ -503,14 +498,14 @@ Deno.serve(async request => {
   catch (_) { return json({ error: "Corps de requête JSON invalide." }, 400); }
 
   const task = cleanText(payload?.task, 30);
-  const apiKey = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY") || "";
-  const model = cleanText(Deno.env.get("GEMINI_MODEL") || Deno.env.get("GEMINI_MODELE") || "gemini-3.8-flash", 100);
+  const apiKey = Deno.env.get("DEEPSEEK_API_KEY") || "";
+  const model = cleanText(Deno.env.get("DEEPSEEK_MODEL") || "deepseek-flash", 100);
   if (task === "status") {
-    return json({ ok: true, provider: "Gemini", configured: Boolean(apiKey && model), model: apiKey && model ? model : null });
+    return json({ ok: true, provider: "DeepSeek", configured: Boolean(apiKey && model), model: apiKey && model ? model : null });
   }
   if (!TASKS.has(task)) return json({ error: "Outil d'agent inconnu." }, 400);
   if (!apiKey || !model) {
-    return json({ error: "Agent non configuré : vérifiez le secret GEMINI_API_KEY et le modèle Gemini dans Supabase." }, 503);
+    return json({ error: "Agent non configuré : vérifiez le secret DEEPSEEK_API_KEY et le modèle DeepSeek dans Supabase." }, 503);
   }
   if (task === "document") {
     const input = payload?.input;
@@ -552,77 +547,56 @@ Deno.serve(async request => {
     };
   }
   const systemInstruction = `${COMMON_RULES}\n${TASK_PROMPTS[task]}${sharedPromptInstructions(selectedPrompts.prompts)}`;
-  const userParts: any[] = [{ text: `Données de travail JSON :\n${JSON.stringify(safePayload)}` }];
-  attachments.forEach(item => {
-    const [header, data] = item.data.split(",", 2);
-    if (["data:image/jpeg;base64", "data:image/png;base64", "data:image/webp;base64"].includes(header)) {
-      userParts.push({ inlineData: { mimeType: header.slice(5, header.indexOf(";")), data } });
-    }
-  });
+  const userText = `Données de travail JSON :\n${JSON.stringify(safePayload)}`;
 
   const defaultOutputTokens = task === "document" ? 12000 : task === "repartition" ? 7000 : 5000;
-  const configuredOutputTokens = Number(Deno.env.get("GEMINI_MAX_OUTPUT_TOKENS"));
+  const configuredOutputTokens = Number(Deno.env.get("DEEPSEEK_MAX_OUTPUT_TOKENS"));
   const maxOutputTokens = Number.isFinite(configuredOutputTokens)
     ? Math.max(1000, Math.min(12000, Math.trunc(configuredOutputTokens)))
     : defaultOutputTokens;
   const controller = new AbortController();
-  const requestStartedAt = Date.now();
-  const requestDeadline = requestStartedAt + GEMINI_REQUEST_TIMEOUT_MS;
-  const timer = setTimeout(() => controller.abort(), GEMINI_REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), DEEPSEEK_REQUEST_TIMEOUT_MS);
 
   try {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-    const requestBody = JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents: [{ role: "user", parts: userParts }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: GEMINI_RESPONSE_SCHEMAS[task],
-        temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
-        maxOutputTokens: Math.max(1000, Math.min(12000, maxOutputTokens)),
-      },
+    const endpoint = "https://api.deepseek.com/responses";
+    const requestBody = JSON.stringify(buildDeepSeekRequestBody({
+      task,
+      model,
+      instructions: systemInstruction,
+      userText,
+      attachments,
+      maxOutputTokens: Math.max(1000, Math.min(12000, maxOutputTokens)),
+      temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
+    }));
+    const providerResponse = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: requestBody,
+      signal: controller.signal,
     });
-    let geminiResponse: Response | null = null;
-    let raw = "";
-    let geminiAttempts = 0;
-    for (let attempt = 0; attempt < GEMINI_MAX_ATTEMPTS; attempt++) {
-      geminiAttempts = attempt + 1;
-      geminiResponse = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-        body: requestBody,
-        signal: controller.signal,
-      });
-      raw = await geminiResponse.text();
-      if (geminiResponse.ok || !RETRYABLE_GEMINI_STATUSES.has(geminiResponse.status) || attempt + 1 >= GEMINI_MAX_ATTEMPTS) break;
-      const retryDelay = geminiRetryDelayMs(geminiResponse, attempt);
-      const remainingMs = requestDeadline - Date.now();
-      // Do not spend the remaining platform budget sleeping before a retry.
-      if (retryDelay === null || retryDelay + 5_000 >= remainingMs) break;
-      await new Promise(resolve => setTimeout(resolve, retryDelay));
-    }
-
-    if (!geminiResponse) return json({ error: "Gemini n'a fourni aucune réponse." }, 502);
-    if (!geminiResponse.ok) {
-      let message = `Gemini a répondu avec le code ${geminiResponse.status}.`;
-      try {
-        const parsed = JSON.parse(raw);
-        message += ` ${cleanText(parsed?.error?.message || parsed?.message, 500)}`;
-      } catch (_) { /* ne pas renvoyer une page HTML complète */ }
-      if (geminiAttempts > 1) message += " Les tentatives automatiques n’ont pas abouti; réessayez dans quelques instants.";
+    const raw = await providerResponse.text();
+    if (!providerResponse.ok) {
+      const detail = providerErrorDetail(raw);
+      if (providerResponse.status === 429) {
+        const hint = "Vérifiez le quota, les limites et le solde de l’API DeepSeek avant de réessayer.";
+        return json({ error: `DeepSeek a limité la demande (quota ou débit). ${hint}${detail ? ` ${detail}` : ""}` }, 429);
+      }
+      const message = `DeepSeek a répondu avec le code ${providerResponse.status}.${detail ? ` ${detail}` : ""}`;
       return json({ error: message.trim() }, 502);
     }
 
     let providerData: any;
     try { providerData = JSON.parse(raw); }
-    catch (_) { return json({ error: "Réponse illisible de Gemini." }, 502); }
+    catch (_) { return json({ error: "Réponse illisible de DeepSeek." }, 502); }
 
-    const responseParts = providerData?.candidates?.[0]?.content?.parts;
-    const content = Array.isArray(responseParts)
-      ? responseParts.map((part: any) => typeof part?.text === "string" ? part.text : "").join("")
-      : "";
+    const responseStatus = cleanText(providerData?.status, 32);
+    if (responseStatus !== "completed") {
+      const detail = providerErrorDetail(JSON.stringify(providerData)) || cleanText(providerData?.incomplete_details?.reason, 120);
+      return json({ error: `DeepSeek n’a pas terminé la génération${responseStatus ? ` (${responseStatus})` : ""}.${detail ? ` ${detail}` : " Réessayez avec une demande plus courte."}` }, 502);
+    }
+    const content = extractDeepSeekContent(providerData);
     if (!content.trim()) {
-      return json({ error: "Gemini n'a produit aucun contenu exploitable." }, 502);
+      return json({ error: "DeepSeek n'a produit aucun contenu exploitable." }, 502);
     }
 
     let result: any;
@@ -638,13 +612,13 @@ Deno.serve(async request => {
       ok: true,
       task,
       result,
-      meta: { provider: "Gemini", model, request_id: crypto.randomUUID(), images: attachments.length },
+      meta: { provider: "DeepSeek", model, request_id: crypto.randomUUID(), images: attachments.length },
     });
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "AbortError";
     const message = timedOut
-      ? `Gemini n'a pas répondu après ${geminiAttempts} tentative(s) dans le délai imparti. Réessayez; pour un document volumineux, réduisez le texte ou le nombre d'images.`
-      : "Le service Gemini est momentanément injoignable.";
+      ? `DeepSeek n'a pas répondu dans le délai imparti. Réessayez; pour un document volumineux, réduisez le texte ou le nombre d'images.`
+      : "Le service DeepSeek est momentanément injoignable.";
     return json({ error: message }, 504);
   } finally {
     clearTimeout(timer);

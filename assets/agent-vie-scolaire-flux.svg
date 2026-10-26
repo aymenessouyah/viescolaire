@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1020" role="img" aria-labelledby="title desc">
   <title id="title">Parcours de l’Agent Vie Scolaire AI</title>
-  <desc id="desc">Le professeur se connecte, prépare une demande, Supabase vérifie la session avant l’appel Gemini, puis compare et valide le résultat. Pour les documents libres, la confirmation enregistre des versions locales restaurables sans modifier le fichier externe. Chaque document reçoit son lycée, son enseignant et sa classe.</desc>
+  <desc id="desc">Le professeur se connecte, prépare une demande, Supabase vérifie la session avant l’appel DeepSeek, puis compare et valide le résultat. Pour les documents libres, la confirmation enregistre des versions locales restaurables sans modifier le fichier externe. Chaque document reçoit son lycée, son enseignant et sa classe.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f9faf6"/><stop offset="1" stop-color="#edf3ed"/></linearGradient>
     <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#143d30"/><stop offset="1" stop-color="#2b7659"/></linearGradient>
@@ -34,7 +34,7 @@
   <text x="64" y="137" fill="#153b2d" font-size="36" font-weight="800" letter-spacing="-1.2">Agent Vie Scolaire AI</text>
   <text x="66" y="171" fill="#65756a" font-size="17" font-weight="500">Du besoin pédagogique au document vérifié par l’enseignant</text>
 
-  <!-- Parcours aller : professeur → formulaire → contrôle sécurisé → Gemini -->
+  <!-- Parcours aller : professeur → formulaire → contrôle sécurisé → DeepSeek -->
   <g filter="url(#shadow)">
     <rect class="card" x="64" y="222" width="330" height="210" rx="20"/>
     <rect class="card" x="454" y="222" width="330" height="210" rx="20"/>
@@ -79,7 +79,7 @@
   <g>
     <circle cx="1271" cy="262" r="19" fill="url(#gold)"/><text class="numText" x="1271" y="268">4</text>
     <text class="kicker" x="1302" y="267">GÉNÉRATION</text>
-    <text class="head" x="1258" y="311">Google Gemini</text>
+    <text class="head" x="1258" y="311">DeepSeek</text>
     <text class="body" x="1258" y="342">Produit une proposition</text><text class="body" x="1258" y="367">structurée adaptée à la demande.</text>
     <rect class="pill" x="1258" y="389" width="195" height="25" rx="12"/><text class="pillText" x="1272" y="406">Clé gardée dans Supabase</text>
   </g>
@@ -115,7 +115,7 @@
   <rect x="84" y="827" width="5" height="104" rx="2.5" fill="url(#brand)"/>
   <text class="footTitle" x="108" y="851">Sécurité et données</text>
   <text class="footText" x="108" y="881">• Chaque requête POST reste authentifiée (Bearer + vérification Supabase Auth).</text>
-  <text class="footText" x="108" y="906">• Nom et lycée ajoutés dans le navigateur; non transmis à Gemini pour l’en-tête.</text>
+  <text class="footText" x="108" y="906">• Nom et lycée ajoutés dans le navigateur; non transmis à DeepSeek pour l’en-tête.</text>
   <text class="footText" x="820" y="881">• Seuls le contexte utile et les pièces jointes choisies sont transmis au modèle.</text>
   <text class="footText" x="820" y="906">• Le fichier externe reste inchangé; les versions locales sont restaurables.</text>
   <text x="64" y="986" fill="#829084" font-size="12" font-weight="600">Agent Vie Scolaire AI · Sciences et technologies de l’informatique</text>

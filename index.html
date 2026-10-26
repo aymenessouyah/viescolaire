@@ -120,7 +120,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.24.0-gemini-deadline";
+  var ATTENDU = "v1.25.0-deepseek";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -318,10 +318,10 @@
       <div id="admin-liste"><p class="tiny muted">Chargement…</p></div>
       <section class="admin-prompt-manager" aria-labelledby="admin-prompt-title">
         <div class="admin-prompt-manager-heading">
-          <div><span class="tiny muted">BIBLIOTHÈQUE COMMUNE</span><h4 id="admin-prompt-title">Prompts pédagogiques pour Gemini</h4></div>
+          <div><span class="tiny muted">BIBLIOTHÈQUE COMMUNE</span><h4 id="admin-prompt-title">Prompts pédagogiques pour DeepSeek</h4></div>
           <span class="badge b-navy">Administration</span>
         </div>
-        <p class="small">Claude propose des brouillons génériques à valider. Seul l’outil choisi et sa description générale lui sont transmis : aucune demande pédagogique, copie, image, donnée d’élève ou document n’est envoyé à Claude. Les prompts approuvés sont ensuite partagés avec les professeurs et ajoutés uniquement aux demandes Gemini.</p>
+        <p class="small">Claude propose des brouillons génériques à valider. Seul l’outil choisi et sa description générale lui sont transmis : aucune demande pédagogique, copie, image, donnée d’élève ou document n’est envoyé à Claude. Les prompts approuvés sont ensuite partagés avec les professeurs et ajoutés uniquement aux demandes DeepSeek.</p>
         <div class="admin-prompt-cost note warn tiny">L’API Claude est facturée selon votre offre Anthropic. Configuration serveur requise dans les secrets des fonctions Edge Supabase : <code>ANTHROPIC_API_KEY</code> et <code>ANTHROPIC_MODEL</code>. Ne mettez jamais la clé dans le site ou dans une conversation.</div>
         <div class="admin-prompt-generate-row">
           <label class="f" for="ad-prompt-task">Outil à préparer
