@@ -38,6 +38,22 @@
 #v-agent .agent-context-card strong{font-size:13px}
 #v-agent .agent-context-card p{margin:6px 0 0;color:var(--agent-muted);font-size:11px;line-height:1.55}
 #v-agent .agent-context-card small{display:block;margin-top:8px;color:var(--agent-blue);font-size:10px}
+#v-agent .agent-context-review{margin:17px 20px 0;padding:14px;border:1px solid #d8c99f;border-radius:13px;background:linear-gradient(120deg,#fffaf0,var(--agent-soft))}
+#v-agent .agent-context-review-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+#v-agent .agent-context-review-heading>div{display:grid;gap:3px}
+#v-agent .agent-context-review-heading>div>span{color:var(--agent-gold);font-size:8px;font-weight:850;letter-spacing:.13em}
+#v-agent .agent-context-review-heading strong{font-size:12px}
+#v-agent .agent-context-review-heading>small{flex:none;padding:5px 8px;border:1px solid var(--agent-line);border-radius:8px;color:var(--agent-muted);background:var(--agent-card);font-size:9px;font-weight:650}
+#v-agent .agent-context-warnings{display:grid;gap:6px;margin:0;padding:10px 12px 10px 30px;border:1px solid #e8d7af;border-radius:10px;color:#76551f;background:#fff7e5;font-size:10px;line-height:1.5}
+#v-agent .agent-context-ok{margin:0;padding:10px 12px;border:1px solid #c8dfcf;border-radius:10px;color:#235f3e;background:#eff8f0;font-size:10px;line-height:1.5}
+#v-agent .agent-context-disclosure{margin:9px 0;color:var(--agent-muted);font-size:9px;line-height:1.5}
+#v-agent .agent-context-review-details{border-top:1px solid var(--agent-line);padding-top:8px}
+#v-agent .agent-context-review-details>summary{cursor:pointer;color:var(--agent-blue);font-size:10px;font-weight:750}
+#v-agent .agent-context-review-details>summary:focus-visible{outline:2px solid var(--agent-green-2);outline-offset:3px;border-radius:4px}
+#v-agent .agent-context-review-details pre{overflow:auto;max-height:360px;margin:9px 0;padding:12px;border:1px solid var(--agent-line);border-radius:9px;color:var(--agent-ink);background:var(--agent-card);font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+#v-agent .agent-context-attachments{margin-top:9px;padding:10px 12px;border:1px solid var(--agent-line);border-radius:9px;background:var(--agent-card);font-size:10px}
+#v-agent .agent-context-attachments ul{margin:6px 0;padding-left:20px}
+#v-agent .agent-context-attachments small,#v-agent .agent-context-attachments-empty{display:block;margin:6px 0 0;color:var(--agent-muted);font-size:9px;line-height:1.5}
 #v-agent .agent-security{display:flex;align-items:flex-start;gap:8px;margin-top:4px;padding:10px;color:var(--agent-muted)}
 #v-agent .agent-security svg{flex:none;margin-top:2px;color:var(--agent-green-2)}
 #v-agent .agent-security p{margin:0;font-size:10px;line-height:1.5}
@@ -185,6 +201,9 @@
 #v-agent .agent-history-list small{margin-top:2px;color:var(--agent-muted);font-size:9px}
 #v-agent .agent-history>p{margin:12px 0 0;color:var(--agent-muted);font-size:9px}
 :root[data-color-mode="dark"] #v-agent{--agent-ink:#e6eee8;--agent-muted:#a1aea6;--agent-line:#34463c;--agent-soft:#1d2a23;--agent-card:#15221b;--agent-green:#79c69c;--agent-green-2:#4d9d72;--agent-blue:#83bce6;--agent-gold:#e0b669;--agent-red:#e68b91}
+:root[data-color-mode="dark"] #v-agent .agent-context-review{border-color:#66593d;background:linear-gradient(120deg,#29271f,var(--agent-soft))}
+:root[data-color-mode="dark"] #v-agent .agent-context-warnings{border-color:#705a32;color:#f0d393;background:#352b1b}
+:root[data-color-mode="dark"] #v-agent .agent-context-ok{border-color:#345e44;color:#a7dfba;background:#1c3023}
 :root[data-color-mode="dark"] #v-agent .agent-tool.active{border-color:#3f6951;background:#20382a;box-shadow:inset 3px 0 0 #70bb90}
 :root[data-color-mode="dark"] #v-agent .agent-tool>span{background:#263a2e}
 :root[data-color-mode="dark"] #v-agent .agent-tool.active>span{color:#10251a;background:#78c499}
@@ -223,6 +242,8 @@
   #v-agent .agent-hero h1{font-size:29px}
   #v-agent .agent-hero-actions{grid-template-columns:1fr}
   #v-agent .agent-form-grid{grid-template-columns:1fr;padding:16px 15px 3px}
+  #v-agent .agent-context-review{margin:14px 14px 0;padding:12px}
+  #v-agent .agent-context-review-heading{align-items:flex-start;flex-direction:column}
   #v-agent .agent-field.full{grid-column:auto}
   #v-agent .agent-request-title{padding:15px}
   #v-agent .agent-form-footer{align-items:stretch;flex-direction:column;padding:15px}

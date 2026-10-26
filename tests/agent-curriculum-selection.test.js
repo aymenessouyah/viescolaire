@@ -65,6 +65,17 @@ test('les notions déjà associées à la séance sont présélectionnées dans 
   assert.deepEqual(payload.input.competences_selectionnees, []);
 });
 
+test('décocher une notion présélectionnée la retire réellement du contexte de la fiche', () => {
+  const { agent, listeners } = loadAgent(catalogue);
+  const session = { cls: '3SI1', n: 1, iso: '2026-10-26', tri: 1, blk: { t: 'HTML sémantique', d: 'HTML5' } };
+  agent.render({ sessions: { '3SI1': [session] }, store: { seances: { '3SI1|1': { notions: ['html-structure'] } } } });
+  const checkbox = { dataset: { agentSelection: 'notions' }, value: 'html-structure', checked: false, closest() { return this; } };
+  listeners.change({ target: checkbox });
+  const payload = JSON.parse(JSON.stringify(agent._test.buildPayload()));
+  assert.deepEqual(Array.from(payload.input.notions_selectionnees), []);
+  assert.equal(Object.hasOwn(payload.input.seance, 'notions'), false);
+});
+
 test('les formulaires de fiche et d’exercices proposent des sélections multiples recherchables', () => {
   assert.equal((agentSource.match(/curriculumPicker\('notions', 'Notions du référentiel'/g) || []).length, 2);
   assert.equal((agentSource.match(/curriculumPicker\('competences', 'Compétences ciblées'/g) || []).length, 2);
@@ -88,16 +99,16 @@ test('les coches faites dans le formulaire d’exercices arrivent dans la demand
   }
   const payload = JSON.parse(JSON.stringify(agent._test.buildPayload()));
   assert.equal(payload.input.notions_selectionnees[0].notion, 'Événements JavaScript');
-  assert.equal(payload.input.notions_du_referentiel[0].id, 'js-events');
+  assert.deepEqual(Array.from(payload.input.notions_du_referentiel), []);
   assert.equal(payload.input.competences_selectionnees[0].competence, 'Créer un site interactif');
-  assert.equal(payload.input.competences[0].code, 'D');
+  assert.deepEqual(Array.from(payload.input.competences), []);
   assert.equal('notions' in payload.input, false);
 });
 
 test('les choix sélectionnés sont transmis à l’agent et prioritaires dans ses consignes', () => {
   assert.match(agentSource, /notions_selectionnees: notionsSelectionnees/);
   assert.match(agentSource, /competences_selectionnees: competencesSelectionnees/);
-  assert.match(agentSource, /notions_du_referentiel: notionsSelectionnees\.length \? notionsSelectionnees : relatedNotions\(f\.sujet\)/);
+  assert.match(agentSource, /notions_du_referentiel: notionsSelectionnees\.length \? \[\] : relatedNotions\(f\.sujet\)/);
   assert.match(edgeSource, /Si input\.notions_selectionnees contient des entrées/);
   assert.match(edgeSource, /Si input\.competences_selectionnees contient des entrées/);
   assert.match(edgeSource, /"competences": \["compétence travaillée"\]/);

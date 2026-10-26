@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="2340" viewBox="0 0 1080 2340" role="img" aria-labelledby="title desc">
+  <title id="title">Agent Vie Scolaire AI — schéma mobile des quatre couches</title>
+  <desc id="desc">Infographie verticale pour téléphone : Prompt, Context, Harness, Gemini et boucle humaine où le professeur relit, corrige ou relance.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071326"/><stop offset="1" stop-color="#122442"/></linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20d5d7"/><stop offset="1" stop-color="#55a9ff"/></linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 12 6 0 12Z" fill="#8da9d1"/></marker>
+    <marker id="loopArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M0 0 12 6 0 12Z" fill="#f7cd5b"/></marker>
+    <style>
+      text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+      .title{fill:#f3f7ff;font-size:58px;font-weight:850;letter-spacing:-1px}
+      .subtitle{fill:#b8c9e2;font-size:31px;font-weight:600}
+      .layer{font-size:36px;font-weight:850;letter-spacing:.3px}
+      .body{fill:#e4edfb;font-size:29px;font-weight:550}
+      .bodySmall{fill:#b8c8df;font-size:25px;font-weight:550}
+      .tag{font-size:21px;font-weight:850;letter-spacing:1.2px}
+      .action{font-size:26px;font-weight:850;letter-spacing:.3px}
+    </style>
+  </defs>
+  <rect width="1080" height="2340" fill="url(#bg)"/>
+  <g opacity=".12" stroke="#8ea8cf" stroke-width="1.5">
+    <path d="M0 350H1080M0 2020H1080M540 0V2340M70 0V2340M1010 0V2340"/>
+  </g>
+  <circle cx="1010" cy="180" r="190" fill="#2b5c92" opacity=".09"/>
+  <circle cx="45" cy="2070" r="220" fill="#19b9bd" opacity=".07"/>
+
+  <!-- Titre -->
+  <rect x="70" y="66" width="58" height="58" rx="18" fill="url(#teal)"/>
+  <path d="m99 75 4.5 12.5L116 92l-12.5 4.5L99 109l-4.5-12.5L82 92l12.5-4.5Z" fill="#efffff"/>
+  <text class="title" x="70" y="193">Agent Vie Scolaire AI</text>
+  <text class="subtitle" x="72" y="250">Les 4 couches, simplement</text>
+  <text x="72" y="294" fill="#8fa6c7" font-size="25" font-weight="550">Le professeur reste au centre du cycle.</text>
+  <rect x="70" y="316" width="650" height="66" rx="33" fill="#182d4c" stroke="#f7cd5b" stroke-width="1.5"/>
+  <circle cx="104" cy="349" r="8" fill="#f7cd5b"/>
+  <text x="128" y="357" fill="#ffe58a" font-size="22" font-weight="850" letter-spacing=".8">BOUCLE GUIDÉE PAR L’ENSEIGNANT</text>
+
+  <!-- 1 Prompt -->
+  <rect x="70" y="415" width="900" height="180" rx="28" fill="#20d5d7" fill-opacity=".06" stroke="#20d5d7" stroke-width="3"/>
+  <rect x="100" y="442" width="236" height="48" rx="24" fill="#123b4b" stroke="#20d5d7" stroke-width="1.5"/>
+  <text class="layer" x="122" y="477" fill="#8cf4ee">1 · PROMPT</text>
+  <text class="body" x="110" y="541">Règles communes + consigne de tâche.</text>
+  <text class="bodySmall" x="110" y="576">Il précise ce que l’outil doit faire.</text>
+
+  <path d="M520 600V623" stroke="#8da9d1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- 2 Context -->
+  <rect x="70" y="635" width="900" height="270" rx="28" fill="#65b4ff" fill-opacity=".055" stroke="#65b4ff" stroke-width="3"/>
+  <rect x="100" y="661" width="260" height="48" rx="24" fill="#1c3150" stroke="#65b4ff" stroke-width="1.5"/>
+  <text class="layer" x="122" y="696" fill="#a8d4ff">2 · CONTEXT</text>
+  <text class="body" x="110" y="755">Données utiles sélectionnées :</text>
+  <text class="bodySmall" x="110" y="797">classe, séance, texte ou pièces choisies.</text>
+  <rect x="100" y="823" width="840" height="64" rx="15" fill="#102743" stroke="#3d6d9b" stroke-width="1.5"/>
+  <text x="124" y="851" fill="#d7e8ff" font-size="23" font-weight="750">Identité professeur / lycée gardée locale</text>
+  <text x="124" y="878" fill="#8fc8ff" font-size="22" font-weight="600">Elle n’est pas envoyée à Gemini.</text>
+
+  <path d="M520 910V933" stroke="#8da9d1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- 3 Harness -->
+  <rect x="70" y="945" width="900" height="240" rx="28" fill="#ad8bff" fill-opacity=".055" stroke="#ad8bff" stroke-width="3"/>
+  <rect x="100" y="971" width="300" height="48" rx="24" fill="#292342" stroke="#ad8bff" stroke-width="1.5"/>
+  <text class="layer" x="122" y="1006" fill="#d7c7ff">3 · HARNESS</text>
+  <text class="body" x="110" y="1067">Interface + fonction Edge Supabase.</text>
+  <text class="bodySmall" x="110" y="1111">Authentification et contrôles avant l’appel,</text>
+  <text class="bodySmall" x="110" y="1151">puis vérification de la réponse.</text>
+
+  <path d="M520 1190V1213" stroke="#8da9d1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Appel du modèle -->
+  <rect x="70" y="1225" width="900" height="265" rx="28" fill="#102b42" stroke="#32c8ce" stroke-width="3"/>
+  <rect x="100" y="1252" width="290" height="42" rx="21" fill="#123b4b" stroke="#32c8ce" stroke-width="1.5"/>
+  <text x="122" y="1281" fill="#8cf4ee" class="tag">MODÈLE APPELÉ</text>
+  <text x="110" y="1352" fill="#f3f7ff" font-size="52" font-weight="900" letter-spacing="1">GEMINI</text>
+  <text class="body" x="110" y="1400">Reçoit le Prompt + le Context.</text>
+  <text class="bodySmall" x="110" y="1445">Pas de fine-tuning par l’application.</text>
+
+  <path d="M520 1495V1518" stroke="#8da9d1" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- 4 Loop -->
+  <rect x="70" y="1530" width="900" height="470" rx="28" fill="#f7cd5b" fill-opacity=".045" stroke="#f7cd5b" stroke-width="3"/>
+  <rect x="100" y="1557" width="390" height="48" rx="24" fill="#312b20" stroke="#f7cd5b" stroke-width="1.5"/>
+  <text class="layer" x="122" y="1592" fill="#ffe58a">4 · LOOP / BOUCLE</text>
+  <text class="body" x="110" y="1654">Gemini renvoie une proposition.</text>
+  <text class="bodySmall" x="110" y="1697">L’enseignant la relit et choisit la suite :</text>
+
+  <rect x="105" y="1730" width="240" height="76" rx="18" fill="#142744" stroke="#7188a9" stroke-width="1.5"/>
+  <text class="action" x="225" y="1778" fill="#e4edfb" text-anchor="middle">RELIRE</text>
+  <path d="M352 1768H373" stroke="#8da9d1" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="383" y="1730" width="240" height="76" rx="18" fill="#142744" stroke="#7188a9" stroke-width="1.5"/>
+  <text class="action" x="503" y="1778" fill="#e4edfb" text-anchor="middle">CORRIGER</text>
+  <path d="M630 1768H651" stroke="#8da9d1" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="661" y="1730" width="250" height="76" rx="18" fill="#302b20" stroke="#f7cd5b" stroke-width="1.8"/>
+  <text class="action" x="786" y="1778" fill="#ffe58a" text-anchor="middle">RELANCER</text>
+
+  <text x="110" y="1861" fill="#d3dcef" font-size="27" font-weight="650">Le professeur garde le dernier mot.</text>
+  <rect x="145" y="1890" width="650" height="64" rx="32" fill="#302b20" stroke="#f7cd5b" stroke-width="1.5"/>
+  <text x="470" y="1931" fill="#ffe58a" font-size="23" font-weight="850" letter-spacing=".7" text-anchor="middle">BOUCLE HUMAINE · PAS AUTONOME</text>
+
+  <!-- Retour de boucle : le professeur décide de relancer -->
+  <path d="M970 1934 C1042 1934 1042 510 970 510" fill="none" stroke="#f7cd5b" stroke-width="3" stroke-dasharray="10 10" marker-end="url(#loopArrow)"/>
+  <text x="1050" y="1218" transform="rotate(-90 1050 1218)" fill="#ffe58a" font-size="20" font-weight="850" letter-spacing="1.2" text-anchor="middle">RETOUR SI LE PROFESSEUR RELANCE</text>
+
+  <!-- À retenir -->
+  <rect x="70" y="2050" width="900" height="220" rx="26" fill="#0c1b30" stroke="#2b4262" stroke-width="2"/>
+  <text x="110" y="2110" fill="#f4f7ff" font-size="31" font-weight="850">À retenir</text>
+  <text x="110" y="2163" fill="#c8d6e9" font-size="25" font-weight="550">Gemini propose ; le professeur relit, corrige ou relance.</text>
+  <text x="110" y="2207" fill="#c8d6e9" font-size="25" font-weight="550">Aucune action n’est appliquée sans décision humaine.</text>
+  <text x="110" y="2247" fill="#8fa6c7" font-size="21" font-weight="550">Contexte sélectionné · garde-fous Supabase · validation humaine</text>
+</svg>

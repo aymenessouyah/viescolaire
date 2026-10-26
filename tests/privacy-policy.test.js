@@ -22,6 +22,9 @@ test('la politique décrit les traitements locaux, Supabase, Google Drive et IA'
   assert.match(policy, /API Google Gemini configurée pour l’Agent Vie Scolaire AI/);
   assert.match(policy, /nom complet du professeur et le nom du lycée sont ajoutés localement/);
   assert.match(policy, /ne sont pas envoyés à Gemini pour cet en-tête/);
+  assert.match(policy, /profil du professeur et de l’établissement n’est pas ajouté automatiquement/);
+  assert.match(policy, /aperçu des champs transmis, la liste des images jointes/);
+  assert.match(policy, /cette détection n’est pas exhaustive/);
   assert.match(policy, /un compte ne voit que son propre historique/);
   assert.match(policy, /anciennes entrées sans identité de compte sont masquées/);
   assert.match(policy, /Conditions d’utilisation de l’API Gemini/);
@@ -37,7 +40,7 @@ test('la politique expose les choix et limites essentiels de sauvegarde et de co
 
 test('la politique est incluse au cache hors ligne et les versions d’interface concordent', () => {
   assert.match(worker, /"\.\/politique-confidentialite\.html"/);
-  const expected = 'v1.20.0-agent-document-revision';
+  const expected = 'v1.21.0-agent-context-preview';
   assert.ok(index.includes(expected));
   assert.ok(app.includes(expected));
   assert.ok(worker.includes('sti-espace-' + expected));

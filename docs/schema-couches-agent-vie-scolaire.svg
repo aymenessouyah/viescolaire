@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1080" role="img" aria-labelledby="title desc">
+  <title id="title">Les quatre couches de l’Agent Vie Scolaire AI</title>
+  <desc id="desc">Schéma en français des couches Prompt, Context, Harness et Loop, avec Gemini au centre et une boucle de travail contrôlée par l’enseignant.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071326"/><stop offset="1" stop-color="#122442"/></linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20d5d7"/><stop offset="1" stop-color="#55a9ff"/></linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#8da9d1"/></marker>
+    <marker id="loopArrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#f7cd5b"/></marker>
+    <style>
+      text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+      .title{fill:#f3f7ff;font-size:35px;font-weight:800;letter-spacing:-.6px}
+      .subtitle{fill:#a9bddc;font-size:16px;font-weight:500}
+      .layerTitle{font-size:18px;font-weight:800;letter-spacing:.5px}
+      .body{fill:#e4edfb;font-size:15px;font-weight:500}
+      .small{fill:#a9bddc;font-size:12px;font-weight:500}
+      .stepTitle{fill:#f4f7ff;font-size:16px;font-weight:750}
+      .stepBody{fill:#b8c8df;font-size:13px;font-weight:500}
+      .tag{font-size:11px;font-weight:800;letter-spacing:1px}
+    </style>
+  </defs>
+  <rect width="1440" height="1080" rx="28" fill="url(#bg)"/>
+  <g opacity=".14" stroke="#8ea8cf" stroke-width="1">
+    <path d="M0 110H1440M0 880H1440M720 0V1080M100 0V1080M1340 0V1080"/>
+  </g>
+  <circle cx="1340" cy="110" r="145" fill="#2b5c92" opacity=".08"/>
+  <circle cx="105" cy="895" r="190" fill="#19b9bd" opacity=".06"/>
+
+  <rect x="70" y="52" width="42" height="42" rx="13" fill="url(#teal)"/>
+  <path d="m91 59 3.5 9.5L104 72l-9.5 3.5L91 85l-3.5-9.5L78 72l9.5-3.5Z" fill="#efffff"/>
+  <text class="title" x="130" y="78">Notre Agent Vie Scolaire AI</text>
+  <text class="subtitle" x="72" y="128">Les couches qui préparent, encadrent et vérifient une réponse Gemini</text>
+  <rect x="1090" y="57" width="278" height="40" rx="20" fill="#182d4c" stroke="#355175"/>
+  <circle cx="1112" cy="77" r="5" fill="#f7cd5b"/>
+  <text x="1126" y="82" fill="#d9e5f6" font-size="12" font-weight="700">BOUCLE AVEC L’ENSEIGNANT</text>
+
+  <!-- Left: nested conceptual layers -->
+  <text x="74" y="183" fill="#839aba" class="tag">LES 4 COUCHES · DU MODÈLE VERS LE PROCESSUS</text>
+  <rect x="70" y="205" width="650" height="650" rx="30" fill="#f7cd5b" fill-opacity=".035" stroke="#f7cd5b" stroke-width="2.5"/>
+  <rect x="94" y="220" width="232" height="34" rx="17" fill="#312b20" stroke="#f7cd5b"/>
+  <text x="111" y="243" class="layerTitle" fill="#ffe58a">4 · LOOP / BOUCLE</text>
+  <text x="105" y="278" class="small">Le cycle complet est relancé au besoin par le professeur.</text>
+
+  <rect x="132" y="300" width="526" height="510" rx="26" fill="#aa82ff" fill-opacity=".035" stroke="#ad8bff" stroke-width="2.5"/>
+  <rect x="155" y="315" width="246" height="34" rx="17" fill="#292342" stroke="#ad8bff"/>
+  <text x="172" y="338" class="layerTitle" fill="#d7c7ff">3 · HARNESS / CADRE</text>
+  <text x="164" y="374" class="small">Interface + Edge Function Supabase : authentification,</text>
+  <text x="164" y="393" class="small">contrôles, appel du modèle et validation de la réponse.</text>
+
+  <rect x="197" y="416" width="396" height="344" rx="23" fill="#64a7ff" fill-opacity=".045" stroke="#65b4ff" stroke-width="2.5"/>
+  <rect x="220" y="431" width="220" height="34" rx="17" fill="#1c3150" stroke="#65b4ff"/>
+  <text x="237" y="454" class="layerTitle" fill="#a8d4ff">2 · CONTEXT</text>
+  <text x="225" y="490" class="body">Classe · séance · demande · texte ou pièces choisies</text>
+  <rect x="225" y="505" width="340" height="49" rx="12" fill="#102743" stroke="#3d6d9b"/>
+  <text x="241" y="526" fill="#d7e8ff" font-size="12" font-weight="700">Identité professeur / lycée :</text>
+  <text x="241" y="543" fill="#8fc8ff" font-size="12">ajoutée localement, non envoyée à Gemini.</text>
+
+  <rect x="263" y="575" width="264" height="156" rx="21" fill="#20d5d7" fill-opacity=".05" stroke="#20d5d7" stroke-width="2.5"/>
+  <rect x="284" y="589" width="173" height="34" rx="17" fill="#123b4b" stroke="#20d5d7"/>
+  <text x="301" y="612" class="layerTitle" fill="#8cf4ee">1 · PROMPT</text>
+  <text x="286" y="645" class="small">Règles communes + consigne</text>
+  <text x="286" y="663" class="small">propre à l’outil demandé.</text>
+  <rect x="309" y="680" width="172" height="38" rx="12" fill="#102d49" stroke="#38d9dd" filter="url(#glow)"/>
+  <text x="395" y="705" fill="#efffff" font-size="17" font-weight="800" text-anchor="middle">GEMINI</text>
+
+  <rect x="93" y="783" width="585" height="48" rx="13" fill="#171f32" stroke="#6c5b35"/>
+  <text x="111" y="804" fill="#ffe58a" font-size="12" font-weight="750">Important :</text>
+  <text x="181" y="804" fill="#d3dcef" font-size="12">ce n’est pas un modèle entraîné spécialement par nous;</text>
+  <text x="111" y="821" fill="#d3dcef" font-size="12">l’application l’oriente avec des instructions, des données choisies et des contrôles.</text>
+
+  <!-- Right: actual request/response path -->
+  <text x="790" y="183" fill="#839aba" class="tag">COMMENT UNE DEMANDE CIRCULE</text>
+  <rect x="780" y="205" width="588" height="650" rx="28" fill="#0d1c32" stroke="#2a4265" stroke-width="1.5"/>
+
+  <g>
+    <rect x="816" y="238" width="500" height="88" rx="16" fill="#142744" stroke="#567092"/>
+    <circle cx="845" cy="267" r="16" fill="#30496d"/><text x="845" y="272" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">1</text>
+    <text class="stepTitle" x="874" y="267">Le professeur prépare sa demande</text>
+    <text class="stepBody" x="874" y="292">Choisit l’outil, la classe, le texte et les consignes utiles.</text>
+
+    <path d="M1066 327v19" stroke="#8da9d1" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="816" y="351" width="500" height="88" rx="16" fill="#142744" stroke="#567092"/>
+    <circle cx="845" cy="380" r="16" fill="#30496d"/><text x="845" y="385" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">2</text>
+    <text class="stepTitle" x="874" y="380">L’application construit le contexte</text>
+    <text class="stepBody" x="874" y="405">Seules les informations nécessaires et les pièces choisies partent.</text>
+
+    <path d="M1066 440v19" stroke="#8da9d1" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="816" y="464" width="500" height="88" rx="16" fill="#142744" stroke="#8f75d6"/>
+    <circle cx="845" cy="493" r="16" fill="#6249a0"/><text x="845" y="498" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">3</text>
+    <text class="stepTitle" x="874" y="493">Supabase encadre l’appel à Gemini</text>
+    <text class="stepBody" x="874" y="518">Vérifie la session, les limites et le format attendu.</text>
+
+    <path d="M1066 553v19" stroke="#8da9d1" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="816" y="577" width="500" height="88" rx="16" fill="#142744" stroke="#32c8ce"/>
+    <circle cx="845" cy="606" r="16" fill="#147d89"/><text x="845" y="611" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">4</text>
+    <text class="stepTitle" x="874" y="606">Le modèle renvoie une proposition</text>
+    <text class="stepBody" x="874" y="631">L’application contrôle la réponse et l’affiche à relire.</text>
+
+    <path d="M1066 666v19" stroke="#8da9d1" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="816" y="690" width="500" height="112" rx="16" fill="#202b34" stroke="#f7cd5b"/>
+    <circle cx="845" cy="721" r="16" fill="#9c7624"/><text x="845" y="726" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">5</text>
+    <text class="stepTitle" x="874" y="720">L’enseignant vérifie et décide</text>
+    <text class="stepBody" x="874" y="746">Il peut corriger, relancer, confirmer une sauvegarde,</text>
+    <text class="stepBody" x="874" y="765">restaurer une version ou exporter. Rien n’est appliqué seul.</text>
+  </g>
+
+  <!-- Human-in-the-loop return path -->
+  <path d="M1320 755 C1365 755 1368 285 1320 285" fill="none" stroke="#f7cd5b" stroke-width="2.5" stroke-dasharray="7 7" marker-end="url(#loopArrow)"/>
+  <rect x="1327" y="495" width="94" height="34" rx="17" fill="#302b20" stroke="#f7cd5b"/>
+  <text x="1374" y="517" fill="#ffe58a" font-size="10" font-weight="800" text-anchor="middle">SI BESOIN</text>
+
+  <!-- Footer -->
+  <rect x="70" y="895" width="1298" height="112" rx="20" fill="#0c1b30" stroke="#2b4262"/>
+  <text x="99" y="932" fill="#f4f7ff" font-size="16" font-weight="800">La boucle actuelle est humaine, pas autonome.</text>
+  <text x="99" y="961" fill="#b8c8df" font-size="14">Exemples multi-étapes : transcription → relecture → correction; barème proposé → ajustement → correction.</text>
+  <text x="99" y="985" fill="#8fa6c7" font-size="12">Le professeur garde le dernier mot; Gemini ne modifie pas directement les données ni les fichiers externes.</text>
+</svg>

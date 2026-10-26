@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.1.0-document-revision';
+const VERSION = '2.2.0-context-review';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -220,37 +220,64 @@ function ensureSessions() {
   }
   if (!findSession(forms.cahier.session)) forms.cahier.session = defaultSession('cahier');
 }
-function sessionData(s) {
+function sessionData(s, purpose = 'full') {
   if (!s) return null;
   const o = record(s);
-  const allowed = new Set(asArray(o.notions));
-  const notions = asArray(root.STI_DATA?.livresSTI?.[s.cls]?.items).filter(x => allowed.has(x.id)).map(x => ({ notion: x.label, domaine: x.domain, description: x.description }));
-  return {
+  const savedNotions = new Set(asArray(o.notions).map(item => String(item && typeof item === 'object' ? item.id || '' : item || '')));
+  const notions = asArray(root.STI_DATA?.livresSTI?.[s.cls]?.items).filter(x => savedNotions.has(String(x.id))).map(x => ({ notion: x.label, domaine: x.domain, description: x.description }));
+  const core = {
     classe: s.cls,
     numero: s.n,
     date: s.iso,
     trimestre: s.tri,
     titre: titleOf(s),
-    reference: s.blk ? { titre: s.blk.t, domaine: s.blk.d, supports: s.blk.o, type: s.blk.k, detail: s.blk.det } : null,
-    preparation: o.preparation || '',
+    reference: s.blk ? { titre: s.blk.t, domaine: s.blk.d, supports: s.blk.o, type: s.blk.k, detail: s.blk.det } : null
+  };
+  const progress = {
     contenu_reellement_declare: o.contenu || '',
     travail_maison: o.devoirs || '',
     observations: o.obs || '',
     statut: o.done === true ? 'assurée' : o.done === false ? 'reportée' : 'non confirmé',
     notions
   };
+  if (purpose === 'fiche') return core;
+  if (purpose === 'cahier') return { ...core, ...progress };
+  if (purpose === 'repartition') return { ...core, preparation: o.preparation || '', ...progress };
+  return { ...core, preparation: o.preparation || '', ...progress };
+}
+const CONTEXT_STOP_WORDS = new Set(['afin', 'ainsi', 'avec', 'avoir', 'ceci', 'cela', 'cette', 'dans', 'depuis', 'des', 'donc', 'elle', 'elles', 'entre', 'etre', 'faire', 'leur', 'leurs', 'mais', 'moins', 'nous', 'pour', 'plus', 'quand', 'sans', 'selon', 'serait', 'sont', 'sous', 'tous', 'tout', 'une', 'vous', 'votre', 'vos', 'classe', 'cours', 'document', 'eleve', 'eleves', 'exercice', 'exercices', 'fiche', 'seance', 'sti']);
+function contextTerms(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('fr')
+    .split(/[^\p{L}\p{N}_$]+/u).filter(word => word.length > 2 && !CONTEXT_STOP_WORDS.has(word));
+}
+function contextTermMatches(left, right) {
+  return left === right || (left.length >= 4 && right.startsWith(left)) || (right.length >= 4 && left.startsWith(right));
 }
 function relatedNotions(topic) {
-  const words = String(topic || '').toLocaleLowerCase('fr').split(/[^\p{L}\p{N}_$]+/u).filter(x => x.length > 2);
+  const terms = [...new Set(contextTerms(topic))];
   const items = asArray(root.STI_DATA?.livresSTI?.[classe]?.items);
-  if (!words.length) return [];
-  return items.filter(x => {
-    const haystack = `${x.label} ${x.description} ${x.domain}`.toLocaleLowerCase('fr');
-    return words.some(w => haystack.includes(w));
-  }).slice(0, 12).map(x => ({ notion: x.label, domaine: x.domain, description: x.description }));
+  if (!terms.length) return [];
+  return items.map((item, index) => {
+    const search = new Set(contextTerms(`${item.label || ''} ${item.description || ''} ${item.domain || ''} ${item.detail || ''} ${item.kind || ''}`));
+    const score = terms.filter(term => [...search].some(candidate => contextTermMatches(term, candidate))).length;
+    return { item, index, score };
+  }).filter(candidate => candidate.score > 0).sort((a, b) => b.score - a.score || a.index - b.index).slice(0, 5)
+    .map(({ item }) => ({ notion: item.label, domaine: item.domain, description: item.description }));
 }
-function programmeContext() {
-  return asArray(root.STI_DATA?.competences?.[classe]).map(x => ({ code: x.code, titre: x.t, domaine: x.domaine, attendus: x.attendu })).slice(0, 12);
+function relatedCompetences(topic, limit = 4) {
+  const terms = [...new Set(contextTerms(topic))];
+  const items = asArray(root.STI_DATA?.competences?.[classe]);
+  if (!terms.length) return [];
+  return items.map((item, index) => {
+    const search = new Set(contextTerms([item.code, item.t, item.domaine, item.sous, item.atelier, ...asArray(item.attendu)].filter(Boolean).join(' ')));
+    const score = terms.filter(term => [...search].some(candidate => contextTermMatches(term, candidate))).length;
+    const payload = { code: String(item.code || ''), competence: String(item.t || 'Compétence'), domaine: String(item.domaine || ''), attendus: asArray(item.attendu).map(String) };
+    return { payload, index, score };
+  }).filter(candidate => candidate.score > 0).sort((a, b) => b.score - a.score || a.index - b.index).slice(0, Math.max(0, limit)).map(candidate => candidate.payload);
+}
+function sessionTopic(session) {
+  if (!session) return '';
+  return [titleOf(session), session.blk?.d, session.blk?.t, session.blk?.o, session.blk?.det].filter(Boolean).join(' ');
 }
 function curriculumCatalog(kind) {
   if (kind === 'notions') {
@@ -336,12 +363,15 @@ function documentIdentityHtml(meta) {
   const identity = documentIdentity(meta);
   return `<div class="agent-doc-identity" aria-label="Identification du document"><div><span>Lycée</span><strong>${esc(identity.school)}</strong></div><div><span>Enseignant</span><strong>${esc(identity.teacher)}</strong></div><div><span>Classe</span><strong>${esc(identity.classe)}</strong></div></div>`;
 }
-function commonContext() {
+function commonContext(task = tool) {
+  const context = { agent: 'Agent Vie Scolaire AI' };
+  if (task === 'document') return context;
+  const schoolYear = String(root.STI_DATA?.reference?.SCHOOL?.annee || root.SCHOOL?.annee || '2026 - 2027').replace(/\s+/g, '');
   return {
-    agent: 'Agent Vie Scolaire AI',
+    ...context,
     matiere: 'Sciences et technologies de l’informatique (STI)',
     programme: 'Programme tunisien — enseignement secondaire',
-    annee_scolaire: '2026-2027',
+    annee_scolaire: schoolYear,
     classe,
     date_du_jour: today()
   };
@@ -378,7 +408,7 @@ function assignmentTypeOptions(value) {
   return ['théorique', 'pratique'].map(x => `<option value="${x}" ${value === x ? 'selected' : ''}>${x === 'pratique' ? 'Pratique' : 'Théorique'}</option>`).join('');
 }
 function generateButton(label = 'Générer avec mon agent') {
-  return `<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
+  return `${contextReviewHtml()}<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
 }
 function formHtml() {
   const f = forms[tool];
@@ -461,7 +491,7 @@ function formHtml() {
       <label class="agent-field full agent-upload"><span>${practical ? 'Captures du code, du rendu ou des tests' : 'Photos de la copie'} · ${attachments.length}/${MAX_IMAGES}</span><input id="agent-copy-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPEG, PNG ou WebP. Les images sont réduites dans le navigateur avant l’envoi. 6 images maximum par analyse.</small></label>
       ${attachments.length ? `<div class="agent-attachments full">${attachments.map((a, i) => `<span>${esc(a.name)}<button type="button" data-agent-remove="${i}" aria-label="Retirer ${esc(a.name)}">×</button></span>`).join('')}</div>` : ''}
       <label class="agent-field full"><span>Règles d’appréciation <em>facultatif</em></span><input data-agent-field="consignes" value="${esc(f.consignes)}" placeholder="Ex. : valoriser la démarche, ne pas pénaliser deux fois la même erreur"></label>
-    </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${transcriptionReview ? '<div class="agent-form-footer"><span>La transcription est prête. Relisez-la et poursuivez depuis l’avertissement ci-dessous.</span></div>' : generateButton(rubricFirst ? 'Proposer d’abord le barème' : handwritingFirst ? 'Transcrire avant correction' : 'Analyser et proposer une correction')}`;
+    </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${transcriptionReview ? contextReviewHtml() + '<div class="agent-form-footer"><span>La transcription est prête. Relisez-la et poursuivez depuis l’avertissement ci-dessous.</span></div>' : generateButton(rubricFirst ? 'Proposer d’abord le barème' : handwritingFirst ? 'Transcrire avant correction' : 'Analyser et proposer une correction')}`;
 }
 
 function resultHeader(title, subtitle, applyLabel = '', restoreLabel = '', statusLabel = 'PROPOSITION DE L’AGENT · À VÉRIFIER') {
@@ -661,24 +691,25 @@ function makeMeta() {
   if (tool === 'document') return { ...base, titre: forms.document.titre.trim(), type_document: forms.document.type_document, document_replacement_id: forms.document.remplacement_id || '' };
   return base;
 }
-function buildPayload(meta) {
+function buildPayload() {
   const f = forms[tool];
-  const contextMeta = { ...meta };
-  if (tool === 'document') delete contextMeta.document_replacement_id;
-  const base = { context: { ...commonContext(), ...contextMeta }, input: {} };
+  const base = { context: { ...commonContext(tool), task: tool }, input: {} };
   if (tool === 'fiche') {
     const notionsSelectionnees = curriculumSelection('notions', f.notions);
     const competencesSelectionnees = curriculumSelection('competences', f.competences);
     const selectedSession = findSession(f.session);
-    const seance = sessionData(selectedSession);
+    const seance = sessionData(selectedSession, 'fiche');
     const existingPreparation = selectedSession ? String(record(selectedSession).preparation || '') : '';
+    const competencesSuggerees = competencesSelectionnees.length
+      ? []
+      : relatedCompetences([sessionTopic(selectedSession), f.objectif, f.consignes, ...notionsSelectionnees.map(item => `${item.notion} ${item.description}`)].join(' '));
     base.input = {
       seance, methode: f.methode, objectif_prioritaire: f.objectif, consignes: f.consignes,
       mode_document: f.remplacer && existingPreparation.trim() ? 'remplacement' : 'nouveau',
       document_a_remplacer: f.remplacer ? existingPreparation : '',
       notions_selectionnees: notionsSelectionnees,
       competences_selectionnees: competencesSelectionnees,
-      competences: competencesSelectionnees.length ? competencesSelectionnees : programmeContext()
+      competences: competencesSuggerees
     };
   } else if (tool === 'exercices') {
     const notionsSelectionnees = curriculumSelection('notions', f.notions);
@@ -696,17 +727,17 @@ function buildPayload(meta) {
       ...parametresExercices,
       mode_document: replacementDocument ? 'remplacement' : 'nouveau',
       document_a_remplacer: replacementDocument,
-      notions_du_referentiel: notionsSelectionnees.length ? notionsSelectionnees : relatedNotions(f.sujet),
+      notions_du_referentiel: notionsSelectionnees.length ? [] : relatedNotions(f.sujet),
       notions_selectionnees: notionsSelectionnees,
       competences_selectionnees: competencesSelectionnees,
-      competences: competencesSelectionnees.length ? competencesSelectionnees : programmeContext()
+      competences: competencesSelectionnees.length ? [] : relatedCompetences(`${f.sujet} ${f.contraintes}`)
     };
   } else if (tool === 'cahier') {
     const selectedSession = findSession(f.session);
     const existingRecord = selectedSession ? record(selectedSession) : {};
     const existingEntry = String(existingRecord.contenu || '');
     base.input = {
-      seance: sessionData(selectedSession),
+      seance: sessionData(selectedSession, 'cahier'),
       mode_document: f.remplacer && existingEntry.trim() ? 'remplacement' : 'nouveau',
       document_a_remplacer: f.remplacer ? { contenu: existingEntry, travail_maison: existingRecord.devoirs || '', observations: existingRecord.obs || '' } : '',
       realise_precise_par_enseignant: f.realise,
@@ -716,7 +747,7 @@ function buildPayload(meta) {
   } else if (tool === 'repartition') {
     base.input = {
       trimestre: Number(f.trimestre), consignes: f.consignes,
-      seances: sessions().filter(s => s.tri === Number(f.trimestre)).map(sessionData),
+      seances: sessions().filter(s => s.tri === Number(f.trimestre)).map(s => sessionData(s, 'repartition')),
       calendrier: { vacances: root.VACANCES || [], fin_annee: root.SCHOOL?.finAnnee }
     };
   } else if (tool === 'document') {
@@ -729,8 +760,9 @@ function buildPayload(meta) {
     };
   } else {
     const uncertain = asArray(transcriptionReview?.transcription_incertaine);
+    const { identifiant: _identifiantLocal, ...correctionInput } = f;
     base.input = {
-      ...f,
+      ...correctionInput,
       fichiers_code: f.type_devoir === 'pratique' ? codeFiles : [],
       note_maximale: Number(f.sur) || 20,
       transcription_incertaine: uncertain,
@@ -744,7 +776,7 @@ function buildPayload(meta) {
 function buildTranscriptionPayload() {
   const f = forms.correction;
   return {
-    context: { ...commonContext(), classe, type_devoir: f.type_devoir, task: 'transcription' },
+    context: { ...commonContext('transcription'), task: 'transcription' },
     input: {
       type_devoir: f.type_devoir,
       sujet: f.sujet,
@@ -753,12 +785,143 @@ function buildTranscriptionPayload() {
     }
   };
 }
-function buildRubricPayload(meta) {
+function buildRubricPayload() {
   const f = forms.correction;
   return {
-    context: { ...commonContext(), ...meta, task: 'bareme' },
+    context: { ...commonContext('bareme'), task: 'bareme' },
     input: { type_devoir: f.type_devoir, sujet: f.sujet, note_maximale: Number(f.sur) || 20, consignes: f.consignes }
   };
+}
+function buildRequestSpec() {
+  const rubricFirst = tool === 'correction' && forms.correction.mode_bareme === 'proposer' && !forms.correction.bareme.trim();
+  const handwritingFirst = tool === 'correction' && shouldTranscribeHandwriting(forms.correction, attachments.length) && !transcriptionReview;
+  const task = rubricFirst ? 'bareme' : handwritingFirst ? 'transcription' : tool;
+  const meta = makeMeta();
+  const payload = rubricFirst ? buildRubricPayload() : handwritingFirst ? buildTranscriptionPayload() : buildPayload();
+  const requestAttachments = task === 'transcription' || (task === 'correction' && !transcriptionReview) ? attachments.map(item => ({ ...item })) : [];
+  return { task, meta, payload, attachments: requestAttachments };
+}
+function requestTaskLabel(task) {
+  if (task === 'transcription') return 'Transcription préalable';
+  if (task === 'bareme') return 'Proposition de barème';
+  return TASKS[task]?.label || 'Demande pédagogique';
+}
+function collectText(value) {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectText);
+  if (value && typeof value === 'object') return Object.values(value).flatMap(collectText);
+  return [];
+}
+function containsPossiblePersonalIdentifier(value) {
+  const text = collectText(value).join('\n');
+  return [
+    /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i,
+    /(?:\+216[\s().-]*)?[2459](?:[\s().-]*\d){7}\b/,
+    /\b(?:CIN|matricule)\s*[:#-]?\s*\d{6,12}\b/iu,
+    /\b(?:nom(?:\s+complet)?|pr[eé]nom|t[eé]l[eé]phone|courriel|e[- ]?mail|adresse\s+personnelle)\s*[:=]\s*[\p{L}\p{N}]/iu
+  ].some(pattern => pattern.test(text));
+}
+function addContextWarning(warnings, message) {
+  if (message && !warnings.includes(message)) warnings.push(message);
+}
+function contextWarnings(request) {
+  const warnings = [];
+  const task = request?.task || '';
+  const input = request?.payload?.input || {};
+  const sessionsInPayload = Array.isArray(input.seances) ? input.seances : input.seance ? [input.seance] : [];
+  const classMismatches = [], reportedWithContent = [], assuredWithoutContent = [];
+  for (const session of sessionsInPayload) {
+    if (request.payload?.context?.classe && session?.classe && String(request.payload.context.classe) !== String(session.classe)) classMismatches.push(String(session.classe));
+    const declaredContent = [
+      session?.contenu_reellement_declare,
+      input.realise_precise_par_enseignant,
+      typeof input.document_a_remplacer === 'string' ? input.document_a_remplacer : input.document_a_remplacer?.contenu
+    ].map(value => String(value || '').trim()).filter(Boolean).join('\n');
+    if (session?.statut === 'reportée' && declaredContent) reportedWithContent.push(`S${session.numero || '?'}`);
+    if (task === 'repartition' && session?.statut === 'assurée' && !String(session?.contenu_reellement_declare || '').trim()) assuredWithoutContent.push(`S${session.numero || '?'}`);
+  }
+  if (classMismatches.length) addContextWarning(warnings, `La classe du contexte (${request.payload.context.classe}) ne correspond pas à celle des séances ${[...new Set(classMismatches)].join(', ')}. Vérifiez la classe de travail.`);
+  if (reportedWithContent.length) addContextWarning(warnings, `${reportedWithContent.join(', ')} ${reportedWithContent.length > 1 ? 'sont marquées' : 'est marquée'} « reportée », mais un contenu réalisé est fourni. Vérifiez ces informations avant l’envoi.`);
+  if (assuredWithoutContent.length) addContextWarning(warnings, `${assuredWithoutContent.join(', ')} ${assuredWithoutContent.length > 1 ? 'sont marquées' : 'est marquée'} « assurée » sans compte rendu réel. L’agent ne peut pas reconstituer ce qui s’y est passé.`);
+  if (task === 'fiche') {
+    if (!String(input.objectif_prioritaire || '').trim()) addContextWarning(warnings, 'Aucun objectif prioritaire n’est saisi. Vérifiez que le titre de la séance et les informations choisies suffisent à cadrer la fiche.');
+    const hasManualNotions = asArray(input.notions_selectionnees).length > 0;
+    const hasManualCompetences = asArray(input.competences_selectionnees).length > 0;
+    const suggestedCompetences = asArray(input.competences);
+    if (!hasManualCompetences && suggestedCompetences.length) addContextWarning(warnings, `${suggestedCompetences.length} compétence(s) sont suggérées automatiquement à partir de la séance : vérifiez leur pertinence dans l’aperçu.`);
+    else if (!hasManualNotions && !hasManualCompetences && !suggestedCompetences.length) addContextWarning(warnings, 'Aucune notion ou compétence n’a été ciblée. Ajoutez-en une si le titre de la séance ne suffit pas.');
+  }
+  if (task === 'exercices') {
+    const hasManualNotions = asArray(input.notions_selectionnees).length > 0;
+    const suggestedNotions = asArray(input.notions_du_referentiel);
+    const hasManualCompetences = asArray(input.competences_selectionnees).length > 0;
+    const suggestedCompetences = asArray(input.competences);
+    if (!hasManualNotions && suggestedNotions.length) addContextWarning(warnings, `${suggestedNotions.length} notion(s) du référentiel sont suggérées par correspondance lexicale : vérifiez leur pertinence dans l’aperçu.`);
+    else if (!hasManualNotions && !suggestedNotions.length) addContextWarning(warnings, 'Aucune notion du référentiel n’a été rapprochée du sujet. Vérifiez le thème ou choisissez une notion manuellement.');
+    if (!hasManualCompetences && suggestedCompetences.length) addContextWarning(warnings, `${suggestedCompetences.length} compétence(s) sont suggérées automatiquement : vérifiez qu’elles correspondent bien au sujet.`);
+    else if (!hasManualCompetences && !suggestedCompetences.length) addContextWarning(warnings, 'Aucune compétence n’a été sélectionnée ou rapprochée du sujet. Vous pouvez en choisir une si nécessaire.');
+  }
+  if (task === 'cahier' && !String(input.travail_donne_precise || input.document_a_remplacer?.travail_maison || '').trim()) {
+    addContextWarning(warnings, 'Aucun travail maison n’est renseigné. L’agent ne doit pas en inventer et indiquera « Non renseigné ».');
+  }
+  if (task === 'correction') {
+    addContextWarning(warnings, 'Confidentialité : utilisez un identifiant anonyme et vérifiez que le texte ou les fichiers ne révèlent pas l’identité de l’élève.');
+  }
+  if (asArray(request?.attachments).length) {
+    addContextWarning(warnings, 'Vérifiez chaque photo/capture : les noms, visages ou identifiants visibles ne sont pas masqués automatiquement.');
+  }
+  if (containsPossiblePersonalIdentifier(input)) {
+    addContextWarning(warnings, 'Un courriel, téléphone, CIN ou champ nominatif possible a été repéré dans les données. Vérifiez et anonymisez le texte avant l’envoi.');
+  }
+  if (task === 'document' && String(input.document_a_remplacer || '').length > 40000) {
+    addContextWarning(warnings, 'Le texte source est long. Vérifiez qu’il contient uniquement les passages utiles à la révision.');
+  }
+  return warnings;
+}
+function requestAttachmentHtml(request) {
+  const images = asArray(request.attachments);
+  if (!images.length) return '<p class="agent-context-attachments-empty">Aucune image jointe pour cette étape.</p>';
+  return `<div class="agent-context-attachments"><strong>${images.length} image(s) transmises séparément à Gemini</strong><ul>${images.map(image => `<li>${esc(image.name || 'Image')} · ${esc(image.mime || 'image')}</li>`).join('')}</ul><small>Le contenu de l’image est envoyé; son nom de fichier n’est pas inclus dans le texte donné au modèle.</small></div>`;
+}
+function contextWarningsHtml(warnings) {
+  if (!warnings.length) return '<p class="agent-context-ok">Aucun manque ou conflit simple repéré. Vérifiez tout de même les données ci-dessous.</p>';
+  return `<ul class="agent-context-warnings" role="note">${warnings.map(warning => `<li>${esc(warning)}</li>`).join('')}</ul>`;
+}
+function contextDisclosureText(request) {
+  const images = asArray(request.attachments).length
+    ? `${request.attachments.length} image(s) seront transmises séparément à cette étape; leurs données binaires ne figurent pas dans l’aperçu JSON.`
+    : 'Aucune image n’est jointe à cette étape.';
+  return `Le nom du professeur et le lycée de son profil ne sont pas ajoutés automatiquement. S’ils figurent dans les champs ou images transmis, ils partiront avec ce contenu. ${images}`;
+}
+function contextReviewHtml() {
+  const request = buildRequestSpec();
+  const warnings = contextWarnings(request);
+  const preview = { task: request.task, context: request.payload.context, input: request.payload.input };
+  return `<section class="agent-context-review agent-no-print" data-agent-context-review aria-label="Aperçu des données transmises">
+    <div class="agent-context-review-heading"><div><span>AVANT L’ENVOI</span><strong>Données de la demande</strong></div><small data-agent-context-task>${esc(requestTaskLabel(request.task))}</small></div>
+    <div data-agent-context-warnings aria-live="polite">${contextWarningsHtml(warnings)}</div>
+    <p class="agent-context-disclosure" data-agent-context-disclosure>${esc(contextDisclosureText(request))}</p>
+    <details class="agent-context-review-details"><summary>Afficher les champs exacts de la demande</summary><pre data-agent-context-json>${esc(JSON.stringify(preview, null, 2))}</pre><div data-agent-context-attachments>${requestAttachmentHtml(request)}</div></details>
+  </section>`;
+}
+function refreshContextReview() {
+  const zone = el('v-agent');
+  const review = zone?.querySelector?.('[data-agent-context-review]');
+  if (!review) return;
+  try {
+    const request = buildRequestSpec();
+    const preview = { task: request.task, context: request.payload.context, input: request.payload.input };
+    const warnings = review.querySelector('[data-agent-context-warnings]');
+    const taskLabel = review.querySelector('[data-agent-context-task]');
+    const disclosure = review.querySelector('[data-agent-context-disclosure]');
+    const json = review.querySelector('[data-agent-context-json]');
+    const attachmentList = review.querySelector('[data-agent-context-attachments]');
+    if (warnings) warnings.innerHTML = contextWarningsHtml(contextWarnings(request));
+    if (taskLabel) taskLabel.textContent = requestTaskLabel(request.task);
+    if (disclosure) disclosure.textContent = contextDisclosureText(request);
+    if (json) json.textContent = JSON.stringify(preview, null, 2);
+    if (attachmentList) attachmentList.innerHTML = requestAttachmentHtml(request);
+  } catch (_) { /* keep the form usable if an optional preview cannot be refreshed */ }
 }
 function rubricToText(r) {
   const lines = [`Barème proposé — ${r.type_devoir || forms.correction.type_devoir} — total : ${r.total ?? forms.correction.sur} points`];
@@ -769,7 +932,7 @@ function rubricToText(r) {
   if (asArray(r.regles).length) lines.push('', 'Règles :', ...asArray(r.regles).map(x => `• ${x}`));
   return lines.join('\n');
 }
-async function callAgent(task, payload = {}) {
+async function callAgent(task, payload = {}, requestAttachments = []) {
   if (!root.cloudReady || !root.cloudReady()) throw new Error('La connexion Supabase n’est pas configurée. Ouvrez les réglages Cloud de votre plateforme.');
   const token = await root.authToken();
   if (!token) {
@@ -783,7 +946,7 @@ async function callAgent(task, payload = {}) {
     const response = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/assistant-ia`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: cfg.key, Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ task, ...payload, attachments: (task === 'transcription' || (task === 'correction' && !transcriptionReview)) ? attachments : [] }),
+      body: JSON.stringify({ task, ...payload, attachments: requestAttachments }),
       signal: controller.signal
     });
     const data = await response.json().catch(() => ({}));
@@ -815,22 +978,20 @@ async function generate() {
   error = validate();
   notice = '';
   if (error) { draw(); return; }
-  const rubricFirst = tool === 'correction' && forms.correction.mode_bareme === 'proposer' && !forms.correction.bareme.trim();
-  const handwritingFirst = tool === 'correction' && shouldTranscribeHandwriting(forms.correction, attachments.length) && !transcriptionReview;
-  const task = rubricFirst ? 'bareme' : handwritingFirst ? 'transcription' : tool;
-  const meta = makeMeta();
+  const request = buildRequestSpec();
+  const { task, meta, payload } = request;
+  const rubricFirst = task === 'bareme';
   const documentTarget = tool === 'document' && meta.document_replacement_id
     ? currentHistory().find(item => item.id === meta.document_replacement_id && item.task === 'document' && item.classe === meta.classe)
     : null;
   const documentTargetContent = documentTarget ? String(currentDocumentVersion(documentTarget)?.result?.contenu || '') : '';
-  const payload = rubricFirst ? buildRubricPayload(meta) : handwritingFirst ? buildTranscriptionPayload() : buildPayload(meta);
   const requestOwner = activeTeacherKey();
   const requestToken = generationToken;
   busy = true;
   results[tool] = null;
   draw();
   try {
-    const data = await callAgent(task, payload);
+    const data = await callAgent(task, payload, request.attachments);
     if (requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
     if (task === 'document' && meta.document_replacement_id) {
       const latestTarget = currentHistory().find(item => item.id === meta.document_replacement_id && item.task === 'document' && item.classe === meta.classe);
@@ -1264,6 +1425,7 @@ document.addEventListener('input', e => {
     const proceed = document.querySelector('[data-agent-transcription-proceed]');
     if (proceed && hasUncertainTranscription(transcriptionReview)) proceed.disabled = true;
   }
+  refreshContextReview();
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'agent-document-file') { readDocumentFile(e.target.files); return; }
@@ -1276,6 +1438,7 @@ document.addEventListener('change', e => {
     forms[tool][kind] = [...selected];
     const count = document.querySelector(`[data-agent-selection-count="${kind}"]`);
     if (count) count.textContent = selectedCountLabel(selected.size);
+    refreshContextReview();
     return;
   }
   if (e.target.matches('[data-agent-class]')) {
@@ -1294,6 +1457,7 @@ document.addEventListener('change', e => {
     transcriptionAcknowledged = e.target.checked;
     const proceed = document.querySelector('[data-agent-transcription-proceed]');
     if (proceed) proceed.disabled = hasUncertainTranscription(transcriptionReview) && !transcriptionAcknowledged;
+    refreshContextReview();
     return;
   }
   const field = e.target.closest('[data-agent-field]');
@@ -1372,17 +1536,17 @@ root.STI_AGENT = {
     draw();
   },
   _test: {
-    ficheText, relatedNotions, curriculumCatalog, curriculumSelection, validate,
+    ficheText, relatedNotions, relatedCompetences, sessionData, curriculumCatalog, curriculumSelection, validate,
     shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings,
-    documentIdentity, documentIdentityHtml, rubricToText,
+    documentIdentity, documentIdentityHtml, rubricToText, buildRequestSpec, contextWarnings, containsPossiblePersonalIdentifier, contextDisclosureText, contextReviewHtml,
     currentHistory, activeTeacherKey, saveCurrentHistory,
     documentVersions, currentDocumentVersion, currentDocumentVersionIndex, newDocumentHistoryEntry, appendDocumentHistoryVersion, restoreDocumentHistoryVersion,
     applyResult, restoreDocumentVersion, readDocumentFile,
     setResult: (task, result, meta) => { results[task] = result; resultMeta[task] = meta; tool = task; },
     renderers: { fiche: renderFiche, exercices: renderExercices, cahier: renderCahier, repartition: renderRepartition, document: renderDocument, correction: renderCorrection },
     formFor: task => { const previous = tool; tool = task; try { return formHtml(); } finally { tool = previous; } },
-    buildPayloadFor: task => { const previous = tool; tool = task; try { return buildPayload(makeMeta()); } finally { tool = previous; } },
-    buildPayload: () => buildPayload(makeMeta()), buildTranscriptionPayload
+    buildPayloadFor: task => { const previous = tool; tool = task; try { return buildPayload(); } finally { tool = previous; } },
+    buildPayload: () => buildPayload(), buildTranscriptionPayload
   }
 };
 })(window);
