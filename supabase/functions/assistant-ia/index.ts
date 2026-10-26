@@ -13,6 +13,21 @@ const TASKS = new Set(["fiche", "exercices", "correction", "transcription", "bar
 const MAX_BODY = 12 * 1024 * 1024;
 const MAX_IMAGES = 6;
 const MAX_DOCUMENT_CHARS = 80_000;
+const GEMINI_MAX_ATTEMPTS = 2;
+const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
+const MAX_RETRY_AFTER_MS = 5_000;
+
+function geminiRetryDelayMs(response: Response): number | null {
+  const retryAfter = response.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    const requestedDelay = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - Date.now();
+    if (Number.isFinite(requestedDelay) && requestedDelay >= 0) {
+      return requestedDelay <= MAX_RETRY_AFTER_MS ? requestedDelay : null;
+    }
+  }
+  return 1_800;
+}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -535,28 +550,41 @@ Deno.serve(async request => {
 
   try {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
-    const geminiResponse = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        contents: [{ role: "user", parts: userParts }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
-          maxOutputTokens: Math.max(1000, Math.min(12000, maxOutputTokens)),
-        },
-      }),
-      signal: controller.signal,
+    const requestBody = JSON.stringify({
+      systemInstruction: { parts: [{ text: systemInstruction }] },
+      contents: [{ role: "user", parts: userParts }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
+        maxOutputTokens: Math.max(1000, Math.min(12000, maxOutputTokens)),
+      },
     });
+    let geminiResponse: Response | null = null;
+    let raw = "";
+    let geminiAttempts = 0;
+    for (let attempt = 0; attempt < GEMINI_MAX_ATTEMPTS; attempt++) {
+      geminiAttempts = attempt + 1;
+      geminiResponse = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: requestBody,
+        signal: controller.signal,
+      });
+      raw = await geminiResponse.text();
+      if (geminiResponse.ok || !RETRYABLE_GEMINI_STATUSES.has(geminiResponse.status) || attempt + 1 >= GEMINI_MAX_ATTEMPTS) break;
+      const retryDelay = geminiRetryDelayMs(geminiResponse);
+      if (retryDelay === null) break;
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
 
-    const raw = await geminiResponse.text();
+    if (!geminiResponse) return json({ error: "Gemini n'a fourni aucune réponse." }, 502);
     if (!geminiResponse.ok) {
       let message = `Gemini a répondu avec le code ${geminiResponse.status}.`;
       try {
         const parsed = JSON.parse(raw);
         message += ` ${cleanText(parsed?.error?.message || parsed?.message, 500)}`;
       } catch (_) { /* ne pas renvoyer une page HTML complète */ }
+      if (geminiAttempts > 1) message += " Une nouvelle tentative automatique n’a pas abouti; réessayez dans quelques instants.";
       return json({ error: message.trim() }, 502);
     }
 
