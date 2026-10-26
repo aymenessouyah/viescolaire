@@ -19,15 +19,18 @@ test('la politique décrit les traitements locaux, Supabase, Google Drive et IA'
   assert.match(policy, /stockage du navigateur/);
   assert.match(policy, /Supabase/);
   assert.match(policy, /drive\.file/);
-  assert.match(policy, /API Google Gemini configurée pour l’Agent Vie Scolaire AI/);
+  assert.match(policy, /API DeepSeek/);
+  assert.match(policy, /le fournisseur effectivement utilisé dépend de la version distante déployée/);
   assert.match(policy, /nom complet du professeur et le nom du lycée sont ajoutés localement/);
-  assert.match(policy, /ne sont pas envoyés à Gemini pour cet en-tête/);
+  assert.match(policy, /ne sont pas envoyés à DeepSeek pour cet en-tête/);
   assert.match(policy, /profil du professeur et de l’établissement n’est pas ajouté automatiquement/);
   assert.match(policy, /aperçu des champs transmis, la liste des images jointes/);
   assert.match(policy, /cette détection n’est pas exhaustive/);
   assert.match(policy, /un compte ne voit que son propre historique/);
   assert.match(policy, /anciennes entrées sans identité de compte sont masquées/);
-  assert.match(policy, /Conditions d’utilisation de l’API Gemini/);
+  assert.match(policy, /Conditions de la plateforme API DeepSeek/);
+  assert.match(policy, /données personnelles d’enfants/);
+  assert.match(policy, /deepseek-open-platform-terms-of-service\.html/);
   assert.match(policy, /API Anthropic Claude de proposer trois brouillons de prompts génériques/);
   assert.match(policy, /Bibliothèque commune de prompts/);
   assert.match(policy, /ne transmet jamais le formulaire de demande, le sujet réel, le texte d’une copie, une image, un document/);
@@ -45,7 +48,7 @@ test('la politique expose les choix et limites essentiels de sauvegarde et de co
 
 test('la politique est incluse au cache hors ligne et les versions d’interface concordent', () => {
   assert.match(worker, /"\.\/politique-confidentialite\.html"/);
-  const expected = 'v1.24.0-gemini-deadline';
+  const expected = 'v1.25.0-deepseek';
   assert.ok(index.includes(expected));
   assert.ok(app.includes(expected));
   assert.ok(worker.includes('sti-espace-' + expected));

@@ -1,16 +1,16 @@
-// Gemini structured-output schemas and deterministic result checks.
+// DeepSeek JSON Schemas and provider-neutral deterministic result checks.
 // This module is deliberately free of Deno and provider calls so its rules can be
 // exercised locally in Node tests as well as in the Edge Function.
 
-const schemaString = { type: "STRING" };
-const schemaNumber = { type: "NUMBER" };
-const schemaInteger = { type: "INTEGER" };
-const schemaStringArray = { type: "ARRAY", items: schemaString };
-const schemaArray = items => ({ type: "ARRAY", items });
-const schemaObject = properties => ({ type: "OBJECT", properties, required: Object.keys(properties) });
-const schemaEnum = values => ({ type: "STRING", enum: values });
+const schemaString = { type: "string" };
+const schemaNumber = { type: "number" };
+const schemaInteger = { type: "integer" };
+const schemaStringArray = { type: "array", items: schemaString };
+const schemaArray = items => ({ type: "array", items });
+const schemaObject = properties => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
+const schemaEnum = values => ({ type: "string", enum: values });
 
-export const GEMINI_RESPONSE_SCHEMAS = {
+export const DEEPSEEK_RESPONSE_SCHEMAS = {
   fiche: schemaObject({
     titre: schemaString, objectifs: schemaStringArray, prerequis: schemaStringArray,
     deroulement: schemaArray(schemaObject({

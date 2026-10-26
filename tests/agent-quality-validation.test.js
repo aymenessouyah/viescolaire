@@ -21,16 +21,18 @@ const correctionResult = () => ({
   limites_analyse: []
 });
 
-test('Gemini reçoit un schéma structuré complet pour chacun des huit outils', async () => {
-  const { GEMINI_RESPONSE_SCHEMAS } = await qualityModule;
+test('DeepSeek reçoit un schéma structuré complet pour chacun des huit outils', async () => {
+  const { DEEPSEEK_RESPONSE_SCHEMAS } = await qualityModule;
   const expectedTasks = ['fiche', 'exercices', 'correction', 'transcription', 'bareme', 'cahier', 'repartition', 'document'];
-  assert.deepEqual(Object.keys(GEMINI_RESPONSE_SCHEMAS).sort(), expectedTasks.sort());
-  for (const schema of Object.values(GEMINI_RESPONSE_SCHEMAS)) {
-    assert.equal(schema.type, 'OBJECT');
-    assert.deepEqual(schema.required.sort(), Object.keys(schema.properties).sort());
+  assert.deepEqual(Object.keys(DEEPSEEK_RESPONSE_SCHEMAS).sort(), expectedTasks.sort());
+  for (const schema of Object.values(DEEPSEEK_RESPONSE_SCHEMAS)) {
+    assert.equal(schema.type, 'object');
+    assert.equal(schema.additionalProperties, false);
+    assert.deepEqual([...schema.required].sort(), Object.keys(schema.properties).sort());
   }
-  assert.ok(GEMINI_RESPONSE_SCHEMAS.repartition.properties.avertissements);
-  assert.match(edgeSource, /responseSchema: GEMINI_RESPONSE_SCHEMAS\[task\]/);
+  assert.ok(DEEPSEEK_RESPONSE_SCHEMAS.repartition.properties.avertissements);
+  assert.match(edgeSource, /buildDeepSeekRequestBody/);
+  assert.match(edgeSource, /https:\/\/api\.deepseek\.com\/responses/);
   assert.match(edgeSource, /contrôle silencieusement que les champs et types requis[\s\S]*sont présents/);
   assert.doesNotMatch(edgeSource, /api\.anthropic\.com/);
 });

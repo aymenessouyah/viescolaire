@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1080" role="img" aria-labelledby="title desc">
   <title id="title">Les quatre couches de l’Agent Vie Scolaire AI</title>
-  <desc id="desc">Schéma en français des couches Prompt, Context, Harness et Loop, avec Gemini au centre et une boucle de travail contrôlée par l’enseignant.</desc>
+  <desc id="desc">Schéma en français des couches Prompt, Context, Harness et Loop, avec DeepSeek au centre et une boucle de travail contrôlée par l’enseignant.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071326"/><stop offset="1" stop-color="#122442"/></linearGradient>
     <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20d5d7"/><stop offset="1" stop-color="#55a9ff"/></linearGradient>
@@ -29,7 +29,7 @@
   <rect x="70" y="52" width="42" height="42" rx="13" fill="url(#teal)"/>
   <path d="m91 59 3.5 9.5L104 72l-9.5 3.5L91 85l-3.5-9.5L78 72l9.5-3.5Z" fill="#efffff"/>
   <text class="title" x="130" y="78">Notre Agent Vie Scolaire AI</text>
-  <text class="subtitle" x="72" y="128">Les couches qui préparent, encadrent et vérifient une réponse Gemini</text>
+  <text class="subtitle" x="72" y="128">Les couches qui préparent, encadrent et vérifient une réponse DeepSeek</text>
   <rect x="1090" y="57" width="278" height="40" rx="20" fill="#182d4c" stroke="#355175"/>
   <circle cx="1112" cy="77" r="5" fill="#f7cd5b"/>
   <text x="1126" y="82" fill="#d9e5f6" font-size="12" font-weight="700">BOUCLE AVEC L’ENSEIGNANT</text>
@@ -53,7 +53,7 @@
   <text x="225" y="490" class="body">Classe · séance · demande · texte ou pièces choisies</text>
   <rect x="225" y="505" width="340" height="49" rx="12" fill="#102743" stroke="#3d6d9b"/>
   <text x="241" y="526" fill="#d7e8ff" font-size="12" font-weight="700">Identité professeur / lycée :</text>
-  <text x="241" y="543" fill="#8fc8ff" font-size="12">ajoutée localement, non envoyée à Gemini.</text>
+  <text x="241" y="543" fill="#8fc8ff" font-size="12">ajoutée localement, non envoyée à DeepSeek.</text>
 
   <rect x="263" y="575" width="264" height="156" rx="21" fill="#20d5d7" fill-opacity=".05" stroke="#20d5d7" stroke-width="2.5"/>
   <rect x="284" y="589" width="173" height="34" rx="17" fill="#123b4b" stroke="#20d5d7"/>
@@ -61,7 +61,7 @@
   <text x="286" y="645" class="small">Règles communes + consigne</text>
   <text x="286" y="663" class="small">propre à l’outil demandé.</text>
   <rect x="309" y="680" width="172" height="38" rx="12" fill="#102d49" stroke="#38d9dd" filter="url(#glow)"/>
-  <text x="395" y="705" fill="#efffff" font-size="17" font-weight="800" text-anchor="middle">GEMINI</text>
+  <text x="395" y="705" fill="#efffff" font-size="17" font-weight="800" text-anchor="middle">DEEPSEEK</text>
 
   <rect x="93" y="783" width="585" height="48" rx="13" fill="#171f32" stroke="#6c5b35"/>
   <text x="111" y="804" fill="#ffe58a" font-size="12" font-weight="750">Important :</text>
@@ -87,7 +87,7 @@
     <path d="M1066 440v19" stroke="#8da9d1" stroke-width="2" marker-end="url(#arrow)"/>
     <rect x="816" y="464" width="500" height="88" rx="16" fill="#142744" stroke="#8f75d6"/>
     <circle cx="845" cy="493" r="16" fill="#6249a0"/><text x="845" y="498" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">3</text>
-    <text class="stepTitle" x="874" y="493">Supabase encadre l’appel à Gemini</text>
+    <text class="stepTitle" x="874" y="493">Supabase encadre l’appel à DeepSeek</text>
     <text class="stepBody" x="874" y="518">Vérifie la session, les limites et le format attendu.</text>
 
     <path d="M1066 553v19" stroke="#8da9d1" stroke-width="2" marker-end="url(#arrow)"/>
@@ -113,5 +113,5 @@
   <rect x="70" y="895" width="1298" height="112" rx="20" fill="#0c1b30" stroke="#2b4262"/>
   <text x="99" y="932" fill="#f4f7ff" font-size="16" font-weight="800">La boucle actuelle est humaine, pas autonome.</text>
   <text x="99" y="961" fill="#b8c8df" font-size="14">Exemples multi-étapes : transcription → relecture → correction; barème proposé → ajustement → correction.</text>
-  <text x="99" y="985" fill="#8fa6c7" font-size="12">Le professeur garde le dernier mot; Gemini ne modifie pas directement les données ni les fichiers externes.</text>
+  <text x="99" y="985" fill="#8fa6c7" font-size="12">Le professeur garde le dernier mot; DeepSeek ne modifie pas directement les données ni les fichiers externes.</text>
 </svg>

@@ -60,7 +60,7 @@ test('tous les documents de l’agent portent le lycée, le nom complet de l’e
   }
 });
 
-test('l’identité destinée à l’en-tête est ajoutée côté navigateur, sans être transmise dans la demande Gemini', () => {
+test('l’identité destinée à l’en-tête est ajoutée côté navigateur, sans être transmise dans la demande DeepSeek', () => {
   const { agent } = loadAgent({ profile: { nom: 'Ada Lovelace', lycee: 'Lycée de Carthage' } });
   const identity = agent._test.documentIdentity({ classe: '3SI1' });
   assert.deepEqual(JSON.parse(JSON.stringify(identity)), {

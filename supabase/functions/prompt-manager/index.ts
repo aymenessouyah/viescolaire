@@ -1,4 +1,4 @@
-// Shared Gemini prompt library and Claude prompt-draft generator.
+// Shared DeepSeek prompt library and Claude prompt-draft generator.
 // Claude is called only for generic, task-level drafts. No teacher request,
 // student work, copy, image, profile, or document content is forwarded to Claude.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -131,7 +131,7 @@ async function generateGenericDrafts(task: string) {
     `Outil concerné : ${taskInfo.label}.`,
     `Objectif pédagogique général : ${taskInfo.genericGoal}.`,
     "Chaque prompt doit compléter les consignes de l’outil et ne doit pas inventer de contenu officiel, de données de classe ou de réponse d’élève.",
-    "Les futurs prompts seront appliqués par Gemini à des demandes qui ne te sont pas transmises.",
+    "Les futurs prompts seront appliqués par DeepSeek à des demandes qui ne te sont pas transmises.",
     "N’inclus aucun nom, identifiant, résultat, copie, photographie ni contenu provenant d’un professeur ou d’un élève.",
     "Renvoie exclusivement un objet JSON avec une propriété prompts contenant trois objets {title, description, prompt}.",
   ].join("\n");

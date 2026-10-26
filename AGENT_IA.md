@@ -1,8 +1,8 @@
 # Agent Vie Scolaire AI — installation et activation
 
-L’**Agent Vie Scolaire AI** est l’assistant pédagogique intégré à Vie Scolaire. Il s’ouvre dans une grande fenêtre de travail, récupère le contexte nécessaire, appelle Gemini par une fonction serveur et produit des documents que l’enseignant peut vérifier, remplacer, exporter ou appliquer.
+L’**Agent Vie Scolaire AI** est l’assistant pédagogique intégré à Vie Scolaire. Il s’ouvre dans une grande fenêtre de travail, récupère le contexte nécessaire, appelle DeepSeek par une fonction serveur et produit des documents que l’enseignant peut vérifier, remplacer, exporter ou appliquer.
 
-Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Classe**. Le nom du professeur et le lycée sont ajoutés dans le navigateur; ces champs d’en-tête ne sont pas envoyés à Gemini.
+Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Classe**. Le nom du professeur et le lycée sont ajoutés dans le navigateur; ces champs d’en-tête ne sont pas envoyés à DeepSeek.
 
 ## Outils inclus
 
@@ -12,7 +12,7 @@ Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Cla
 - **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; une entrée déjà remplie peut être remplacée après confirmation, sans confirmer automatiquement la séance.
 - **Répartition** : proposition séance par séance avec dates et numéros inchangés ; seules les séances futures peuvent recevoir la proposition.
 - **Autres documents** : texte collé ou import TXT, Markdown et HTML (PDF/DOCX non extraits). La source et la version complète proposée sont comparées côte à côte. Une confirmation explicite enregistre le résultat et la source dans l’historique local; chaque version précédente reste restaurable. L’agent ne modifie pas le fichier externe : exportez le résultat pour le remplacer vous-même.
-- **Prompts partagés** : l’administrateur peut demander trois brouillons génériques à Claude, les modifier, puis en approuver un ou plusieurs. Les professeurs connectés choisissent ensuite jusqu’à cinq prompts publiés pour les demandes Gemini correspondantes.
+- **Prompts partagés** : l’administrateur peut demander trois brouillons génériques à Claude, les modifier, puis en approuver un ou plusieurs. Les professeurs connectés choisissent ensuite jusqu’à cinq prompts publiés pour les demandes DeepSeek correspondantes.
 
 ## Architecture
 
@@ -20,16 +20,18 @@ Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Cla
 Professeur connecté
   → formulaire Agent Vie Scolaire AI (outil, classe, demande et pièces choisies)
   → Edge Function assistant-ia (Bearer + session Supabase Auth vérifiés)
-  → Google Gemini API `generateContent`
+  → DeepSeek Responses API `POST /responses`
   → JSON contrôlé, aperçu relu par l’enseignant
   → comparaison avant/après, confirmation, restauration locale, insertion, impression ou export
 ```
 
 ![Schéma du parcours de l’Agent Vie Scolaire AI](assets/agent-vie-scolaire-flux.svg)
 
+Ce schéma décrit le code DeepSeek préparé dans le dépôt; il ne signifie pas que la fonction distante a été mise à jour. La version Supabase déjà déployée reste inchangée jusqu’à un déploiement explicite. L’interface interroge le fournisseur distant avant chaque génération et bloque l’envoi si la fonction ne confirme pas DeepSeek.
+
 La clé de l’IA est un **secret Supabase**. Elle n’apparaît ni dans GitHub, ni dans le JavaScript, ni dans les réponses de la fonction. Le nom complet de l’enseignant et le lycée sont ajoutés à l’en-tête côté navigateur; ils ne sont pas transmis au modèle pour cette mise en forme.
 
-## Prompts partagés : Claude → validation → Gemini
+## Prompts partagés : Claude → validation → DeepSeek
 
 Le flux est volontairement séparé en deux fournisseurs :
 
@@ -39,42 +41,39 @@ Administrateur → prompt-manager côté serveur → Claude : outil + descriptio
 Administrateur relit/modifie et clique « Approuver et partager »
              → bibliothèque Supabase commune (prompts publiés uniquement)
 Professeur connecté choisit des prompts → assistant-ia vérifie leurs identifiants et leur statut
-             → Gemini reçoit la demande pédagogique et les consignes approuvées
+             → DeepSeek reçoit la demande pédagogique et les consignes approuvées
 ```
 
 - Claude n’est appelé que lorsque l’administrateur clique sur **Demander 3 brouillons génériques à Claude**. La fonction serveur construit une consigne fixe à partir de l’outil choisi, de son objectif général et du format JSON attendu. Elle ignore les autres champs de la requête : aucune demande, sujet réel, copie, image, document, donnée d’élève ou profil professeur ne lui est transmis.
-- Les propositions restent des brouillons privés jusqu’à l’action **Approuver et partager**. L’administrateur peut les modifier avant publication. Les professeurs peuvent sélectionner plusieurs prompts publiés (cinq au maximum) pour une tâche; l’Agent les vérifie à nouveau côté serveur et les ajoute uniquement aux consignes envoyées à Gemini.
-- Les appels Claude sont **payants** selon l’offre Anthropic. Claude ne participe jamais au traitement d’une demande pédagogique et ne peut pas résoudre une surcharge ou un code 503 Gemini.
+- Les propositions restent des brouillons privés jusqu’à l’action **Approuver et partager**. L’administrateur peut les modifier avant publication. Les professeurs peuvent sélectionner plusieurs prompts publiés (cinq au maximum) pour une tâche; l’Agent les vérifie à nouveau côté serveur et les ajoute uniquement aux consignes envoyées à DeepSeek.
+- Les appels Claude sont **payants** selon l’offre Anthropic. Claude ne participe jamais au traitement d’une demande pédagogique et ne peut pas résoudre une limite de quota DeepSeek.
 - La clé ne doit jamais être ajoutée au navigateur, au dépôt ou au chat. Dans Supabase → Edge Functions → Secrets, configurer `ANTHROPIC_API_KEY` et `ANTHROPIC_MODEL` (un identifiant de modèle disponible sur le compte Anthropic). Le modèle doit être configuré explicitement; il n’y a pas de valeur supposée par défaut.
 - La migration préparée `supabase/migrations/20261026_agent_prompt_library.sql` crée la table commune et ses règles RLS. **Elle n’a pas été appliquée** : demander une confirmation explicite avant toute exécution sur la base Supabase distante. Le fichier `supabase/schema.sql` inclut également cette structure pour une nouvelle base.
 - Après approbation de la migration et configuration des secrets, déployer `prompt-manager` et redéployer `assistant-ia`. `prompt-manager` garde sa vérification JWT par défaut et vérifie aussi la session et `ADMIN_EMAILS`; la configuration `verify_jwt = false` reste limitée à `assistant-ia`, qui conserve son contrôle interne `authenticatedUser()`.
 
-## 1. Choisir le modèle
+## 1. Configurer DeepSeek
 
-La fonction appelle directement l’API **Google Gemini `generateContent`**. Il faut un modèle Gemini qui prend en charge les images et le mode JSON : ces capacités sont nécessaires à la transcription manuscrite et aux documents structurés.
+Le code préparé de la fonction appelle l’API DeepSeek Responses (`POST https://api.deepseek.com/responses`) avec `deepseek-flash`; il ne sera actif sur Supabase qu’après déploiement explicite. Ce modèle est nécessaire aux tâches qui analysent des images. La requête utilise une sortie structurée JSON Schema et les contrôles locaux restent appliqués après la réponse. Chaque demande fait un seul appel de génération : l’auto-contrôle est inclus dans les consignes et les validations métier sont locales; aucun second appel de qualité ni aucune nouvelle tentative automatique ne sont faits.
 
 Réglages disponibles dans les secrets Supabase :
 
 | Secret | Rôle |
 |---|---|
-| `GEMINI_API_KEY` | Clé privée Gemini — obligatoire. Le projet Supabase actuel possède déjà ce secret. |
-| `GEMINI_MODEL` | Identifiant du modèle à utiliser — facultatif; par défaut `gemini-3.8-flash`. |
-| `GEMINI_MODELE` | Ancien nom accepté pour le réglage du modèle, afin de rester compatible avec `corriger-ia`. |
-| `GEMINI_MAX_OUTPUT_TOKENS` | Limite de réponse, de 1000 à 12000; facultatif. |
+| `DEEPSEEK_API_KEY` | Clé API privée DeepSeek — obligatoire. À ajouter dans Supabase → Edge Functions → Secrets. |
+| `DEEPSEEK_MODEL` | Identifiant du modèle — facultatif; valeur par défaut : `deepseek-flash`. |
+| `DEEPSEEK_MAX_OUTPUT_TOKENS` | Limite de sortie, de 1000 à 12000; facultatif. |
 
-Le modèle par défaut est `gemini-3.8-flash`. Si ce modèle n’est pas disponible sur votre compte, définissez `GEMINI_MODEL` avec un modèle Gemini prenant en charge les images et la sortie JSON :
+Créez la clé API dans la plateforme DeepSeek puis enregistrez-la directement dans les secrets du projet Supabase; ne la collez ni dans le dépôt, ni dans le navigateur, ni dans une conversation. Le modèle Flash prend en charge les images envoyées sous forme de données intégrées; les formats acceptés par l’application restent JPEG, PNG et WebP.
 
-```bash
-supabase secrets set GEMINI_MODEL="MODELE_GEMINI_DISPONIBLE"
-```
+Les anciens secrets d’un autre fournisseur ne sont pas utilisés par ce code. Le portage local ne configure pas le secret distant : l’agent restera « non configuré » tant que `DEEPSEEK_API_KEY` n’aura pas été ajouté dans Supabase.
 
-La clé API reste un secret côté serveur; ne la communiquez pas dans une conversation, un ticket ou un fichier du dépôt. Si `GEMINI_API_KEY` n’existe pas ou doit être renouvelée, ajoutez-la directement dans Supabase → Edge Functions → Secrets.
+Pour les copies d’élèves, anonymisez les textes et les images avant l’envoi et ne transmettez que les éléments indispensables. La politique publique de DeepSeek indique que ses services ne sont pas conçus pour traiter certaines données sensibles, notamment des données personnelles d’enfants. Vérifiez les règles de l’établissement et la base légale applicable avant d’activer le traitement de copies par l’API. Voir les [conditions de la plateforme API DeepSeek](https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html) et sa [politique de confidentialité](https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html).
 
-Pour éviter qu’une requête longue dépasse le délai du runtime Edge, la vérification de session et celle de la bibliothèque ont chacune une limite de 10 secondes; l’appel Gemini est borné à 90 secondes et le navigateur attend jusqu’à 120 secondes pour laisser le serveur renvoyer une erreur contrôlée. Si l’agent renvoie un délai dépassé, réessayez ou réduisez la longueur du document et le nombre d’images.
+Pour éviter qu’une requête longue dépasse le délai du runtime Edge, la vérification de session et celle de la bibliothèque ont chacune une limite de 10 secondes; l’appel DeepSeek est borné à 90 secondes et le navigateur attend jusqu’à 120 secondes pour laisser le serveur renvoyer une erreur contrôlée. Si l’agent renvoie un délai dépassé, réessayez ou réduisez la longueur du document et le nombre d’images.
 
 ## 2. Déployer la fonction
 
-Depuis la racine du projet, avec la CLI Supabase et un compte ayant accès au projet :
+Pour une future mise en production, uniquement après confirmation explicite du déploiement, depuis la racine du projet avec la CLI Supabase et un compte ayant accès au projet :
 
 ```bash
 supabase login
@@ -138,7 +137,7 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 - Les fichiers de code sont limités à huit fichiers de 200 Ko chacun ; ils sont lus localement et ne sont pas enregistrés dans l'historique.
 - Les corrections et les propositions de barème ne sont pas ajoutées à l'historique local des générations.
 - Les autres documents récents sont conservés dans l’historique du navigateur, associé au professeur connecté; seules ses entrées sont proposées. Les anciennes entrées sans identité de compte restent stockées mais sont masquées. Une série sélectionnée n’est remplacée qu’après relecture et confirmation; pour un document libre, la source et la proposition ne sont enregistrées qu’après confirmation. Les versions locales précédentes sont conservées et peuvent être restaurées; aucun fichier externe n’est modifié.
-- Pour les documents libres, le texte source est transmis à Gemini uniquement lorsque l’enseignant lance la révision. L’import est limité au texte TXT, Markdown et HTML; les PDF/DOCX binaires ne sont pas extraits. L’import ou l’édition du champ ne modifie pas le fichier choisi.
+- Pour les documents libres, le texte source est transmis à DeepSeek uniquement lorsque l’enseignant lance la révision. L’import est limité au texte TXT, Markdown et HTML; les PDF/DOCX binaires ne sont pas extraits. L’import ou l’édition du champ ne modifie pas le fichier choisi.
 - Le remplacement d’une fiche ou d’une entrée du cahier ouvre une confirmation dédiée; Annuler laisse les données existantes intactes. L’enregistrement final reste à la main du professeur.
 - Aucune correction n’est enregistrée dans les notes et aucune séance n’est marquée assurée sans action de l’enseignant.
 
@@ -147,10 +146,11 @@ Puis publier sur la branche utilisée par GitHub Pages. La version du service wo
 | Message | Vérification |
 |---|---|
 | `Connexion professeur requise` | Se reconnecter depuis le bouton Compte de la plateforme. |
-| `Agent non configuré` | Vérifier `GEMINI_API_KEY` dans Supabase → Edge Functions → Secrets. Vérifier aussi que `GEMINI_MODEL` est disponible sur le compte. |
-| Code 401 ou 403 de Gemini | Vérifier la clé, le compte et les autorisations du modèle. |
-| Le texte fonctionne mais pas les photos | Choisir un modèle Gemini vision et vérifier que les images sont transmises en `inlineData`. |
-| Réponse JSON incomplète | Réessayer, réduire la demande ou choisir un modèle Gemini prenant bien en charge le mode JSON. |
+| `Agent non configuré` | Vérifier `DEEPSEEK_API_KEY` dans Supabase → Edge Functions → Secrets et le modèle `DEEPSEEK_MODEL`. |
+| Code 401 ou 403 de DeepSeek | Vérifier la clé, le compte et les autorisations du modèle. |
+| Le texte fonctionne mais pas les photos | Vérifier que le modèle est `deepseek-flash` et que les images sont transmises comme `input_image` dans le message utilisateur. |
+| Code 429 | Vérifier le quota, les limites ou le solde de l’API DeepSeek. Les erreurs 429 ne sont pas relancées automatiquement. |
+| Réponse JSON incomplète | Réessayer, réduire la demande ou vérifier la réponse structurée JSON Schema. |
 | Délai dépassé | Réduire le nombre d'images ou de séances demandées, puis réessayer. |
 
 ## Limites volontaires

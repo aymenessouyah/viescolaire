@@ -1,4 +1,4 @@
--- Bibliothèque commune de prompts Gemini.
+-- Bibliothèque commune de prompts DeepSeek.
 -- À appliquer seulement après confirmation explicite de l’administrateur du projet.
 -- Les professeurs connectés peuvent lire les prompts publiés; seul le serveur
 -- prompt-manager, avec service_role et contrôle ADMIN_EMAILS, peut les gérer.

@@ -106,43 +106,39 @@ test('la fonction Edge applique une liste blanche au contexte et retire les mét
   assert.match(agentSource, /Le nom du professeur et le lycée de son profil ne sont pas ajoutés/);
 });
 
-test('la fonction Edge réessaie les erreurs Gemini transitoires avec temporisation et respecte Retry-After', () => {
-  assert.match(edgeSource, /GEMINI_MAX_ATTEMPTS = 3/);
-  assert.match(edgeSource, /RETRYABLE_GEMINI_STATUSES = new Set\(\[429, 500, 502, 503, 504\]\)/);
-  assert.match(edgeSource, /function geminiRetryDelayMs\(response: Response, attempt: number\): number \| null/);
-  assert.match(edgeSource, /MAX_RETRY_AFTER_MS = 30_000/);
-  assert.match(edgeSource, /response\.headers\.get\("retry-after"\)/);
-  assert.match(edgeSource, /return attempt === 0 \? 1_800 : 5_000/);
-  assert.match(edgeSource, /geminiResponse\.ok \|\| !RETRYABLE_GEMINI_STATUSES\.has\(geminiResponse\.status\)/);
-  assert.match(edgeSource, /Les tentatives automatiques n’ont pas abouti/);
+test('chaque demande ne déclenche qu’un seul appel de génération DeepSeek, sans nouvelle tentative automatique', () => {
+  assert.match(edgeSource, /const providerResponse = await fetch\(endpoint/);
+  assert.match(edgeSource, /providerResponse\.status === 429/);
+  assert.match(edgeSource, /a limité la demande \(quota ou débit\)/);
+  assert.doesNotMatch(edgeSource, /PROVIDER_MAX_ATTEMPTS|RETRYABLE_PROVIDER_STATUSES|providerRetryDelayMs|for \(let attempt/);
 });
 
 test('les délais serveur et navigateur laissent la fonction finir avec une marge avant la limite de plateforme', () => {
-  assert.match(edgeSource, /GEMINI_REQUEST_TIMEOUT_MS = 90_000/);
-  assert.match(edgeSource, /controller\.abort\(\), GEMINI_REQUEST_TIMEOUT_MS/);
-  assert.match(edgeSource, /retryDelay \+ 5_000 >= remainingMs/);
-  assert.match(edgeSource, /GEMINI n'a pas répondu après \$\{geminiAttempts\} tentative/i);
+  assert.match(edgeSource, /DEEPSEEK_REQUEST_TIMEOUT_MS = 90_000/);
+  assert.match(edgeSource, /controller\.abort\(\), DEEPSEEK_REQUEST_TIMEOUT_MS/);
+  assert.match(edgeSource, /DeepSeek n'a pas répondu dans le délai imparti/i);
   assert.match(agentSource, /controller\.abort\(\), 120000/);
   assert.match(agentSource, /sb-request-id/);
   assert.match(edgeSource, /AUTH_CHECK_TIMEOUT_MS = 10_000/);
   assert.match(edgeSource, /PROMPT_LOOKUP_TIMEOUT_MS = 10_000/);
 });
 
-test('la fonction Agent Vie Scolaire AI appelle Gemini avec les images inline et une sortie JSON', () => {
+test('la fonction Agent Vie Scolaire AI appelle DeepSeek avec JSON Schema et images', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.match(edgeSource, /if \(request\.method === "OPTIONS"\)[\s\S]*?const authError = await authenticatedUser\(request\)/);
   assert.match(edgeSource, /if \(!authorization\?\.startsWith\("Bearer "\)\) return json/);
   assert.match(edgeSource, /\/auth\/v1\/user/);
-  assert.match(edgeSource, /Deno\.env\.get\("GEMINI_API_KEY"\)/);
-  assert.match(edgeSource, /Deno\.env\.get\("GEMINI_MODEL"\)/);
-  assert.match(edgeSource, /GEMINI_MODELE"\) \|\| "gemini-3\.8-flash"/);
-  assert.match(edgeSource, /generativelanguage\.googleapis\.com\/v1beta\/models/);
-  assert.match(edgeSource, /"x-goog-api-key": apiKey/);
-  assert.match(edgeSource, /const \[header, encoded\] = item\.data\.split\(",", 2\)/);
-  assert.match(edgeSource, /inlineData: \{ mimeType: header\.slice\(5, header\.indexOf\(";"\)\), data \}/);
-  assert.match(edgeSource, /responseMimeType: "application\/json"/);
-  assert.match(edgeSource, /providerData\?\.candidates\?\.\[0\]\?\.content\?\.parts/);
-  assert.match(edgeSource, /clearTimeout\(timer\)/);
-  assert.doesNotMatch(edgeSource, /api\.openai\.com|AI_API_KEY/);
-  assert.match(agentSource, /Gemini configuré/);
+  assert.match(edgeSource, /Deno\.env\.get\("DEEPSEEK_API_KEY"\)/);
+  assert.match(edgeSource, /Deno\.env\.get\("DEEPSEEK_MODEL"\)/);
+  assert.match(edgeSource, /\|\| "deepseek-flash"/);
+  assert.match(edgeSource, /https:\/\/api\.deepseek\.com\/responses/);
+  assert.match(edgeSource, /Authorization: `Bearer \${apiKey}`/);
+  assert.match(edgeSource, /buildDeepSeekRequestBody/);
+  assert.match(edgeSource, /responseStatus !== "completed"/);
+  assert.match(edgeSource, /extractDeepSeekContent\(providerData\)/);
+  assert.doesNotMatch(edgeSource, /generativelanguage\.googleapis\.com|x-goog-api-key/);
+  assert.match(agentSource, /await verifyDeepSeekDeployment\(\);[\s\S]*callAgent\(task, payload, request\.attachments\)/);
+  assert.match(agentSource, /remoteStatus\?\.provider !== 'DeepSeek'/);
+  assert.match(agentSource, /aucune génération n’a été envoyée/);
+  assert.match(agentSource, /DeepSeek configuré/);
 });

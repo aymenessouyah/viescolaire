@@ -134,7 +134,7 @@ grant execute on function public.sti_sync_snapshot(text,text,jsonb,boolean) to a
 --   delete from public.espace_pedagogique
 --   where id not in (select id from public.espace_pedagogique order by created_at desc limit 200);
 
--- 5) Bibliothèque commune des prompts Gemini -------------------------------
+-- 5) Bibliothèque commune des prompts DeepSeek -------------------------------
 -- Le serveur prompt-manager contrôle l'administrateur via ADMIN_EMAILS, puis
 -- écrit avec service_role. Les professeurs connectés ne peuvent que lire les
 -- prompts publiés. Voir aussi la migration préparée, à appliquer séparément.
