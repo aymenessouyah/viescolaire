@@ -7,7 +7,7 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.2.0-context-review';
+const VERSION = '2.3.0-gemini-timeout';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -941,7 +941,7 @@ async function callAgent(task, payload = {}, requestAttachments = []) {
   }
   const cfg = root.cloudCfg();
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 110000);
+  const timer = setTimeout(() => controller.abort(), 130000);
   try {
     const response = await fetch(`${cfg.url.replace(/\/$/, '')}/functions/v1/assistant-ia`, {
       method: 'POST',
