@@ -1,6 +1,7 @@
 // Agent Vie Scolaire AI — Supabase Edge Function (Deno)
 // Secrets requis : GEMINI_API_KEY. Le modèle Gemini reste configurable par secret.
 // Aucune donnée reçue n'est journalisée par cette fonction.
+import { GEMINI_RESPONSE_SCHEMAS, requestConsistencyError, validateResult } from "./quality.mjs";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -103,6 +104,10 @@ RÈGLES IMPÉRATIVES
   directement exploitables dans les chaînes JSON. Vérifie la cohérence technique.
 - Ne complète pas les champs par du texte générique si l'information manque :
   indique précisément la limite dans le champ prévu.
+- Avant d’émettre le JSON final, contrôle silencieusement que les champs et types requis
+  sont présents, que les nombres et dates respectent les données fournies, et que le
+  résultat suit les règles de la tâche; corrige toute incohérence détectée. Ne révèle
+  pas ce contrôle ni un raisonnement interne dans la réponse.
 `;
 
 const TASK_PROMPTS: Record<string, string> = {
@@ -376,66 +381,6 @@ FORMAT JSON EXACT :
 }`,
 };
 
-function validateResult(task: string, result: any): boolean {
-  if (!result || typeof result !== "object" || Array.isArray(result)) return false;
-  if (task === "fiche") return Array.isArray(result.objectifs) && Array.isArray(result.deroulement);
-  if (task === "exercices") return Array.isArray(result.exercices) && result.exercices.length > 0;
-  if (task === "correction") return Array.isArray(result.questions) && Number.isFinite(Number(result.note));
-  if (task === "transcription") return typeof result.transcription === "string" && result.transcription.trim().length > 0 && Array.isArray(result.transcription_incertaine) && ["haute", "moyenne", "faible"].includes(String(result.confiance_globale || "").trim().toLocaleLowerCase("fr"));
-  if (task === "bareme") return Array.isArray(result.criteres) && result.criteres.length > 0 && Number.isFinite(Number(result.total));
-  if (task === "cahier") return typeof result.contenu === "string" && result.contenu.trim().length > 0;
-  if (task === "repartition") return Array.isArray(result.seances) && result.seances.length > 0;
-  if (task === "document") return typeof result.titre === "string" && result.titre.trim().length > 0
-    && typeof result.type_document === "string" && result.type_document.trim().length > 0
-    && typeof result.contenu === "string" && result.contenu.trim().length > 0
-    && Array.isArray(result.changements) && Array.isArray(result.points_a_verifier);
-  return false;
-}
-
-function requestConsistencyError(task: string, result: any, payload: any): string {
-  if (task === "transcription" && ["note", "sur", "points_attribues", "points_max", "appreciation"].some(key => key in result)) {
-    return "La prélecture doit fournir une transcription sans évaluation.";
-  }
-  if (task === "exercices") {
-    const expected = Number(payload?.input?.nombre);
-    if (Number.isInteger(expected) && expected > 0 && result.exercices.length !== expected) {
-      return `Le modèle a produit ${result.exercices.length} exercice(s) au lieu de ${expected}.`;
-    }
-  }
-  if (task === "repartition") {
-    const expected = Array.isArray(payload?.input?.seances) ? payload.input.seances : [];
-    if (result.seances.length !== expected.length) return "La répartition ne contient pas exactement les séances du planning.";
-    const inconsistent = expected.some((session: any, index: number) => {
-      const proposed = result.seances[index] || {};
-      return Number(proposed.numero ?? proposed.n) !== Number(session.numero) || String(proposed.date) !== String(session.date);
-    });
-    if (inconsistent) return "Le modèle a modifié un numéro ou une date de séance.";
-  }
-  if (task === "correction") {
-    const note = Number(result.note);
-    const sur = Number(result.sur);
-    const maximum = Number(payload?.input?.note_maximale || payload?.input?.sur || sur);
-    if (!Number.isFinite(sur) || sur <= 0 || note < 0 || note > sur) return "La note proposée est hors des limites du barème.";
-    if (Number.isFinite(maximum) && maximum > 0 && sur !== maximum) return "Le total de la note ne correspond pas au maximum demandé.";
-  }
-  if (task === "bareme") {
-    const maximum = Number(payload?.input?.note_maximale);
-    const total = Number(result.total);
-    const sum = result.criteres.reduce((acc: number, item: any) => acc + Number(item?.points || 0), 0);
-    if (!Number.isFinite(maximum) || maximum <= 0 || total !== maximum) return "Le total du barème proposé ne correspond pas à la note maximale demandée.";
-    if (!Number.isFinite(sum) || Math.abs(sum - maximum) > 0.001) return "La somme des critères ne correspond pas au total du barème.";
-  }
-  if (task === "document") {
-    const input = payload?.input || {};
-    const source = typeof input.document_a_remplacer === "string" ? input.document_a_remplacer : "";
-    if (!source.trim()) return "Le texte source à réviser est manquant.";
-    if (source.length > MAX_DOCUMENT_CHARS) return `Le document dépasse la limite de ${MAX_DOCUMENT_CHARS} caractères.`;
-    if (!cleanText(input.titre, 140).trim() || !cleanText(input.type_document, 80).trim()) return "Le titre et le type du document sont obligatoires.";
-    if (String(result.contenu).length > MAX_DOCUMENT_CHARS * 2) return "La version proposée est trop volumineuse pour l’historique local.";
-  }
-  return "";
-}
-
 function extractJson(content: string): any {
   let value = content.trim();
   value = value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -632,6 +577,7 @@ Deno.serve(async request => {
       contents: [{ role: "user", parts: userParts }],
       generationConfig: {
         responseMimeType: "application/json",
+        responseSchema: GEMINI_RESPONSE_SCHEMAS[task],
         temperature: task === "correction" || task === "transcription" || task === "cahier" ? 0.1 : 0.35,
         maxOutputTokens: Math.max(1000, Math.min(12000, maxOutputTokens)),
       },
@@ -685,7 +631,7 @@ Deno.serve(async request => {
     if (!validateResult(task, result)) {
       return json({ error: "La réponse de l'agent est incomplète pour cet outil. Réessayez ou précisez votre demande." }, 502);
     }
-    const consistencyError = requestConsistencyError(task, result, safePayload);
+    const consistencyError = requestConsistencyError(task, result, safePayload, MAX_DOCUMENT_CHARS);
     if (consistencyError) return json({ error: consistencyError }, 502);
 
     return json({
