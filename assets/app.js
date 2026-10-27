@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.26.0-deepseek";
+const APP_VER = "v1.26.1-deepseek";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -1215,6 +1215,9 @@ function renderCahier(){
   const filled=period.filter(s=>Object.keys(store.seances[s.cls+"|"+s.n]||{}).length>0).length;
   const labels={pending:"Dernières séances à confirmer",all:"Toutes les séances",done:"Séances assurées",reported:"Séances reportées"};
   const scope=(cahCls==="both"?"les deux classes":cahCls)+" • "+(cahTri?cahTri+(cahTri===1?"er":"e")+" trimestre":"Tous les trimestres");
+  const groupesLabel = "Groupes : 1 et 2";
+  const groupesCahier = classesCahier().filter(c=>cahCls==="both"||cahCls===c)
+    .map(c=>`<span><strong>${escapeHtml(c)}</strong> · ${groupesLabel}</span>`).join("");
   /* complétude d'une fiche : préparation, contenu réalisé, travail donné */
   const complet = s => { const o=store.seances[s.cls+"|"+s.n]||{};
     return { prep: !!(o.preparation && o.preparation.trim()), contenu: !!(o.contenu && o.contenu.trim()),
@@ -1229,7 +1232,7 @@ function renderCahier(){
   const box=document.getElementById("v-cahier");
   box.innerHTML=`
   <div class="sec-head"><div><h2>${ic("pen")} Cahier de textes numérique</h2>
-    <p class="lead">Par défaut : les séances assurées du trimestre en cours, des plus récentes aux plus anciennes. Les autres statuts et trimestres restent accessibles avec les filtres.</p></div>
+    <p class="lead">Par défaut : les séances assurées du trimestre en cours, des plus récentes aux plus anciennes. Les autres statuts et trimestres restent accessibles avec les filtres.</p>${groupesCahier ? `<p class="cah-groups-summary">${groupesCahier}</p>` : ""}</div>
     <div class="row no-print">
       <select id="cah-class" aria-label="Classe du cahier" style="width:auto"><option value="both" ${cahCls==="both"?"selected":""}>Les deux classes</option><option value="3SI1" ${cahCls==="3SI1"?"selected":""}>3SI1</option><option value="4SI2" ${cahCls==="4SI2"?"selected":""}>4SI2</option></select>
       <select id="cah-term" aria-label="Trimestre du cahier" style="width:auto"><option value="0" ${!cahTri?"selected":""}>Tous les trimestres</option>${[1,2,3].map(n=>`<option value="${n}" ${cahTri===n?"selected":""}>${n}${n===1?"er":"e"} trimestre${n===currentTri?" — en cours":""}</option>`).join("")}</select>
@@ -1279,6 +1282,7 @@ function renderCahier(){
       return `<tr class="cah-row ${flag?"is-eval":""} ${st==="faite"?"is-done":st==="reportee"?"is-reported":""}" data-cah-key="${s.cls}|${s.n}" data-cah-date="${s.iso}">
         <td class="cah-date-cell"><time class="cah-date-main" datetime="${s.iso}">${fmtLong(s.iso)}</time>
           <div class="cah-date-meta"><span class="badge ${clsChip(s.cls)}">${s.cls}</span><span>Séance n°${s.n}</span></div>
+          <small class="cah-groups">${groupesLabel}</small>
           <span class="badge ${statusClass}">${statusLabel}</span>
           <small class="cah-time">${escapeHtml(slotsTxt(s.cls,s.iso))}</small>
         </td>
