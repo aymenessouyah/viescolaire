@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.25.0-deepseek";
+const APP_VER = "v1.26.0-deepseek";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -413,7 +413,7 @@ function renderDash(){
       <div class="foo">${nextVac ? nextVac.label + " • dans " + diffDays(t, nextVac.from) + " jour(s)" : "Année terminée"}</div>
     </div>
     <div class="kpi k-rose">
-      <div class="lbl">${ic("flag")} Prochain jalon officiel</div>
+      <div class="lbl">${ic("flag")} Prochain jalon prévu</div>
       <div class="val" style="font-size:19px">${nextJ[0] ? (nextJ[0].date ? fmtJM(nextJ[0].date) : fmtJM(nextJ[0].from)) : "—"}</div>
       <div class="foo">${nextJ[0] ? nextJ[0].label : ""}</div>
     </div>
@@ -482,14 +482,14 @@ function renderDash(){
               </div>
             </div>`;
           }).join("")}
-          <div class="note" style="margin-top:10px">Trois ensembles : l'aide pédagogique et les répartitions officielles (1<sup>er</sup>, 2<sup>e</sup> et 3<sup>e</sup> trimestres), vos 5 annexes de cours, et vos 13 fiches de séances 2026-2027. Tous les fichiers se trouvent dans ce même projet.</div>
+          <div class="note" style="margin-top:10px">Trois ensembles : l'aide pédagogique et les répartitions du dépôt (1<sup>er</sup>, 2<sup>e</sup> et 3<sup>e</sup> trimestres), vos 5 annexes de cours, et vos 13 fiches de séances 2026-2027. Tous les fichiers se trouvent dans ce même projet.</div>
         </div>
       </div>
     </div>
 
     <div class="stack">
       <div class="card">
-        <div class="card-h"><h3>${ic("flag")} Calendrier officiel — prochains jalons</h3>
+        <div class="card-h"><h3>${ic("flag")} Calendrier renseigné — prochains jalons</h3>
           <button class="btn btn-xs btn-soft no-print" onclick="go('v-cal')">Tout le calendrier</button></div>
         <div class="card-b">
           <div class="tl">
@@ -508,15 +508,15 @@ function renderDash(){
       <div class="card">
         <div class="card-h"><h3>${ic("alert")} Points d'attention de l'année</h3></div>
         <div class="card-b">
-          <div class="li"><div class="ico">${ic("alert")}</div><div><strong>Jeudi 15 octobre 2026 — Fête de l'Évacuation.</strong> Jour férié : la séance hebdomadaire de <strong>3SI1</strong> du jeudi n'est pas assurée. La répartition officielle prévoyait une seule séance cette semaine-là (séance n°9).</div></div>
-          <div class="li"><div class="ico">${ic("alert")}</div><div><strong>Vendredi 1<sup>er</sup> janvier 2027 — Jour de l'An</strong> et <strong>vendredi 9 avril 2027 — Fête des Martyrs</strong> : les séances de <strong>4SI2</strong> du vendredi sont reportées.</div></div>
-          <div class="li"><div class="ico">${ic("check")}</div><div><strong>Semaine bloquée du 7 au 12 décembre 2026</strong> : devoirs de synthèse n°1 — 3SI1 le ${fmtShort(DS1["3SI1"].main)}, 4SI2 le ${fmtShort(DS1["4SI2"].main)}. Les corrections sont assurées après les vacances d'hiver (28 et 31 décembre 2026 pour 3SI1 ; 28 décembre pour 4SI2).</div></div>
+          <div class="li"><div class="ico">${ic("alert")}</div><div><strong>Jeudi 15 octobre 2026 — Fête de l'Évacuation.</strong> Jour férié : la séance hebdomadaire de <strong>3SI1</strong> du jeudi n'est pas assurée. La répartition du dépôt prévoyait une seule séance cette semaine-là (séance n°9).</div></div>
+          <div class="li"><div class="ico">${ic("alert")}</div><div><strong>Vendredi 1<sup>er</sup> janvier 2027 — Jour de l'An</strong> et <strong>vendredi 9 avril 2027 — Fête des Martyrs</strong> : les séances de <strong>4SI2</strong> du vendredi sont à reporter.</div></div>
+          <div class="li"><div class="ico">${ic("check")}</div><div><strong>Semaine bloquée du 7 au 12 décembre 2026</strong> : devoirs de synthèse n°1 — 3SI1 le ${fmtShort(DS1["3SI1"].main)}, 4SI2 le ${fmtShort(DS1["4SI2"].main)}. Les corrections sont prévues après les vacances d'hiver (28 et 31 décembre 2026 pour 3SI1 ; 28 décembre pour 4SI2).</div></div>
           <div class="li"><div class="ico">${ic("clock")}</div><div><strong>Aïd el-Fitr, Aïd el-Idha et Ras El Am El Hijri</strong> : dates fixées par l'observation lunaire ; elles seront intégrées dès leur annonce officielle.</div></div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-h"><h3>${ic("target")} Couverture des compétences officielles</h3></div>
+        <div class="card-h"><h3>${ic("target")} Couverture des compétences du référentiel</h3></div>
         <div class="card-b tight">
           ${["3SI1","4SI2"].map(c => `
             <div style="margin-bottom:10px">
@@ -530,7 +530,7 @@ function renderDash(){
                   </div>`).join("")}
               `).join("")}
             </div>`).join("")}
-          <div class="note tiny">Les badges indiquent les trimestres de traitement prévus ; le 1<sup>er</sup> trimestre correspond à la répartition officielle des documents fournis.</div>
+          <div class="note tiny">Les badges indiquent les trimestres de traitement prévus ; le 1<sup>er</sup> trimestre est fondé sur les documents fournis ; vérifiez leur validité et leur adéquation.</div>
         </div>
       </div>
     </div>
@@ -791,7 +791,7 @@ function renderCal(){
   <div class="sec-head">
     <div>
       <h2>${ic("calendar")} Calendrier scolaire tunisien — 2026 / 2027</h2>
-      <p class="lead">Calendrier officiel du ministère de l'Éducation (année scolaire 2026-2027) croisé avec les créneaux des deux classes. Les séances tombant un jour férié, pendant les vacances ou durant une semaine bloquée sont automatiquement retirées du planning.</p>
+      <p class="lead">Calendrier renseigné pour l’année scolaire 2026-2027, croisé avec les créneaux des deux classes. Vérifiez les dates et décisions applicables auprès des sources officielles. Les séances tombant un jour férié, pendant les vacances ou durant une semaine bloquée sont automatiquement retirées du planning.</p>
     </div>
     <div class="row no-print" style="gap:8px;flex-wrap:wrap">
       <button class="btn btn-xs btn-blue" onclick="exporterCalendrierICS()" title="Télécharger les séances, évaluations et échéances au format agenda">${ic("down")} Exporter .ics</button>
@@ -853,7 +853,7 @@ function renderCal(){
   </div>
 
   <div class="card">
-    <div class="card-h"><h3>${ic("list")} Jalons officiels de l'année (surveillance continue, saisie des notes, conseils de classe)</h3>
+    <div class="card-h"><h3>${ic("list")} Jalons renseignés de l'année (surveillance continue, saisie des notes, conseils de classe)</h3>
       <span class="badge b-blue">Calendrier 2026-2027 publié par le ministère de l'Éducation</span></div>
     <div class="card-b tight">
       <div class="tbl-wrap">
@@ -975,8 +975,8 @@ function renderRep(){
   document.getElementById("v-rep").innerHTML = `
   <div class="sec-head">
     <div>
-      <h2>${ic("list")} Répartition trimestrielle — contenu officiel replacé sur le calendrier 2026/2027</h2>
-      <p class="lead">Le contenu provient des documents de répartition officiels (les trois trimestres). Les <strong>dates réelles</strong> sont calculées séance par séance selon les créneaux de chaque classe (chaque séance est assurée avec le Groupe 1 puis reprise avec le Groupe 2) et selon le calendrier tunisien : jours fériés, vacances et semaines bloquées sont automatiquement exclus. Cliquez sur « Fiche » pour consigner le contenu réellement traité, les devoirs donnés et vos observations.</p>
+      <h2>${ic("list")} Répartition trimestrielle — proposition sur le calendrier 2026/2027</h2>
+      <p class="lead">Le contenu est construit à partir des documents de répartition du dépôt (trois trimestres) ; vérifiez leur origine et leur applicabilité. Les <strong>dates prévisionnelles</strong> sont calculées séance par séance selon les créneaux de chaque classe (chaque séance est assurée avec le Groupe 1 puis reprise avec le Groupe 2) et selon le calendrier tunisien : jours fériés, vacances et semaines bloquées sont automatiquement exclus. Cliquez sur « Fiche » pour consigner le contenu réellement traité, les devoirs donnés et vos observations.</p>
     </div>
     <div class="row no-print">
       <div class="row" style="gap:6px">
@@ -1006,15 +1006,15 @@ function renderRep(){
       </div>
     </div>
     <div class="card-b">
-      ${repTri===1 ? `<div class="note" style="margin-bottom:12px">${ic("pin")} <strong>Contenu conforme aux documents « Répartition Trimestrielle (1) prévisionnelle »</strong> (3<sup>ème</sup> et 4<sup>ème</sup> année SI — matière STI). Les dates ont été recalculées pour l'année 2026-2027 : la rentrée des élèves a lieu le mardi 15 septembre 2026, les vacances de mi-trimestre du 26 octobre au 1<sup>er</sup> novembre 2026 et la semaine bloquée des devoirs de synthèse du 7 au 12 décembre 2026.</div>` :
-        `<div class="note warn" style="margin-bottom:12px">${ic("alert")} Le document de répartition fourni ne couvre que le 1<sup>er</sup> trimestre. Pour le ${repTri}<sup>e</sup> trimestre, les dates réelles des séances sont calculées à partir du calendrier officiel ; utilisez le bouton « Fiche » pour saisir le contenu de chaque séance (enregistré automatiquement). Les jalons d'évaluation officiels sont rappelés dans l'onglet « Calendrier tunisien ».</div>`}
+      ${repTri===1 ? `<div class="note" style="margin-bottom:12px">${ic("pin")} <strong>Progression construite à partir des documents « Répartition Trimestrielle (1) prévisionnelle » — à vérifier</strong> (3<sup>ème</sup> et 4<sup>ème</sup> année SI — matière STI). Les dates ont été recalculées pour l'année 2026-2027 : la rentrée des élèves a lieu le mardi 15 septembre 2026, les vacances de mi-trimestre du 26 octobre au 1<sup>er</sup> novembre 2026 et la semaine bloquée des devoirs de synthèse du 7 au 12 décembre 2026.</div>` :
+        `<div class="note warn" style="margin-bottom:12px">${ic("alert")} Les contenus affichés proviennent des données du dépôt et les dates sont calculées à partir du calendrier renseigné. Vérifiez-les avec les documents et décisions applicables ; utilisez « Fiche » pour adapter chaque séance. Les jalons d’évaluation figurent dans l’onglet « Calendrier tunisien ».</div>`}
       <div class="tbl-wrap">
         <table class="tbl">
           <thead><tr><th style="width:52px">N°</th><th style="width:120px">Date</th><th>Contenu de la séance</th><th style="width:170px" class="hide-sm">Domaine</th><th style="width:220px">État</th></tr></thead>
           <tbody>${rows || '<tr><td colspan="5" class="muted">Aucune séance sur cette période.</td></tr>'}</tbody>
         </table>
       </div>
-      ${repTri===1 ? `<div class="note tiny" style="margin-top:12px">${ic("pin")} <strong>Fidélité aux documents :</strong> la numérotation des séances est recalculée automatiquement à partir des créneaux réels et du calendrier tunisien. Elle correspond au document officiel (3SI1 : 23 séances — 4SI2 : 22 séances), à deux détails près : le document de la 4<sup>ème</sup> année passe de la séance 13 à la séance 15 (coquille de frappe, corrigée ici en 14-15) et le rang de la dernière séance de 4SI2 diffère d'une unité pour la même raison. Par ailleurs, le jeudi 15 octobre 2026 étant férié (Fête de l'Évacuation), la 3SI1 ne dispose que de la séance du mardi 13 octobre lors de la semaine du 12 au 17 octobre, ce que prévoyait déjà la répartition officielle.</div>` : ""}
+      ${repTri===1 ? `<div class="note tiny" style="margin-top:12px">${ic("pin")} <strong>Fidélité aux documents :</strong> la numérotation des séances est recalculée automatiquement à partir des créneaux réels et du calendrier tunisien. À comparer aux documents du dépôt (3SI1 : 23 séances — 4SI2 : 22 séances), notamment sur deux détails : le document de la 4<sup>ème</sup> année passe de la séance 13 à la séance 15 (coquille de frappe, corrigée ici en 14-15) et le rang de la dernière séance de 4SI2 diffère d'une unité pour la même raison. Par ailleurs, le jeudi 15 octobre 2026 étant férié (Fête de l'Évacuation), la 3SI1 ne dispose que de la séance du mardi 13 octobre lors de la semaine du 12 au 17 octobre, ce que prévoyait déjà la répartition du dépôt.</div>` : ""}
       <div class="row" style="justify-content:space-between;margin-top:10px">
         <div class="tiny muted">${list.length} séances • ${list.length*cfg.heures} heures • ${repTri===1?(cfg.short==="3SI1"?"Progression du document : séances 1 à 23":"Progression du document : séances 1 à 22 avec corrections du DS1 après les vacances d'hiver"):"Contenu à planifier"}</div>
         <button class="btn btn-xs btn-line no-print" onclick="resetCls('${cls}')">Réinitialiser les fiches de ${cfg.short}</button>
@@ -1077,7 +1077,7 @@ function renderProg(){
   <div class="sec-head">
     <div>
       <h2>${ic("target")} Programme, compétences et supports</h2>
-      <p class="lead">Chaque compétence officielle de l'<strong>aide pédagogique STI</strong> est reliée à trois éléments : les <strong>savoirs associés</strong> du programme, les <strong>éléments correspondants de vos annexes</strong> (HTML5, CSS3, JavaScript, PHP, SQL) et les <strong>séances du 1<sup>er</sup> trimestre</strong> qui la traitent, avec leurs dates réelles. Deux accès directs : l'<a href="docs/Aide-pedagogique-STI-3-4-2024.pdf" target="_blank">aide pédagogique</a> et le dossier des <a href="docs/Annexe-HTML5.pdf" target="_blank">annexes</a> (ou l'onglet « Annexes &amp; mémo »).</p>
+      <p class="lead">Les compétences issues de l'<strong>aide pédagogique STI</strong> sont rapprochées de trois éléments ; ces rapprochements restent à vérifier : les <strong>savoirs associés</strong> du programme, les <strong>éléments correspondants de vos annexes</strong> (HTML5, CSS3, JavaScript, PHP, SQL) et les <strong>séances du 1<sup>er</sup> trimestre</strong> qui les traitent, avec leurs dates prévues. Deux accès directs : l'<a href="docs/Aide-pedagogique-STI-3-4-2024.pdf" target="_blank">aide pédagogique</a> et le dossier des <a href="docs/Annexe-HTML5.pdf" target="_blank">annexes</a> (ou l'onglet « Annexes &amp; mémo »).</p>
     </div>
     <div class="row no-print">
       <a class="btn btn-xs btn-line" href="docs/Aide-pedagogique-STI-3-4-2024.pdf" target="_blank">${ic("file")} Aide pédagogique</a>
@@ -2134,7 +2134,7 @@ function renderRef(){
     <div class="card-h"><h3>${ic("target")} Mémo consolidé — annexes adaptées à l'aide pédagogique</h3>
       <span class="badge b-green">${MEMO.length} familles &bull; ${memoLines} éléments</span></div>
     <div class="card-b">
-      <div class="note tiny" style="margin-bottom:12px">${ic("pin")} Ce mémo reprend le contenu de vos 5 annexes en le réorganisant selon les compétences officielles. Chaque ligne indique sa <strong>source</strong> dans l'annexe, et chaque compétence renvoie aux <strong>séances du 1<sup>er</sup> trimestre</strong> correspondantes (onglet « Programme &amp; compétences »).</div>
+      <div class="note tiny" style="margin-bottom:12px">${ic("pin")} Ce mémo reprend le contenu de vos 5 annexes en le réorganisant selon les compétences recensées ; ce rapprochement est à vérifier. Chaque ligne indique sa <strong>source</strong> dans l'annexe, et chaque compétence renvoie aux <strong>séances du 1<sup>er</sup> trimestre</strong> correspondantes (onglet « Programme &amp; compétences »).</div>
       <div id="memo-zone">
         ${MEMO.map(m => `
           <details class="acc" id="memo-${m.id}" style="margin-bottom:10px">
@@ -2266,7 +2266,7 @@ function openModal(cls, n){
       <label class="badge b-green" style="cursor:pointer"><input type="checkbox" id="m-done" ${o.done?"checked":""}> Séance assurée — contenu commun traité avec les deux groupes</label>
       <label class="badge b-rose" style="cursor:pointer"><input type="checkbox" id="m-rep" ${o.done===false?"checked":""}> Séance reportée</label>
     </div>
-    <div class="note tiny" style="margin-top:12px">Rappel du contenu prévu par la répartition officielle : ${s.blk ? s.blk.t + " — " + s.blk.det : "séance à planifier (le document de répartition fourni ne couvre que le 1<sup>er</sup> trimestre)."}</div>`;
+    <div class="note tiny" style="margin-top:12px">Rappel du contenu prévu dans la répartition du dépôt (à vérifier) : ${s.blk ? s.blk.t + " — " + s.blk.det : "séance à planifier."}</div>`;
   { const vv = seanceVerrouillee(s);
     if (vv) document.getElementById("m-body").insertAdjacentHTML("afterbegin",
       '<div class="note tiny" style="background:#fdecea;border-color:#f3b7b1;color:#8c1d18;margin-bottom:12px"><b>Trimestre verrouillé</b> — '

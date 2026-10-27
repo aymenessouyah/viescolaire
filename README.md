@@ -4,6 +4,9 @@
 
 Dépôt : <https://github.com/aymenessouyah/viescolaire> · Application en ligne : <https://aymenessouyah.github.io/viescolaire/>
 
+> Les propositions et correspondances de ce dépôt ne sont pas certifiées conformes au programme officiel. Vérifiez les documents applicables, leur provenance et leur édition avant utilisation.
+> Architecture et étapes de l’assistant : [docs/ARCHITECTURE-ASSISTANT-STI.md](docs/ARCHITECTURE-ASSISTANT-STI.md).
+
 Application web installable (PWA) qui rassemble l'emploi du temps, le calendrier scolaire tunisien,
 la répartition du 1<sup>er</sup> trimestre, les compétences issues de l'aide pédagogique, les annexes
 de cours, le cahier de textes, la bibliothèque de documents (répartitions des trois trimestres,
@@ -17,11 +20,12 @@ fiches de séances, annexes) et une sauvegarde des données.
 |---|---|
 | **Tableau de bord** | Indicateurs de l'année, prochaine séance, alertes (vacances, jours fériés), carte de sauvegarde distante |
 | **Emploi du temps** | 3SI1 : mardi 8 h–12 h et jeudi 13 h–17 h ; 4SI2 : lundi 8 h–12 h et vendredi 8 h–12 h — **2 groupes de 2 h par jour de cours** (8 h/semaine/classe, 16 h pour l'enseignant). Les horaires sont modifiables et enregistrés. |
-| **Calendrier tunisien** | Année 2026-2027 : rentrée des élèves mardi 15 septembre 2026, fin d'année mercredi 30 juin 2027, vacances officielles, jours fériés, périodes de devoirs de contrôle et de synthèse, conseils de classe |
-| **Répartition 1<sup>er</sup> trimestre** | Progression en blocs conforme aux documents officiels (3SI1 : 23 séances ; 4SI2 : 22 séances), avec dates réelles, évaluations et corrections du DS1 |
+| **Calendrier tunisien** | Année 2026-2027 : rentrée des élèves mardi 15 septembre 2026, fin d'année mercredi 30 juin 2027, vacances et jours fériés renseignés (à vérifier), périodes de devoirs de contrôle et de synthèse, conseils de classe |
+| **Répartition 1<sup>er</sup> trimestre** | Progression en blocs construite à partir des documents du dépôt, à vérifier (3SI1 : 23 séances ; 4SI2 : 22 séances), avec dates prévues, évaluations et corrections du DS1 |
 | **Programme & compétences** | Chaque compétence de l'**aide pédagogique STI** renvoie à ses savoirs associés, aux **éléments des annexes** à mobiliser, aux **séances datées** du 1<sup>er</sup> trimestre, à une activité de classe et aux acquis attendus. Liens directs vers l'aide pédagogique et les annexes. |
 | **Suivi des notions & annexes** | Cases de suivi dans les fiches de séance pour les **234 éléments** HTML5, CSS3, JavaScript, PHP et SQL ; bilan des éléments couverts, prévus ou restant à traiter, filtrable par classe. |
 | **Cahier de textes** | Relevé chronologique séance par séance (contenu, observations, état d'avancement) pour les deux classes |
+| **Assistant pédagogique** | Fiches, exercices, répartitions, correction à valider, bibliothèque locale et exports. Génération IA sous réserve d’une fonction Supabase compatible déployée et configurée. |
 | **Annexes & mémo** | **Mémo consolidé** (6 familles C1→C6 : contenu des annexes réorganisé selon les compétences), **annexes intégrales** (HTML5, CSS3, JavaScript, PHP, SQL) et les 8 documents PDF, avec recherche instantanée |
 
 Deux accès directs exigés par le cahier des charges sont présents dans l'onglet « Programme & compétences »
@@ -40,6 +44,9 @@ sti-espace/
 │   ├── style.css               feuille de style (aucune ressource externe)
 │   ├── app.js                  logique : emploi du temps, calendrier, répartition, programme,
 │   │                           cahier de textes, sauvegarde distante, installation
+│   ├── agent-sti.js            interface, parcours et revue humaine de l'assistant
+│   ├── agent-library.js        bibliothèque personnelle locale (IndexedDB)
+│   ├── agent-xlsx.js           exports Excel Open XML
 │   ├── suivi-sti.js            suivi commun des notions des Smart Books
 │   └── suivi-annexes.js        checklist des 234 éléments et bilan de couverture des annexes
 ├── data/                       données séparées : à modifier sans toucher au code
