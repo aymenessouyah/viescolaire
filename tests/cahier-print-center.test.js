@@ -46,12 +46,15 @@ test('le Centre d’impression produit le même tableau, conserve les contenus e
   };
   const plan = session => ({ num: session.n, iso: session.iso, tri: session.tri, t: session.blk.t, k: session.blk.k, d: session.blk.d, det: session.blk.det });
   const school = { annee: '2026-2027', lycee: 'Lycée Rafèha', prof: 'Professeur test' };
+  const dataWindow = {};
+  vm.runInNewContext(fs.readFileSync('data/reference.js', 'utf8'), { window: dataWindow });
+  const classReference = dataWindow.STI_DATA.reference.CLASSES;
   const root = {
     STI_DATA: { repartition3SI1: [plan(sessionA), plan(sessionC)], repartition4SI2: [plan(sessionB)] },
     SESSIONS: { '3SI1': [sessionA, sessionC], '4SI2': [sessionB] },
     store: { seances: records, times: {} },
     SCHOOL: school,
-    DATA: { reference: { SCHOOL: school, JOURS: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], CLASSES: {} } },
+    DATA: { reference: { SCHOOL: school, JOURS: ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'], CLASSES: classReference } },
     activeProfessorProfile: () => ({ signature: 'signature-professeur' }),
     STI_SIGNATURE: { toMarkup: value => value ? mark : '' },
     addEventListener() {},
@@ -85,4 +88,21 @@ test('le Centre d’impression produit le même tableau, conserve les contenus e
   const secondTerm = printedHtml.indexOf('<h2>2e trimestre</h2>');
   const t2 = printedHtml.indexOf('T2_REALISE');
   assert.ok(t1 >= 0 && t1 < secondTerm && secondTerm < t2);
+
+  const cover = html => html.match(/<section class="cp-page cp-cover-page">[\s\S]*?<\/section>/)?.[0] || '';
+  const coverItems = html => [...cover(html).matchAll(/<div class="cp-cover-class"><b>([^<]+)<\/b><span>([^<]+)<\/span><\/div>/g)];
+  const both = coverItems(printedHtml);
+  assert.deepEqual(both.map(item => item[1]), ['3SI1', '4SI2']);
+  both.forEach(item => assert.match(item[2], /Groupes : 1 et 2/));
+  const rows = printedHtml.match(/<tr class="cp-session-row [\s\S]*?<\/tr>/g) || [];
+  assert.equal(rows.length, 3);
+  rows.forEach(row => assert.match(row, /<small class="cp-date-groups">Groupes : 1 et 2<\/small>/));
+
+  for (const classe of ['3SI1', '4SI2']) {
+    root.STI_FICHES.exportCahierPDF({ classe, trimestre: 0, statut: 'all' });
+    const individual = coverItems(printedHtml);
+    assert.equal(individual.length, 1);
+    assert.equal(individual[0][1], classe);
+    assert.match(individual[0][2], /Groupes : 1 et 2/);
+  }
 });

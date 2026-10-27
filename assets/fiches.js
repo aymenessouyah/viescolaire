@@ -1274,6 +1274,7 @@ function cahierSessionHtml(session, signatureMarkup, signatureAtEnd) {
   return `<tr class="cp-session-row cp-${session.cls.toLowerCase()} cp-row-${currentState}">
     <td class="cp-date-cell"><time datetime="${esc(session.iso || '')}">${esc(date)}</time>
       <div class="cp-date-meta"><b>${esc(session.cls)}</b><span>Séance n°${sessionNumber}</span></div>
+      <small class="cp-date-groups">Groupes : 1 et 2</small>
       <span class="cp-row-state cp-state-${currentState}">${esc(cahierPrintStateLabel(currentState))}</span>
       ${session.blk && session.blk.d ? `<small class="cp-date-time">${esc(session.blk.d)}</small>` : ''}
     </td>
@@ -1386,7 +1387,7 @@ function cahierPrintCss() {
     .cp-week-row td{padding:2mm;background:#edf3ed;color:#24523d;font-size:7pt;font-weight:800;letter-spacing:.35pt;text-transform:uppercase;border:0}
     .cp-date-cell time{display:block;color:#173e31;font-weight:800}
     .cp-date-meta{display:flex;gap:2mm;flex-wrap:wrap;margin:1.5mm 0;color:#5b6c60;font-size:7pt}
-    .cp-date-meta b{color:#17649e}.cp-date-time{display:block;margin-top:1.5mm;color:#778177;font-size:6.5pt}
+    .cp-date-meta b{color:#17649e}.cp-date-groups{display:block;margin:0 0 1.5mm;color:#40574a;font-size:6.5pt;font-weight:700}.cp-date-time{display:block;margin-top:1.5mm;color:#778177;font-size:6.5pt}
     .cp-row-state{display:inline-block;padding:.6mm 1.6mm;border:1px solid #d3ded4;border-radius:10mm;font-size:6pt;color:#536459}
     .cp-state-done{background:#e8f4eb;color:#216342;border-color:#badac2}.cp-state-reported{background:#fff0ed;color:#a9433b;border-color:#edc9c2}.cp-state-pending{background:#fff6df;color:#8a6318;border-color:#ead69e}
     .cp-work-title{display:block;margin-bottom:1.4mm;color:#173e31;font-size:8.5pt}
