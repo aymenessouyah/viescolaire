@@ -4,9 +4,17 @@ L’**Agent Vie Scolaire AI** est l’assistant pédagogique intégré à Vie Sc
 
 Chaque document comporte un en-tête **Lycée · Enseignant (nom complet) · Classe**. Le nom du professeur et le lycée sont ajoutés dans le navigateur; ces champs d’en-tête ne sont pas envoyés à DeepSeek.
 
+## Architecture et périmètre actualisés
+
+La fonction distante doit annoncer le protocole `sti-pedagogique-2026-10-27` : une version plus ancienne est bloquée avant génération pour éviter d’ignorer les nouvelles durées ou sources. La modification locale ne déploie rien ; demandez votre accord avant de redéployer `assistant-ia`.
+
+La [note d’architecture et feuille de route](docs/ARCHITECTURE-ASSISTANT-STI.md) décrit les étapes réalisées et les limites. Les propositions ne sont **pas certifiées conformes au programme** : comparez-les aux sources applicables avant utilisation. La bibliothèque personnelle classe fichiers et extraits dans IndexedDB ; elle n’est ni synchronisée, ni chiffrée, ni incluse dans les sauvegardes Cloud/Drive. Seuls les extraits cochés sont envoyés à l’IA avec leur provenance, jamais les fichiers de la bibliothèque. Le bouton d’archivage place volontairement un support généré dans cette bibliothèque ; pour un sujet, la copie archivée comprend son corrigé.
+
+Les fiches acceptent une durée ajustable, les répartitions peuvent couvrir un trimestre ou l’année à partir des séances existantes, et la correction peut être ajustée et validée localement, question par question. Cette validation n’inscrit aucune note dans le registre. Les exports comprennent HTML, impression/PDF et XLSX ; pour les exercices, les versions élève excluent les sections corrigé et doivent être relues avant diffusion.
+
 ## Outils inclus
 
-- **Fiche pédagogique** : objectifs, prérequis, phases de 2 h, notions, évaluation, travail et remédiation ; insertion ou remplacement de la préparation d’une séance après confirmation.
+- **Fiche pédagogique** : objectifs, prérequis, phases selon la durée demandée (2 h par défaut), notions, évaluation, travail et remédiation ; insertion ou remplacement de la préparation d’une séance après confirmation.
 - **Séries d’exercices** : énoncés théoriques ou pratiques, questions, corrigés et barème ; export HTML et impression. Une série récente de l’historique local peut être remplacée après relecture et confirmation; une série externe peut être collée comme référence.
 - **Correction de copies** : choix explicite entre devoir **théorique** et **pratique** ; texte, photos, captures et fichiers HTML/CSS/JS/PHP/SQL/TXT/JSON pour le pratique. Pour les copies théoriques photographiées, l'agent transcrit d'abord les réponses sans les noter. La transcription est éditable; les passages incertains sont signalés et l'enseignant doit confirmer explicitement s'il poursuit malgré l'avertissement. La correction utilise ensuite le texte relu, sans renvoyer les photos lors du second appel. Barème fourni par l'enseignant ou proposé d'abord par l'agent puis modifiable avant correction. Justification question par question, limites de l'analyse, note proposée et remédiation. Le code n'est jamais prétendu exécuté et aucune note n'est saisie automatiquement.
 - **Cahier de textes** : reformulation limitée au contenu réellement déclaré ; une entrée déjà remplie peut être remplacée après confirmation, sans confirmer automatiquement la séance.
@@ -27,7 +35,7 @@ Professeur connecté
 
 ![Schéma du parcours de l’Agent Vie Scolaire AI](assets/agent-vie-scolaire-flux.svg)
 
-Ce schéma décrit le code DeepSeek préparé dans le dépôt; il ne signifie pas que la fonction distante a été mise à jour. La version Supabase déjà déployée reste inchangée jusqu’à un déploiement explicite. L’interface interroge le fournisseur distant avant chaque génération et bloque l’envoi si la fonction ne confirme pas DeepSeek.
+Ce schéma décrit le code DeepSeek préparé dans le dépôt; il ne signifie pas que la fonction distante a été mise à jour. La version Supabase déjà déployée reste inchangée jusqu’à un déploiement explicite. L’interface interroge le fournisseur distant avant chaque génération et bloque l’envoi si la fonction ne confirme pas DeepSeek et le protocole attendu.
 
 La clé de l’IA est un **secret Supabase**. Elle n’apparaît ni dans GitHub, ni dans le JavaScript, ni dans les réponses de la fonction. Le nom complet de l’enseignant et le lycée sont ajoutés à l’en-tête côté navigateur; ils ne sont pas transmis au modèle pour cette mise en forme.
 

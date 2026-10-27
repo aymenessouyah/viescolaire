@@ -1,5 +1,5 @@
 /* Documents de référence et de travail.
-   1) Aide pédagogique et répartitions officielles (PDF)
+   1) Aide pédagogique et répartitions du dépôt (PDF)
    2) Annexes de cours élaborées par A. Essouyah (PDF)
    3) Fiches de séances 2026-2027 (Word) — dossier documents/ du dépôt GitHub
    Fichier de données — modifiable sans toucher au code de l'application.
@@ -7,19 +7,19 @@
 (function (root) {
 'use strict';
 
-const G_AIDE  = "Aide pédagogique et répartitions officielles";
+const G_AIDE  = "Aide pédagogique et répartitions du dépôt";
 const G_ANNEX = "Annexes de cours élaborées par A. Essouyah";
 const G_FICHE = "Fiches de séances 2026-2027";
 
 const DOCS = [
   /* ---------- 1. aide pédagogique et répartitions ---------- */
-  { g:G_AIDE, t:"Aide pédagogique STI 3<sup>e</sup> et 4<sup>e</sup> années SI (avec annexes)", f:"docs/Aide-pedagogique-STI-3-4-2024.pdf", s:"Ministère de l'Éducation — septembre 2024 &bull; 18 pages", d:"Programme officiel : compétences, savoirs associés, pistes pédagogiques et annexes HTML5 / CSS3 / JS / PHP / SQL." },
+  { g:G_AIDE, t:"Aide pédagogique STI 3<sup>e</sup> et 4<sup>e</sup> années SI (avec annexes)", f:"docs/Aide-pedagogique-STI-3-4-2024.pdf", s:"Origine indiquée : ministère de l'Éducation — septembre 2024 &bull; 18 pages (à vérifier)", d:"Aide pédagogique déposée : compétences, savoirs associés et annexes. Vérifiez son origine et son applicabilité avant utilisation." },
   { g:G_AIDE, t:"Répartition trimestrielle (1) prévisionnelle — 3<sup>ème</sup> année SI (STI)", f:"docs/Repartition-T1-3SI.pdf", s:"1<sup>er</sup> trimestre &bull; 23 séances", d:"Déroulement séance par séance : rappels HTML+CSS, projet « Fleurs du Lycée », JavaScript, DC1, DC2, DS1." },
   { g:G_AIDE, t:"Répartition trimestrielle (1) prévisionnelle — 4<sup>ème</sup> année SI (STI)", f:"docs/Repartition-T1-4SI.pdf", s:"1<sup>er</sup> trimestre &bull; 22 séances", d:"Rappels HTML/CSS/JS, Bac pratique, rappel BD (LDD+LMD), création d'un site web dynamique PHP, DC1, DC2, DS1." },
-  { g:G_AIDE, t:"Répartition trimestrielle (2) — 3<sup>ème</sup> année SI (STI)", f:"documents/repartition/3si/Répartition 2eme Tri 3 Sti.pdf", s:"2<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition officielle du 2<sup>e</sup> trimestre (dossier documents/repartition/3si du dépôt GitHub)." },
-  { g:G_AIDE, t:"Répartition trimestrielle (3) — 3<sup>ème</sup> année SI (STI)", f:"documents/repartition/3si/Répartition 3eme Tri 4 Sti.pdf", s:"3<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition officielle du 3<sup>e</sup> trimestre. Remarque : le fichier du dépôt porte le nom « … 4 Sti » alors qu'il est rangé dans le dossier 3si — à renommer si nécessaire." },
-  { g:G_AIDE, t:"Répartition trimestrielle (2) — 4<sup>ème</sup> année SI (STI)", f:"documents/repartition/4si/Répartition 2eme Tri 4 Sti.pdf", s:"2<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition officielle du 2<sup>e</sup> trimestre (dossier documents/repartition/4si du dépôt GitHub)." },
-  { g:G_AIDE, t:"Répartition trimestrielle (3) — 4<sup>ème</sup> année SI (STI)", f:"documents/repartition/4si/Répartition 3eme Tri 4 Sti.pdf", s:"3<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition officielle du 3<sup>e</sup> trimestre (dossier documents/repartition/4si du dépôt GitHub)." },
+  { g:G_AIDE, t:"Répartition trimestrielle (2) — 3<sup>ème</sup> année SI (STI)", f:"documents/repartition/3si/Répartition 2eme Tri 3 Sti.pdf", s:"2<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition déposée du 2<sup>e</sup> trimestre (origine et validité à vérifier) (dossier documents/repartition/3si du dépôt GitHub)." },
+  { g:G_AIDE, t:"Répartition trimestrielle (3) — 3<sup>ème</sup> année SI (STI)", f:"documents/repartition/3si/Répartition 3eme Tri 4 Sti.pdf", s:"3<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition déposée du 3<sup>e</sup> trimestre (origine et validité à vérifier). Remarque : le fichier du dépôt porte le nom « … 4 Sti » alors qu'il est rangé dans le dossier 3si — à renommer si nécessaire." },
+  { g:G_AIDE, t:"Répartition trimestrielle (2) — 4<sup>ème</sup> année SI (STI)", f:"documents/repartition/4si/Répartition 2eme Tri 4 Sti.pdf", s:"2<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition déposée du 2<sup>e</sup> trimestre (origine et validité à vérifier) (dossier documents/repartition/4si du dépôt GitHub)." },
+  { g:G_AIDE, t:"Répartition trimestrielle (3) — 4<sup>ème</sup> année SI (STI)", f:"documents/repartition/4si/Répartition 3eme Tri 4 Sti.pdf", s:"3<sup>e</sup> trimestre &bull; document du dépôt", d:"Répartition déposée du 3<sup>e</sup> trimestre (origine et validité à vérifier) (dossier documents/repartition/4si du dépôt GitHub)." },
 
   /* ---------- 2. annexes de cours ---------- */
   { g:G_ANNEX, t:"Annexe HTML5 — élaborée par A. Essouyah", f:"docs/Annexe-HTML5.pdf", s:"6 pages &bull; annexe de cours", d:"Balises HTML5, attributs détaillés (link, script, ol, img) et exemples issus du projet « Le fleuriste du Rafèha »." },

@@ -7,7 +7,8 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.6.0-deepseek';
+const VERSION = '2.7.0-deepseek';
+const AGENT_PROTOCOL = 'sti-pedagogique-2026-10-27';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
@@ -19,7 +20,8 @@ const TASKS = {
   correction: { label: 'Correction de copies', short: 'Correction', icon: 'check', desc: 'Analyser texte, photos ou code avec un barème validé.' },
   cahier: { label: 'Cahier de textes', short: 'Cahier', icon: 'book', desc: 'Rédiger une entrée à partir du réalisé déclaré.' },
   repartition: { label: 'Répartition', short: 'Répartition', icon: 'calendar', desc: 'Proposer une progression sans changer les dates.' },
-  document: { label: 'Autres documents', short: 'Document libre', icon: 'file', desc: 'Comparer une révision avec un texte source et conserver les versions.' }
+  document: { label: 'Autres documents', short: 'Document libre', icon: 'file', desc: 'Comparer une révision avec un texte source et conserver les versions.' },
+  bibliotheque: { label: 'Bibliothèque', short: 'Bibliothèque', icon: 'book', desc: 'Classer vos sources et choisir les extraits utiles.' }
 };
 const ICONS = {
   spark: '<path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z"/><path d="m19 14 .8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14Z"/><path d="m5 14 .8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14Z"/>',
@@ -51,6 +53,11 @@ let resultMeta = {};
 let history = readHistory();
 let workspaceOwnerKey = '';
 let generationToken = 0;
+let libraryDocs = [];
+let libraryError = '';
+let libraryOwner = '';
+let correctionReview = null;
+const selectedSourceIds = {};
 let sharedPrompts = [];
 let sharedPromptState = 'idle';
 let sharedPromptError = '';
@@ -59,11 +66,11 @@ let sharedPromptUser = '';
 const selectedSharedPromptIds = {};
 function defaultForms() {
   return {
-    fiche: { session: '', methode: 'Cours dialogué et TP guidé', objectif: '', consignes: '', notions: [], competences: [], remplacer: false },
+    fiche: { session: '', methode: 'Cours dialogué et TP guidé', duree: 120, objectif: '', consignes: '', notions: [], competences: [], remplacer: false },
     exercices: { type_devoir: 'théorique', sujet: '', nombre: 5, difficulte: 'Progressive', format: 'Série d’exercices', duree: 60, contraintes: '', notions: [], competences: [], remplacement_id: '', document_existant: '' },
     correction: { type_devoir: 'théorique', mode_bareme: 'fourni', identifiant: 'Copie 1', sur: 20, sujet: '', bareme: '', copie: '', consignes: '' },
     cahier: { session: '', realise: '', devoirs: '', observations: '', remplacer: false },
-    repartition: { trimestre: 1, consignes: 'Conserver la progression officielle. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' },
+    repartition: { trimestre: 1, consignes: 'Respecter les contraintes et la progression fournies. Renforcer les activités pratiques et prévoir une remédiation après chaque évaluation.' },
     document: { titre: '', type_document: 'Document libre', document_existant: '', consignes: '', remplacement_id: '', fichier_nom: '' }
   };
 }
@@ -101,6 +108,7 @@ function preserveTranscriptionWarnings(result, review, acknowledged) {
 const keyOf = s => `${s.cls}|${s.n}`;
 const sessions = () => ctx?.sessions?.[classe] || [];
 const record = s => ctx?.store?.seances?.[keyOf(s)] || {};
+const lockedSession = s => Boolean(s && ctx?.store?.verrous?.[`${s.cls}|${s.tri}`]);
 const titleOf = s => record(s).title || s.blk?.t || 'Séance à planifier';
 const dateLong = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 const today = () => root.todayISO ? root.todayISO() : new Date().toISOString().slice(0, 10);
@@ -357,6 +365,9 @@ function resetTeacherWorkspace() {
   transcriptionAcknowledged = false;
   results = {};
   resultMeta = {};
+  correctionReview = null;
+  libraryDocs = []; libraryError = ''; libraryOwner = '';
+  Object.keys(selectedSourceIds).forEach(task => delete selectedSourceIds[task]);
   Object.keys(selectedSharedPromptIds).forEach(task => delete selectedSharedPromptIds[task]);
   Object.assign(forms, defaultForms());
 }
@@ -367,9 +378,10 @@ function documentIdentity(meta = {}) {
   const teacher = String(profile?.nom || [profile?.prenom, profile?.nom_famille].filter(Boolean).join(' ') || 'Nom et prénom à compléter').trim();
   return { school, teacher, classe: String(meta.classe || classe || '—').trim() };
 }
-function documentIdentityHtml(meta) {
+function documentIdentityHtml(meta = {}) {
   const identity = documentIdentity(meta);
-  return `<div class="agent-doc-identity" aria-label="Identification du document"><div><span>Lycée</span><strong>${esc(identity.school)}</strong></div><div><span>Enseignant</span><strong>${esc(identity.teacher)}</strong></div><div><span>Classe</span><strong>${esc(identity.classe)}</strong></div></div>`;
+  const sources = asArray(meta.sources).map(source => [source.titre, source.provenance, source.date_edition, source.page_ou_section].filter(Boolean).join(' — '));
+  return `<div class="agent-doc-identity" aria-label="Identification du document"><div><span>Lycée</span><strong>${esc(identity.school)}</strong></div><div><span>Enseignant</span><strong>${esc(identity.teacher)}</strong></div><div><span>Classe</span><strong>${esc(identity.classe)}</strong></div></div><div class="agent-source-disclaimer"><strong>Proposition à vérifier.</strong> La conformité au programme officiel n’a pas été vérifiée automatiquement. L’enseignant compare au document applicable et valide le contenu.${sources.length ? `<br><b>Extraits transmis :</b> ${esc(sources.join(' ; '))}.` : '<br>Aucun extrait de la bibliothèque sélectionné pour cette proposition.'}</div>`;
 }
 function commonContext(task = tool) {
   const context = { agent: 'Agent Vie Scolaire AI' };
@@ -390,6 +402,7 @@ function statusHtml() {
   const provider = String(status.provider || '').trim();
   if (provider && provider !== 'DeepSeek') return `<span class="agent-status warn"><i></i> Fonction distante : ${esc(provider)} · portage DeepSeek non déployé</span>`;
   if (!provider) return '<span class="agent-status warn"><i></i> Fournisseur distant non confirmé · tester la connexion</span>';
+  if (status.protocol !== AGENT_PROTOCOL) return '<span class="agent-status warn"><i></i> Fonction distante à mettre à jour</span>';
   if (status.configured) return `<span class="agent-status ok"><i></i> DeepSeek configuré · ${esc(status.model || 'modèle configuré')}</span>`;
   return '<span class="agent-status warn"><i></i> Fonction DeepSeek déployée · secret à configurer</span>';
 }
@@ -400,20 +413,48 @@ async function verifyDeepSeekDeployment() {
     const provider = String(remoteStatus?.provider || 'inconnu').trim();
     throw new Error(`La fonction Supabase distante signale « ${provider} ». Le portage DeepSeek n’est pas déployé; aucune génération n’a été envoyée.`);
   }
+  if (remoteStatus.protocol !== AGENT_PROTOCOL) {
+    throw new Error('La fonction Supabase distante n’est pas à la version attendue pour les sources, les durées et la répartition annuelle. Après votre accord, redéployez assistant-ia ; aucune génération n’a été envoyée.');
+  }
   if (!remoteStatus.configured) {
     throw new Error('La fonction Supabase utilise DeepSeek, mais DEEPSEEK_API_KEY n’est pas configurée.');
   }
   return remoteStatus;
 }
+function plannedSessions(period = forms.repartition.trimestre) {
+  return Number(period) === 0 ? sessions() : sessions().filter(s => s.tri === Number(period));
+}
+function periodLabel(period) { return Number(period) === 0 ? 'Année scolaire' : `Trimestre ${period}`; }
+async function loadLibrary(owner) {
+  if (!root.STI_AGENT_LIBRARY || !owner) return;
+  libraryOwner = owner;
+  try {
+    const docs = await root.STI_AGENT_LIBRARY.list(owner);
+    if (owner !== activeTeacherKey() || libraryOwner !== owner) return;
+    libraryDocs = docs; libraryError = '';
+  } catch (e) {
+    if (owner !== activeTeacherKey() || libraryOwner !== owner) return;
+    libraryDocs = []; libraryError = e.message || 'Bibliothèque locale indisponible.';
+  }
+  if (ctx) draw();
+}
+function sourcePickerHtml() {
+  if (!['fiche', 'exercices', 'repartition'].includes(tool) || !root.STI_AGENT_LIBRARY) return '';
+  return `<div class="agent-source-area">${root.STI_AGENT_LIBRARY.picker(libraryDocs, selectedSourceIds[tool], classe, activeTeacherKey())}</div>`;
+}
+function selectedSources() {
+  return root.STI_AGENT_LIBRARY?.references(libraryDocs, selectedSourceIds[tool], classe, activeTeacherKey()) || [];
+}
 function contextCard() {
   if (!['fiche', 'cahier'].includes(tool)) {
     if (tool === 'repartition') {
-      const count = sessions().filter(s => s.tri === Number(forms.repartition.trimestre)).length;
-      return `<div class="agent-context-card"><span>Contexte automatique</span><strong>${classe} · T${forms.repartition.trimestre}</strong><p>${count} séances, leurs dates, les références officielles et votre avancement seront transmis.</p></div>`;
+      const count = plannedSessions().length;
+      return `<div class="agent-context-card"><span>Contexte automatique</span><strong>${classe} · ${esc(periodLabel(forms.repartition.trimestre))}</strong><p>${count} séances, leurs dates et votre avancement seront transmis. Les documents du dépôt ne sont pas lus automatiquement.</p></div>`;
     }
     if (tool === 'exercices') {
       return `<div class="agent-context-card"><span>Référentiel disponible</span><strong>Programme ${classe}</strong><p>L’agent peut mobiliser les compétences et les notions du Smart Book liées à votre sujet.</p></div>`;
     }
+    if (tool === 'bibliotheque') return `<div class="agent-context-card"><span>Stockage local</span><strong>Vos sources sur cet appareil</strong><p>Les extraits ne sont transmis que si vous les sélectionnez dans une demande.</p></div>`;
     if (tool === 'document') {
       return `<div class="agent-context-card"><span>Source protégée</span><strong>Texte révisé, fichier inchangé</strong><p>La comparaison et les versions restent dans l’historique local de votre compte. Exportez le résultat pour remplacer vous-même le fichier source.</p></div>`;
     }
@@ -510,7 +551,7 @@ function sharedPromptPickerHtml() {
   return `<section class="agent-shared-prompts agent-no-print" aria-label="Prompts approuvés pour DeepSeek"><div class="agent-shared-prompts-heading"><div><strong>Prompts approuvés pour DeepSeek</strong><span>Bibliothèque partagée · <span data-agent-prompt-count="${esc(tool)}">${count}</span> sélectionné(s), ${MAX_SHARED_PROMPTS} maximum</span></div><span class="agent-shared-prompts-lock">Validés avant partage</span></div><p>Les prompts cochés seront ajoutés comme consignes complémentaires à DeepSeek. Claude sert uniquement à créer des brouillons génériques en amont : il ne reçoit pas vos demandes, copies, images ni données d’élèves.</p>${correctionNote}${content}</section>`;
 }
 function generateButton(label = 'Générer avec mon agent') {
-  return `${sharedPromptPickerHtml()}${contextReviewHtml()}<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
+  return `${sourcePickerHtml()}${sharedPromptPickerHtml()}${contextReviewHtml()}<div class="agent-form-footer"><button class="btn btn-primary agent-generate" type="button" data-agent-generate ${busy ? 'disabled' : ''}>${icon('spark')} ${busy ? 'L’agent travaille…' : esc(label)}</button><span>Une proposition sera affichée avant toute application.</span></div>`;
 }
 function formHtml() {
   const f = forms[tool];
@@ -524,7 +565,8 @@ function formHtml() {
       ${curriculumPicker('notions', 'Notions du référentiel', f.notions, 'Les notions déjà renseignées pour cette séance sont présélectionnées. Vous pouvez en choisir plusieurs ou laisser la sélection vide.')}
       ${curriculumPicker('competences', 'Compétences ciblées', f.competences, 'Choisissez les compétences de Sciences et technologies de l’informatique à travailler dans cette fiche.')}
       <label class="agent-field"><span>Méthode pédagogique</span><select data-agent-field="methode">${['Cours dialogué et TP guidé', 'TP principalement pratique', 'Apprentissage par projet', 'Révision et remédiation', 'Correction d’évaluation'].map(x => `<option ${f.methode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
-      <label class="agent-field"><span>Objectif prioritaire <em>facultatif</em></span><input data-agent-field="objectif" value="${esc(f.objectif)}" placeholder="Ex. : savoir contrôler un formulaire"></label>
+      <label class="agent-field"><span>Durée de la séance (minutes)</span><input type="number" min="15" max="300" step="5" data-agent-field="duree" value="${esc(f.duree)}"><small>120 minutes par défaut, ajustables selon votre contexte.</small></label>
+      <label class="agent-field full"><span>Objectif prioritaire <em>facultatif</em></span><input data-agent-field="objectif" value="${esc(f.objectif)}" placeholder="Ex. : savoir contrôler un formulaire"></label>
       <label class="agent-field full"><span>Vos consignes <em>facultatif</em></span><textarea data-agent-field="consignes" rows="4" placeholder="Matériel disponible, difficultés des groupes, activité à privilégier…">${esc(f.consignes)}</textarea></label>
     </div>${generateButton('Générer la fiche pédagogique')}`;
   }
@@ -538,7 +580,7 @@ function formHtml() {
       ${curriculumPicker('notions', 'Notions du référentiel', f.notions, 'Sélection facultative. Sans sélection, l’agent proposera des notions correspondant au thème saisi.')}
       ${curriculumPicker('competences', 'Compétences ciblées', f.competences, 'Sélection facultative des compétences que les exercices doivent évaluer.')}
       <label class="agent-field"><span>Type de devoir</span><select data-agent-field="type_devoir">${assignmentTypeOptions(f.type_devoir)}</select></label>
-      <label class="agent-field"><span>Type de document</span><select data-agent-field="format">${['Série d’exercices', 'Travail pratique', 'Devoir de contrôle', 'Révision orientée bac'].map(x => `<option ${f.format === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+      <label class="agent-field"><span>Type de document</span><select data-agent-field="format">${['Série d’exercices', 'Travail pratique', 'Devoir de contrôle', 'Devoir de synthèse', 'Révision orientée bac'].map(x => `<option ${f.format === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Difficulté</span><select data-agent-field="difficulte">${['Progressive', 'Facile', 'Moyenne', 'Difficile', 'Niveau baccalauréat'].map(x => `<option ${f.difficulte === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
       <label class="agent-field"><span>Nombre d’exercices</span><input type="number" min="1" max="10" data-agent-field="nombre" value="${esc(f.nombre)}"></label>
       <label class="agent-field"><span>Durée estimée (minutes)</span><input type="number" min="15" max="300" step="15" data-agent-field="duree" value="${esc(f.duree)}"></label>
@@ -559,10 +601,10 @@ function formHtml() {
   }
   if (tool === 'repartition') return `
     <div class="agent-form-grid">
-      <label class="agent-field"><span>Trimestre</span><select data-agent-field="trimestre">${[1, 2, 3].map(x => `<option value="${x}" ${Number(f.trimestre) === x ? 'selected' : ''}>${x}${x === 1 ? 'er' : 'e'} trimestre</option>`).join('')}</select></label>
+      <label class="agent-field"><span>Période</span><select data-agent-field="trimestre">${[1, 2, 3].map(x => `<option value="${x}" ${Number(f.trimestre) === x ? 'selected' : ''}>${x}${x === 1 ? 'er' : 'e'} trimestre</option>`).join('')}<option value="0" ${Number(f.trimestre) === 0 ? 'selected' : ''}>Année scolaire complète</option></select><small>Pour une année entière, la demande peut être longue ; en cas d’échec, procédez trimestre par trimestre.</small></label>
       <label class="agent-field"><span>Classe et calendrier</span><input value="${classe} · dates et numéros conservés" disabled></label>
       <label class="agent-field full"><span>Objectifs de la réorganisation</span><textarea data-agent-field="consignes" rows="5">${esc(f.consignes)}</textarea></label>
-    </div><div class="agent-truth-note">${icon('calendar')}<div><strong>Dates, vacances et évaluations restent repérables.</strong><span>L’application n’écrase ni le contenu réalisé ni les séances assurées. L’application de la proposition ne concerne que les séances à venir.</span></div></div>${generateButton('Proposer la répartition')}`;
+    </div><div class="agent-truth-note">${icon('calendar')}<div><strong>Dates, vacances et évaluations restent repérables.</strong><span>L’application ne modifie ni les séances assurées ni les trimestres verrouillés. La proposition ne peut être appliquée qu’aux séances à venir.</span></div></div>${generateButton('Proposer la répartition')}`;
   if (tool === 'document') {
     const savedDocuments = currentHistory().filter(item => item.task === 'document' && item.result && item.classe === classe);
     return `<div class="agent-truth-note">${icon('shield')}<div><strong>Le fichier original ne sera jamais modifié par l’agent.</strong><span>Collez votre texte ou importez un fichier TXT, Markdown ou HTML. Pour un PDF ou Word, copiez le texte. La comparaison, l’export et l’historique restent sous votre contrôle.</span></div></div>
@@ -597,7 +639,7 @@ function formHtml() {
 }
 
 function resultHeader(title, subtitle, applyLabel = '', restoreLabel = '', statusLabel = 'PROPOSITION DE L’AGENT · À VÉRIFIER') {
-  return `<div class="agent-result-top agent-no-print"><div><span>${esc(statusLabel)}</span><strong>${esc(title)}</strong>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</div><div class="agent-result-actions">${applyLabel ? `<button type="button" class="btn btn-primary" data-agent-apply>${icon('arrow')} ${esc(applyLabel)}</button>` : ''}${restoreLabel ? `<button type="button" class="btn btn-ghost" data-agent-restore-document>${icon('arrow')} ${esc(restoreLabel)}</button>` : ''}<button type="button" class="btn btn-ghost" data-agent-download>${icon('download')} Exporter</button><button type="button" class="btn btn-ghost" data-agent-print>${icon('print')} Imprimer</button></div></div>`;
+  return `<div class="agent-result-top agent-no-print"><div><span>${esc(statusLabel)}</span><strong>${esc(title)}</strong>${subtitle ? `<small>${esc(subtitle)}</small>` : ''}</div><div class="agent-result-actions">${applyLabel ? `<button type="button" class="btn btn-primary" data-agent-apply>${icon('arrow')} ${esc(applyLabel)}</button>` : ''}${restoreLabel ? `<button type="button" class="btn btn-ghost" data-agent-restore-document>${icon('arrow')} ${esc(restoreLabel)}</button>` : ''}<button type="button" class="btn btn-ghost" data-agent-download>${icon('download')} ${tool === 'exercices' ? 'HTML avec corrigé' : 'HTML'}</button>${tool === 'exercices' ? `<button type="button" class="btn btn-ghost" data-agent-download-student title="Retire les sections corrigé ; relisez aussi les énoncés avant diffusion">${icon('download')} HTML élève</button>` : ''}${['fiche', 'exercices', 'repartition', 'correction'].includes(tool) && root.STI_AGENT_XLSX ? `<button type="button" class="btn btn-ghost" data-agent-xlsx>${icon('download')} ${tool === 'exercices' ? 'Excel avec corrigé' : 'Excel'}</button>` : ''}${['fiche', 'exercices', 'repartition'].includes(tool) && root.STI_AGENT_LIBRARY ? `<button type="button" class="btn btn-ghost" data-agent-archive title="Copie locale à vérifier${tool === 'exercices' ? ', avec corrigé' : ''}">${icon('file')} Archiver${tool === 'exercices' ? ' avec corrigé' : ''}</button>` : ''}<button type="button" class="btn btn-ghost" data-agent-print title="Dans la boîte d’impression, choisissez Enregistrer au format PDF">${icon('print')} ${tool === 'exercices' ? 'PDF avec corrigé' : 'Imprimer / PDF'}</button>${tool === 'exercices' ? `<button type="button" class="btn btn-ghost" data-agent-print-student title="Retire les sections corrigé ; relisez aussi les énoncés avant diffusion">${icon('print')} PDF élève</button>` : ''}</div></div>`;
 }
 function chipList(items) {
   return `<div class="agent-tags">${asArray(items).map(x => `<span>${esc(x)}</span>`).join('') || '<span>Non renseigné</span>'}</div>`;
@@ -611,7 +653,7 @@ function renderFiche(r, meta) {
   const hasExisting = Boolean(session && String(record(session).preparation || '').trim());
   return `${resultHeader(r.titre || 'Fiche pédagogique', `${meta.classe} · ${dateLong(meta.date)}`, hasExisting ? 'Remplacer la fiche existante' : 'Utiliser dans la fiche')}<div id="agent-result" class="agent-document">
     ${documentIdentityHtml(meta)}
-    <div class="agent-doc-heading"><span>FICHE PÉDAGOGIQUE · ${esc(meta.classe)}</span><h2>${esc(r.titre || 'Séance STI')}</h2><p>${esc(dateLong(meta.date))}</p></div>
+    <div class="agent-doc-heading"><span>FICHE PÉDAGOGIQUE · ${esc(meta.classe)}</span><h2>${esc(r.titre || 'Séance STI')}</h2><p>${esc(dateLong(meta.date))}${meta.duree ? ` · ${esc(meta.duree)} min` : ''}</p></div>
     <div class="agent-doc-grid"><section><h3>Objectifs</h3>${bulletList(r.objectifs)}</section><section><h3>Prérequis</h3>${bulletList(r.prerequis)}</section></div>
     <section><h3>Déroulement proposé</h3><div class="agent-phases">${phases.map((p, i) => `<div><span>${String(i + 1).padStart(2, '0')}</span><div><strong>${esc(p.phase || `Phase ${i + 1}`)} <em>${esc(p.duree || '')}</em></strong><p><b>Enseignant :</b> ${nl(p.activite_enseignant || p.enseignant)}</p><p><b>Élèves :</b> ${nl(p.activite_eleve || p.eleves)}</p>${p.trace ? `<p><b>Trace / évaluation :</b> ${nl(p.trace)}</p>` : ''}</div></div>`).join('') || '<p>Déroulement non renseigné.</p>'}</div></section>
     <section><h3>Notions mobilisées</h3>${chipList(r.notions)}</section>
@@ -624,7 +666,7 @@ function renderExercices(r, meta) {
   const exos = asArray(r.exercices);
   const replacementTarget = currentHistory().find(item => item.id === meta.remplacement_id && item.task === 'exercices' && item.classe === meta.classe);
   const replaceLabel = replacementTarget ? 'Remplacer la série sélectionnée' : '';
-  return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`, replaceLabel)}<div id="agent-result" class="agent-document">
+  return `${resultHeader(r.titre || 'Série d’exercices', `${meta.classe} · ${asArray(exos).length} exercice(s)`, replaceLabel)}<div class="agent-student-export-hint agent-no-print">Les exports « élève » retirent les sections corrigé. Relisez aussi les énoncés et les fichiers avant toute diffusion.</div><div id="agent-result" class="agent-document">
     ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>${esc(r.format || 'SÉRIE D’EXERCICES')} · ${esc(meta.classe)} · ${esc((meta.type_devoir || 'théorique').toUpperCase())}</span><h2>${esc(r.titre || 'Exercices STI')}</h2><p>${esc(r.duree || forms.exercices.duree + ' min')}${r.bareme_total ? ` · Barème : ${esc(r.bareme_total)}` : ''}</p></div>
     ${r.introduction ? `<p class="agent-intro">${nl(r.introduction)}</p>` : ''}
@@ -647,11 +689,11 @@ function renderCahier(r, meta) {
 }
 function renderRepartition(r, meta) {
   const rows = asArray(r.seances);
-  return `${resultHeader(r.titre || `Répartition ${meta.classe} · T${meta.trimestre}`, `${rows.length} séance(s) proposée(s) · dates inchangées`, 'Appliquer aux séances à venir')}<div id="agent-result" class="agent-document">
+  return `${resultHeader(r.titre || `Répartition ${meta.classe} · ${periodLabel(meta.trimestre)}`, `${rows.length} séance(s) proposée(s) · dates inchangées`, 'Appliquer aux séances à venir')}<div id="agent-result" class="agent-document">
     ${documentIdentityHtml(meta)}
-    <div class="agent-doc-heading"><span>RÉPARTITION PÉDAGOGIQUE · ${esc(meta.classe)} · TRIMESTRE ${esc(meta.trimestre)}</span><h2>${esc(r.titre || 'Progression proposée')}</h2></div>
+    <div class="agent-doc-heading"><span>RÉPARTITION PÉDAGOGIQUE · ${esc(meta.classe)} · ${esc(periodLabel(meta.trimestre).toLocaleUpperCase('fr'))}</span><h2>${esc(r.titre || 'Progression proposée')}</h2></div>
     ${asArray(r.avertissements).length ? `<div class="agent-uncertainties"><strong>Points de vigilance</strong>${bulletList(r.avertissements)}</div>` : ''}
-    <div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>N° / date</th><th>Séance proposée</th><th>Objectif et travail</th></tr></thead><tbody>${rows.map(s => `<tr><td><strong>S${esc(s.numero ?? s.n)}</strong><br>${esc(s.date || '')}</td><td><strong>${esc(s.titre)}</strong><br><small>${esc(s.domaine || '')}${s.type ? ` · ${esc(s.type)}` : ''}</small></td><td>${nl(s.objectif)}${s.travail_maison ? `<p><b>Devoir :</b> ${nl(s.travail_maison)}</p>` : ''}</td></tr>`).join('')}</tbody></table></div>
+    <div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>N° / date</th><th>Séance proposée</th><th>Objectif et travail</th></tr></thead><tbody>${rows.map(s => `<tr><td><strong>S${esc(s.numero ?? s.n)}</strong><br>${esc(s.date || '')}${Number(meta.trimestre) === 0 ? `<br><small>T${esc(asArray(meta.seances).find(item => Number(item.numero) === Number(s.numero ?? s.n) && item.date === s.date)?.trimestre || '—')}</small>` : ''}</td><td><strong>${esc(s.titre)}</strong><br><small>${esc(s.domaine || '')}${s.type ? ` · ${esc(s.type)}` : ''}</small></td><td>${nl(s.objectif)}${s.travail_maison ? `<p><b>Devoir :</b> ${nl(s.travail_maison)}</p>` : ''}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
 }
 function renderTranscriptionReview() {
@@ -696,14 +738,52 @@ function renderDocument(r, meta) {
       ${asArray(r.points_a_verifier).length ? `<div class="agent-uncertainties"><strong>Points à vérifier avant utilisation</strong>${bulletList(r.points_a_verifier)}</div>` : ''}
     </div>`;
 }
+function createGradeReview(result) {
+  return { points: asArray(result?.questions).map(q => String(q.points_attribues ?? '')), reasons: asArray(result?.questions).map(() => ''), confirmed: false, total: null };
+}
+function calculateGradeReview(result, review) {
+  const questions = asArray(result?.questions), maximum = Number(result?.sur);
+  if (!questions.length || !Number.isFinite(maximum) || maximum <= 0 || !review || review.points.length !== questions.length) return { error: 'Le détail du barème est incomplet.' };
+  let available = 0;
+  const points = [], reasons = [];
+  for (let i = 0; i < questions.length; i++) {
+    const raw = String(review.points[i] ?? '').trim().replace(',', '.');
+    const point = raw ? Number(raw) : NaN, max = Number(questions[i].points_max), proposed = Number(questions[i].points_attribues);
+    const reason = String(review.reasons[i] || '').trim();
+    if (questions[i].points_max == null || questions[i].points_attribues == null || !Number.isFinite(proposed) || proposed < 0 || proposed > max) return { error: `La proposition de points de la question ${i + 1} est invalide : relancez l’analyse.` };
+    if (!Number.isFinite(max) || max < 0 || !Number.isFinite(point) || point < 0 || point > max) return { error: `Vérifiez les points de la question ${i + 1} : ils doivent être compris entre 0 et son maximum.` };
+    if (Math.abs(point - proposed) > 0.000001 && !reason) return { error: `Justifiez la modification des points de la question ${i + 1}.` };
+    available += max; points.push(point); reasons.push(reason);
+  }
+  if (Math.abs(available - maximum) > 0.05) return { error: 'La somme des maxima ne correspond pas au barème total : vérifiez la proposition.' };
+  const total = Math.round(points.reduce((sum, value) => sum + value, 0) * 1000) / 1000;
+  if (total > maximum + 0.000001) return { error: 'La note dépasse le total du barème.' };
+  return { error: '', points, reasons, total };
+}
+function renderGradeReview(r) {
+  if (!correctionReview || !asArray(r.questions).length) return '';
+  const confirmed = correctionReview.confirmed;
+  return `<section class="agent-grade-review agent-no-print"><div><span>VALIDATION HUMAINE</span><h3>${confirmed ? 'Note validée sur cet appareil' : 'Relire et valider la note'}</h3><p>Contrôlez la copie, le barème et chaque attribution. Pour modifier des points, expliquez votre décision. Aucune note n’est enregistrée dans le registre des élèves.</p></div>
+    ${confirmed ? `<div class="agent-message success"><strong>${esc(correctionReview.total)} / ${esc(r.sur)}</strong> · validation par l’enseignant, non saisie dans le registre.</div><button type="button" class="btn btn-ghost" data-agent-edit-grade>Modifier ma validation</button>` : `<div class="agent-grade-review-list">${asArray(r.questions).map((q, i) => `<div class="agent-grade-review-row"><strong>${esc(q.question || `Question ${i + 1}`)}</strong><label>Points retenus <span>/ ${esc(q.points_max)}</span><input type="number" step="any" min="0" max="${esc(q.points_max)}" data-agent-grade-point="${i}" value="${esc(correctionReview.points[i])}"></label><label>Justification si points modifiés<input type="text" maxlength="1000" data-agent-grade-reason="${i}" value="${esc(correctionReview.reasons[i])}" placeholder="Motif de votre décision"></label></div>`).join('')}</div><button type="button" class="btn btn-primary" data-agent-validate-grade>Valider ma note après relecture</button>`}
+  </section>`;
+}
+function validateGrade() {
+  if (tool !== 'correction' || !results.correction || !correctionReview || correctionReview.confirmed) return;
+  const checked = calculateGradeReview(results.correction, correctionReview);
+  if (checked.error) { error = checked.error; draw(); return; }
+  if (!root.confirm?.(`Valider ${checked.total} / ${results.correction.sur} après relecture de la copie et du barème ? La note ne sera pas saisie dans le registre.`)) return;
+  correctionReview = { ...checked, confirmed: true };
+  error = ''; notice = 'Votre validation est conservée uniquement tant que cette correction reste ouverte. Exportez le document si nécessaire.'; draw();
+}
 function renderCorrection(r, meta) {
   const questions = asArray(r.questions);
   const uncertain = asArray(r.transcription_incertaine);
   const limitations = asArray(r.limites_analyse);
-  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · ${meta.type_devoir || 'théorique'} · note proposée à contrôler`)}<div id="agent-result" class="agent-document">
+  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · ${meta.type_devoir || 'théorique'} · note proposée à contrôler`)}${renderGradeReview(r)}<div id="agent-result" class="agent-document">
     ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>CORRECTION ${esc((meta.type_devoir || 'théorique').toUpperCase())} · ${esc(meta.classe)} · ${esc(meta.identifiant)}</span><h2>Proposition d’évaluation</h2></div>
-    <div class="agent-grade"><div><strong>${esc(r.note ?? '—')}</strong><span>/ ${esc(r.sur ?? meta.sur)}</span></div><p><b>Confiance de lecture :</b> ${esc(r.confiance || 'à vérifier')}<br>Cette note n’est pas enregistrée automatiquement.</p></div>
+    <div class="agent-grade"><div><strong>${esc(r.note ?? '—')}</strong><span>/ ${esc(r.sur ?? meta.sur)}</span></div><p><b>Note proposée par l’agent</b> · confiance de lecture : ${esc(r.confiance || 'à vérifier')}<br>Cette note n’est pas enregistrée automatiquement.</p></div>
+    ${correctionReview?.confirmed ? `<div class="agent-grade-final"><strong>Note validée par l’enseignant : ${esc(correctionReview.total)} / ${esc(r.sur)}</strong><p>Validation locale ; aucune saisie automatique dans le registre des élèves.</p><ul>${questions.map((q, i) => `<li>${esc(q.question || `Question ${i + 1}`)} : ${esc(correctionReview.points[i])} / ${esc(q.points_max)}${correctionReview.reasons[i] ? ` — ${esc(correctionReview.reasons[i])}` : ''}</li>`).join('')}</ul></div>` : '<div class="agent-grade-pending">Note non validée par l’enseignant.</div>'}
     ${uncertain.length ? `<div class="agent-uncertainties"><strong>Passages à relire sur la copie</strong>${bulletList(uncertain)}</div>` : ''}
     ${limitations.length ? `<div class="agent-uncertainties"><strong>Limites de l’analyse${meta.type_devoir === 'pratique' ? ' pratique' : ''}</strong>${bulletList(limitations)}</div>` : ''}
     <section><h3>Détail question par question</h3><div class="agent-table-wrap"><table class="agent-table"><thead><tr><th>Question</th><th>Points</th><th>Justification</th></tr></thead><tbody>${questions.map(q => `<tr><td><strong>${esc(q.question || q.numero)}</strong></td><td><strong>${esc(q.points_attribues ?? '—')} / ${esc(q.points_max ?? '—')}</strong></td><td>${nl(q.justification)}${asArray(q.erreurs).length ? `<p><b>Erreurs :</b> ${esc(asArray(q.erreurs).join(' ; '))}</p>` : ''}${asArray(q.elements_corrects).length ? `<p><b>Réussites :</b> ${esc(asArray(q.elements_corrects).join(' ; '))}</p>` : ''}</td></tr>`).join('')}</tbody></table></div></section>
@@ -742,14 +822,25 @@ function draw() {
   zone.innerHTML = `<div class="agent-shell">
     <header class="agent-hero agent-no-print"><div class="agent-hero-copy"><span class="agent-eyebrow">${icon('spark', 16)} VOTRE STUDIO PÉDAGOGIQUE PERSONNEL</span><h1>Agent Vie Scolaire <em>AI</em></h1><p>Préparez, adaptez et vérifiez vos documents pédagogiques. Rien n’est appliqué sans votre décision.</p><div class="agent-identity-strip" aria-label="Informations du professeur"><span><small>LYCÉE</small><strong>${esc(identity.school)}</strong></span><span><small>ENSEIGNANT</small><strong>${esc(identity.teacher)}</strong></span>${needsProfile ? '<button type="button" class="agent-profile-link" data-agent-profile>Compléter mon profil</button>' : '<span class="agent-doc-promise">Lycée · Enseignant · Classe sur chaque document</span>'}</div><div class="agent-hero-status">${statusHtml()}<span>Version ${VERSION}</span></div></div><div class="agent-hero-actions"><label>Classe de travail<select data-agent-class aria-label="Classe de travail"><option ${classe === '3SI1' ? 'selected' : ''}>3SI1</option><option ${classe === '4SI2' ? 'selected' : ''}>4SI2</option></select></label><button class="btn btn-ghost" data-agent-test>${icon('shield')} Tester la connexion</button><a class="agent-flow-link" href="#agent-flow">Voir le schéma du parcours ↓</a></div></header>
     <div class="agent-workspace">
-      <aside class="agent-sidebar agent-no-print"><span class="agent-menu-label">CHOISIR UN OUTIL</span>${Object.entries(TASKS).map(([id, t]) => `<button class="agent-tool ${tool === id ? 'active' : ''}" data-agent-tool="${id}" aria-pressed="${tool === id}"><span>${icon(t.icon)}</span><div><strong>${t.label}</strong><small>${t.desc}</small></div></button>`).join('')}${contextCard()}<div class="agent-security">${icon('shield', 16)}<p>La clé IA reste dans Supabase. Les élèves et les notes ne sont jamais envoyés en bloc.</p></div></aside>
-      <main class="agent-main"><section class="agent-request agent-no-print"><div class="agent-request-title"><span>${icon(TASKS[tool].icon, 21)}</span><div><small>CONFIGURER VOTRE DOCUMENT</small><h2>${TASKS[tool].label}</h2><p>${esc(TASKS[tool].desc)}</p></div></div>${formHtml()}</section>
+      <aside class="agent-sidebar agent-no-print"><span class="agent-menu-label">CHOISIR UN OUTIL</span>${Object.entries(TASKS).map(([id, t]) => `<button class="agent-tool ${tool === id ? 'active' : ''}" data-agent-tool="${id}" aria-pressed="${tool === id}"><span>${icon(t.icon)}</span><div><strong>${t.label}</strong><small>${t.desc}</small></div></button>`).join('')}${contextCard()}<div class="agent-security">${icon('shield', 16)}<p>La clé IA reste dans Supabase. Le registre élève n’est pas transmis automatiquement : vérifiez les pièces jointes.</p></div></aside>
+      <main class="agent-main">${tool === 'bibliotheque' ? '<section class="agent-request agent-library" data-agent-library-host></section>' : `<section class="agent-request agent-no-print"><div class="agent-request-title"><span>${icon(TASKS[tool].icon, 21)}</span><div><small>CONFIGURER VOTRE DOCUMENT</small><h2>${TASKS[tool].label}</h2><p>${esc(TASKS[tool].desc)}</p></div></div>${formHtml()}</section>
       ${busy ? `<div class="agent-loading" role="status"><span></span><div><strong>L’agent analyse votre demande…</strong><p>La génération peut prendre une à deux minutes pour une répartition ou une copie avec photos.</p></div></div>` : ''}
       ${error ? `<div class="agent-message error agent-no-print" role="alert"><strong>La demande n’a pas abouti</strong><p>${nl(error)}</p></div>` : ''}
       ${notice ? `<div class="agent-message success agent-no-print"><p>${nl(notice)}</p></div>` : ''}
       ${transcriptionReview ? renderTranscriptionReview() : ''}
-      ${renderResult() || (!busy && !error && !transcriptionReview ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez relire, remplacer, exporter ou appliquer le résultat.</p></div>` : '')}</main>
+      ${renderResult() || (!busy && !error && !transcriptionReview ? `<div class="agent-empty agent-no-print">${icon('spark', 30)}<h3>Votre document apparaîtra ici</h3><p>Renseignez la demande puis laissez l’agent travailler. Vous pourrez relire, remplacer, exporter ou appliquer le résultat.</p></div>` : '')}`}</main>
     </div>${historyHtml()}${flowHtml()}</div>`;
+  if (tool === 'bibliotheque' && root.STI_AGENT_LIBRARY) {
+    const owner = activeTeacherKey();
+    root.STI_AGENT_LIBRARY.mount(zone.querySelector?.('[data-agent-library-host]'), {
+      owner, docs: libraryDocs.filter(doc => doc.owner === owner), error: libraryError,
+      onChanged: docs => {
+        if (owner !== activeTeacherKey() || owner !== libraryOwner) return;
+        libraryDocs = docs; libraryError = '';
+        Object.keys(selectedSourceIds).forEach(task => delete selectedSourceIds[task]);
+      }
+    });
+  }
 }
 
 function validate() {
@@ -759,11 +850,14 @@ function validate() {
   if (!identity.teacher || identity.teacher === 'Nom et prénom à compléter') return 'Complétez d’abord votre nom et prénom dans « Mon profil » pour identifier les documents produits.';
   if (!identity.school || identity.school === 'Lycée à renseigner') return 'Le nom du lycée doit être renseigné avant de produire un document.';
   if (['fiche', 'cahier'].includes(tool) && !findSession(f.session)) return 'Sélectionnez une séance du planning.';
+  if (tool === 'fiche' && (!Number.isFinite(Number(f.duree)) || Number(f.duree) < 15 || Number(f.duree) > 300)) return 'Indiquez une durée de séance entre 15 et 300 minutes.';
   if (tool === 'cahier') {
     const s = findSession(f.session);
     if (!f.realise.trim() && !String(record(s).contenu || '').trim()) return 'Décrivez ce qui a réellement été fait, ou renseignez d’abord le contenu de la fiche. L’agent ne doit pas inventer le déroulement d’une séance.';
   }
   if (tool === 'exercices' && !f.sujet.trim()) return 'Indiquez la notion ou le thème des exercices.';
+  if (tool === 'exercices' && (!Number.isInteger(Number(f.nombre)) || Number(f.nombre) < 1 || Number(f.nombre) > 10)) return 'Choisissez de 1 à 10 exercices.';
+  if (tool === 'exercices' && (!Number.isFinite(Number(f.duree)) || Number(f.duree) < 15 || Number(f.duree) > 300)) return 'Indiquez une durée entre 15 et 300 minutes.';
   if (tool === 'document') {
     if (!f.titre.trim()) return 'Donnez un titre au document à réviser.';
     if (!f.type_document.trim()) return 'Indiquez le type de document à réviser.';
@@ -773,21 +867,23 @@ function validate() {
     if (f.remplacement_id && !currentHistory().some(item => item.id === f.remplacement_id && item.task === 'document' && item.classe === classe)) return 'Le document sélectionné n’est plus présent dans votre historique local.';
   }
   if (tool === 'correction') {
+    if (!Number.isFinite(Number(f.sur)) || Number(f.sur) <= 0 || Number(f.sur) > 1000) return 'Indiquez une note maximale supérieure à 0 et au plus égale à 1 000.';
     if (!f.sujet.trim()) return 'Ajoutez le sujet et, si possible, le corrigé de référence.';
     const rubricFirst = f.mode_bareme === 'proposer' && !f.bareme.trim();
     if (!rubricFirst && !f.bareme.trim()) return 'Ajoutez le barème détaillé ou choisissez « L’agent propose le barème ».';
     if (!rubricFirst && !f.copie.trim() && !attachments.length && !(f.type_devoir === 'pratique' && codeFiles.length)) return 'Ajoutez les réponses de l’élève : texte, fichier de code ou image selon le type de devoir.';
   }
-  if (tool === 'repartition' && !sessions().some(s => s.tri === Number(f.trimestre))) return 'Aucune séance n’est disponible pour ce trimestre.';
+  if (tool === 'repartition' && !plannedSessions().length) return 'Aucune séance n’est disponible pour cette période.';
   return '';
 }
 function makeMeta() {
   const base = { classe, task: tool };
   if (['fiche', 'cahier'].includes(tool)) {
     const s = findSession(forms[tool].session);
-    return s ? { ...base, session: keyOf(s), numero: s.n, date: s.iso, titre: titleOf(s) } : { ...base, session: '', numero: '', date: today(), titre: '' };
+    const duration = tool === 'fiche' ? { duree: Number(forms.fiche.duree) } : {};
+    return s ? { ...base, ...duration, session: keyOf(s), numero: s.n, date: s.iso, titre: titleOf(s) } : { ...base, ...duration, session: '', numero: '', date: today(), titre: '' };
   }
-  if (tool === 'repartition') return { ...base, trimestre: Number(forms.repartition.trimestre) };
+  if (tool === 'repartition') return { ...base, trimestre: Number(forms.repartition.trimestre), seances: plannedSessions().map(s => ({ numero: s.n, date: s.iso, trimestre: s.tri })) };
   if (tool === 'correction') return { ...base, type_devoir: forms.correction.type_devoir, mode_bareme: forms.correction.mode_bareme, identifiant: forms.correction.identifiant.trim() || 'Copie anonyme', sur: Number(forms.correction.sur) || 20 };
   if (tool === 'exercices') return { ...base, type_devoir: forms.exercices.type_devoir, remplacement_id: forms.exercices.remplacement_id || '' };
   if (tool === 'document') return { ...base, titre: forms.document.titre.trim(), type_document: forms.document.type_document, document_replacement_id: forms.document.remplacement_id || '' };
@@ -806,7 +902,7 @@ function buildPayload() {
       ? []
       : relatedCompetences([sessionTopic(selectedSession), f.objectif, f.consignes, ...notionsSelectionnees.map(item => `${item.notion} ${item.description}`)].join(' '));
     base.input = {
-      seance, methode: f.methode, objectif_prioritaire: f.objectif, consignes: f.consignes,
+      seance, methode: f.methode, duree_minutes: Number(f.duree), objectif_prioritaire: f.objectif, consignes: f.consignes,
       mode_document: f.remplacer && existingPreparation.trim() ? 'remplacement' : 'nouveau',
       document_a_remplacer: f.remplacer ? existingPreparation : '',
       notions_selectionnees: notionsSelectionnees,
@@ -848,8 +944,8 @@ function buildPayload() {
     };
   } else if (tool === 'repartition') {
     base.input = {
-      trimestre: Number(f.trimestre), consignes: f.consignes,
-      seances: sessions().filter(s => s.tri === Number(f.trimestre)).map(s => sessionData(s, 'repartition')),
+      trimestre: Number(f.trimestre), periode: Number(f.trimestre) === 0 ? 'annuelle' : 'trimestrielle', consignes: f.consignes,
+      seances: plannedSessions(f.trimestre).map(s => sessionData(s, 'repartition')),
       calendrier: { vacances: root.VACANCES || [], fin_annee: root.SCHOOL?.finAnnee }
     };
   } else if (tool === 'document') {
@@ -872,6 +968,10 @@ function buildPayload() {
       poursuite_malgre_incertitudes_confirmee: Boolean(transcriptionAcknowledged),
       regles: ['Attribuer les points uniquement à partir du sujet, du barème validé et des éléments fournis. Signaler toute illisibilité et ne jamais prétendre avoir exécuté le code.', transcriptionReview ? 'La copie photo a été transcrite puis relue par l’enseignant. Ne devine pas les segments marqués [illisible]; garde les limites de lecture visibles dans la correction.' : ''].filter(Boolean).join(' ')
     };
+  }
+  if (['fiche', 'exercices', 'repartition'].includes(tool)) {
+    const sources = selectedSources();
+    if (sources.length) base.input.sources_fournies = sources;
   }
   return base;
 }
@@ -900,6 +1000,9 @@ function buildRequestSpec() {
   const task = rubricFirst ? 'bareme' : handwritingFirst ? 'transcription' : tool;
   const meta = makeMeta();
   const payload = rubricFirst ? buildRubricPayload() : handwritingFirst ? buildTranscriptionPayload() : buildPayload();
+  if (Array.isArray(payload.input?.sources_fournies)) {
+    meta.sources = payload.input.sources_fournies.map(({ titre, provenance, date_edition, page_ou_section }) => ({ titre, provenance, date_edition, page_ou_section }));
+  }
   const requestAttachments = task === 'transcription' || (task === 'correction' && !transcriptionReview) ? attachments.map(item => ({ ...item })) : [];
   const prompts = task === tool ? selectedPromptsForTask(tool) : [];
   payload.prompt_ids = prompts.map(item => item.id);
@@ -909,6 +1012,19 @@ function requestTaskLabel(task) {
   if (task === 'transcription') return 'Transcription préalable';
   if (task === 'bareme') return 'Proposition de barème';
   return TASKS[task]?.label || 'Demande pédagogique';
+}
+function containsUnsupportedComplianceClaim(value) {
+  return collectText(value).some(item => {
+    const text = item.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const affirmative = /\b(?:conforme(?:s|ment)?|respecte(?:nt)?|aligne(?:e|s|es)?|correspond(?:ent)?)\b[^.!?\n]{0,100}\bprogrammes?\b[^.!?\n]{0,50}\bofficiel(?:le)?s?\b/g;
+    for (const match of text.matchAll(affirmative)) {
+      const before = text.slice(Math.max(0, match.index - 45), match.index).split(/[.!?\n]/).pop();
+      if (!/\b(?:non|pas|jamais|sans|verifier|verifiez|verifie|verifiee|verification|incertain)\b/.test(before)) return true;
+    }
+    return /\bofficiellement\b[^.!?\n]{0,45}\bconforme(?:s)?\b/.test(text)
+      || /\bconformite\b[^.!?\n]{0,80}\bprogrammes?\b[^.!?\n]{0,50}\bofficiel(?:le)?s?\b[^.!?\n]{0,50}\b(?:garantie|assuree|confirmee)\b/.test(text)
+      || /\bprogrammes?\b[^.!?\n]{0,50}\bofficiel(?:le)?s?\b[^.!?\n]{0,40}\b(?:pleinement respecte|entierement respecte)\b/.test(text);
+  });
 }
 function collectText(value) {
   if (typeof value === 'string') return [value];
@@ -1109,6 +1225,7 @@ async function generate() {
   const requestToken = generationToken;
   busy = true;
   results[tool] = null;
+  if (tool === 'correction') correctionReview = null;
   draw();
   try {
     await verifyDeepSeekDeployment();
@@ -1119,12 +1236,14 @@ async function generate() {
       status = { configured: false, provider, model: data.meta?.model };
       throw new Error(`La réponse ne confirme pas DeepSeek côté serveur (fournisseur : ${provider}); aucun résultat n’a été appliqué. Vérifiez le déploiement de la fonction.`);
     }
+    if (data.meta?.protocol !== AGENT_PROTOCOL) throw new Error('La réponse provient d’une version incompatible de la fonction distante. Aucun résultat n’a été appliqué.');
     if (task === 'document' && meta.document_replacement_id) {
       const latestTarget = currentHistory().find(item => item.id === meta.document_replacement_id && item.task === 'document' && item.classe === meta.classe);
       if (!latestTarget || String(currentDocumentVersion(latestTarget)?.result?.contenu || '') !== documentTargetContent) throw new Error('Ce document a changé dans votre historique pendant la révision. Rouvrez sa dernière version avant de recommencer.');
     }
     if (!data.result || typeof data.result !== 'object') throw new Error('La réponse de l’agent ne contient pas de document exploitable.');
-    status = { configured: true, provider: data.meta.provider, model: data.meta?.model || status?.model };
+    if (['fiche', 'exercices', 'repartition'].includes(task) && containsUnsupportedComplianceClaim(data.result)) throw new Error('La réponse affirme une conformité officielle non vérifiée. Relancez la demande et comparez la proposition au programme applicable.');
+    status = { configured: true, provider: data.meta.provider, model: data.meta?.model || status?.model, protocol: data.meta.protocol };
     if (rubricFirst) {
       forms.correction.bareme = rubricToText(data.result);
       notice = 'Le barème proposé est maintenant dans le champ modifiable. Relisez-le, ajustez les points si nécessaire, puis lancez la correction avec ce barème.';
@@ -1154,6 +1273,7 @@ async function generate() {
     } : meta;
     results[tool] = data.result;
     resultMeta[tool] = localMeta;
+    if (task === 'correction') correctionReview = createGradeReview(data.result);
     if (task === 'document') {
       notice = meta.document_replacement_id
         ? 'Comparez la source et la proposition. Le remplacement dans votre historique restera réversible et demandera votre confirmation.'
@@ -1216,6 +1336,8 @@ async function testConnection() {
     if (data.provider !== 'DeepSeek') {
       const provider = String(data.provider || 'inconnu').trim();
       notice = `La fonction distante signale « ${provider} » : le portage DeepSeek n’est pas encore déployé. Ce test n’a lancé aucune génération.`;
+    } else if (data.protocol !== AGENT_PROTOCOL) {
+      notice = 'La fonction Supabase distante n’est pas à la version attendue. Son redéploiement doit être approuvé avant d’utiliser ces fonctions ; ce test n’a lancé aucune génération.';
     } else if (data.configured) {
       notice = `Fonction Supabase accessible et DeepSeek configuré avec « ${data.model} ».`;
     } else {
@@ -1250,6 +1372,7 @@ async function applyResult() {
   if (['fiche', 'cahier'].includes(tool)) {
     const s = findSession(meta.session, meta.classe);
     if (!s) { error = 'La séance liée à ce résultat est introuvable.'; draw(); return; }
+    if (lockedSession(s)) { error = 'Ce trimestre est verrouillé : déverrouillez-le avant de modifier la séance.'; draw(); return; }
     const existing = record(s);
     const hasExisting = tool === 'fiche'
       ? Boolean(String(existing.preparation || '').trim())
@@ -1263,6 +1386,7 @@ async function applyResult() {
       );
       if (!accepted || requestToken !== generationToken || requestOwner !== activeTeacherKey()) return;
     }
+    if (lockedSession(s)) { error = 'Ce trimestre a été verrouillé : aucune modification n’a été appliquée.'; draw(); return; }
     root.openModal(meta.classe, s.n);
     if (tool === 'fiche') {
       el('m-titre').value = r.titre || meta.titre;
@@ -1337,9 +1461,9 @@ async function applyResult() {
     return;
   }
   if (tool === 'repartition') {
-    const candidates = asArray(r.seances).map(x => ({ proposal: x, session: (ctx.sessions[meta.classe] || []).find(s => s.n === Number(x.numero ?? x.n) && s.tri === meta.trimestre) })).filter(x => x.session && x.session.iso >= today() && record(x.session).done !== true);
-    if (!candidates.length) { error = 'Aucune séance future modifiable dans cette proposition.'; draw(); return; }
-    if (!confirm(`Appliquer les titres et préparations proposés à ${candidates.length} séance(s) à venir de ${meta.classe} ? Les dates, le réalisé et les statuts seront conservés.`)) return;
+    const candidates = asArray(r.seances).map(x => ({ proposal: x, session: (ctx.sessions[meta.classe] || []).find(s => s.n === Number(x.numero ?? x.n) && s.iso === x.date && (Number(meta.trimestre) === 0 || s.tri === Number(meta.trimestre))) })).filter(x => x.session && x.session.iso >= today() && record(x.session).done !== true && !lockedSession(x.session));
+    if (!candidates.length) { error = 'Aucune séance future, non assurée et non verrouillée n’est modifiable dans cette proposition.'; draw(); return; }
+    if (!root.confirm?.(`Appliquer les titres et préparations proposés à ${candidates.length} séance(s) à venir de ${meta.classe} ? Les séances verrouillées sont exclues. Les dates, le réalisé et les statuts seront conservés.`)) return;
     candidates.forEach(({ proposal, session }) => {
       const key = keyOf(session);
       const previous = ctx.store.seances[key] || {};
@@ -1347,7 +1471,7 @@ async function applyResult() {
     });
     root.save(true);
     root.setRep(meta.classe);
-    root.setTri(meta.trimestre);
+    root.setTri(Number(meta.trimestre) || candidates[0].session.tri);
     root.go('v-rep');
     root.toast(`${candidates.length} séance(s) à venir mise(s) à jour.`);
   }
@@ -1393,30 +1517,55 @@ async function restoreDocumentVersion() {
   error = '';
   draw();
 }
-function downloadResult() {
+function printableDocument(studentOnly = false) {
   const content = el('agent-result');
   if (!content) return;
   const printable = content.cloneNode(true);
+  if (studentOnly && tool === 'exercices') printable.querySelectorAll('.agent-correction').forEach(node => node.remove());
   printable.querySelectorAll('details').forEach(details => { details.open = true; });
   const meta = resultMeta[tool] || { classe };
   const title = resultTitle(tool, results[tool], meta);
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)}</title><style>body{max-width:960px;margin:40px auto;padding:0 24px;color:#18251f;font:15px/1.6 system-ui,sans-serif}h1,h2,h3{line-height:1.25}section{margin:22px 0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccd5cf;padding:10px;text-align:left;vertical-align:top}th{background:#f0f4f1}.agent-doc-heading{border-bottom:3px solid #173f35;padding-bottom:16px}.agent-doc-heading>span{font-size:12px;letter-spacing:.1em}.agent-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.agent-phases>div{display:flex;gap:15px;border-top:1px solid #ddd;padding:14px 0}.agent-phases>div>span{font-weight:800;color:#276fa7}.agent-tags span{display:inline-block;background:#eef3ef;padding:4px 8px;margin:3px;border-radius:6px}.agent-exercise{border-top:1px solid #ccd5cf}.agent-exercise h3 span{float:right}.agent-points{float:right}.agent-grade{display:flex;gap:30px;align-items:center;background:#f0f4f1;padding:18px}.agent-grade strong{font-size:44px}.agent-correction{background:#f6f7f4;padding:12px}.agent-uncertainties{border:1px solid #cc8a32;padding:14px;background:#fff8e9}@media(max-width:650px){.agent-doc-grid{grid-template-columns:1fr}}@media print{body{margin:0;max-width:none}.agent-correction{display:block}.agent-correction>div{display:block}}</style></head><body>${printable.innerHTML}</body></html>`;
-  const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>${esc(title)}</title><style>body{max-width:960px;margin:40px auto;padding:0 24px;color:#18251f;font:15px/1.6 system-ui,sans-serif}h1,h2,h3{line-height:1.25}section{margin:22px 0}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccd5cf;padding:10px;text-align:left;vertical-align:top}th{background:#f0f4f1}.agent-doc-heading{border-bottom:3px solid #173f35;padding-bottom:16px}.agent-doc-heading>span{font-size:12px;letter-spacing:.1em}.agent-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.agent-phases>div{display:flex;gap:15px;border-top:1px solid #ddd;padding:14px 0}.agent-phases>div>span{font-weight:800;color:#276fa7}.agent-tags span{display:inline-block;background:#eef3ef;padding:4px 8px;margin:3px;border-radius:6px}.agent-exercise{border-top:1px solid #ccd5cf}.agent-exercise h3 span{float:right}.agent-points{float:right}.agent-grade{display:flex;gap:30px;align-items:center;background:#f0f4f1;padding:18px}.agent-grade strong{font-size:44px}.agent-correction{background:#f6f7f4;padding:12px}.agent-exercise p,.agent-exercise li,.agent-correction>div{white-space:pre-wrap;overflow-wrap:anywhere}.agent-uncertainties,.agent-source-disclaimer,.agent-grade-pending{border:1px solid #cc8a32;padding:14px;margin:12px 0;background:#fff8e9}.agent-grade-final{border:1px solid #89b899;padding:14px;margin:12px 0;background:#f0f8f1}@media(max-width:650px){.agent-doc-grid{grid-template-columns:1fr}}@media print{body{margin:0;max-width:none}.agent-correction{display:block}.agent-correction>div{display:block}}</style></head><body>${printable.innerHTML}</body></html>`;
+  const filename = `${tool}${studentOnly && tool === 'exercices' ? '-sujet-eleve' : ''}-${meta.classe || classe}-${new Date().toISOString().slice(0, 10)}.html`;
+  return { html, filename, meta, title };
+}
+function downloadResult(studentOnly = false) {
+  const page = printableDocument(studentOnly);
+  if (!page) return;
+  const url = URL.createObjectURL(new Blob([page.html], { type: 'text/html;charset=utf-8' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${tool}-${meta.classe || classe}-${new Date().toISOString().slice(0, 10)}.html`;
+  a.download = page.filename;
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
-function printResult() {
+async function archiveResult() {
+  if (!['fiche', 'exercices', 'repartition'].includes(tool) || !root.STI_AGENT_LIBRARY) return;
+  const page = printableDocument();
+  const owner = activeTeacherKey(), archivedTool = tool;
+  if (!page || !owner) { error = 'Un profil enseignant est nécessaire pour archiver dans la bibliothèque locale.'; draw(); return; }
+  const includesCorrection = archivedTool === 'exercices' ? ' avec son corrigé' : '';
+  if (!root.confirm?.(`Archiver cette proposition${includesCorrection} dans la bibliothèque de ce navigateur ? Elle restera à vérifier et ne sera pas synchronisée.`)) return;
+  try {
+    const file = new File([page.html], page.filename, { type: 'text/html;charset=utf-8' });
+    await root.STI_AGENT_LIBRARY.save(owner, { title: page.title, category: ({ fiche: 'Fiche', exercices: 'Sujet', repartition: 'Répartition' })[archivedTool], classe: page.meta.classe || classe, source: 'Assistant STI — proposition à vérifier', publication: new Date().toISOString().slice(0, 10), excerpt: '' }, file);
+    const docs = await root.STI_AGENT_LIBRARY.list(owner);
+    if (activeTeacherKey() !== owner) return;
+    libraryOwner = owner; libraryDocs = docs; libraryError = '';
+    notice = `Proposition${includesCorrection} archivée localement dans la bibliothèque. Ajoutez un extrait vérifié si vous souhaitez la citer plus tard.`;
+    error = ''; draw();
+  } catch (e) { error = e?.message || 'Archivage local impossible.'; draw(); }
+}
+function printResult(studentOnly = false) {
   const content = el('agent-result');
   if (!content) return;
   const details = Array.from(content.querySelectorAll('details'));
   const previous = details.map(x => x.open);
   details.forEach(x => { x.open = true; });
   document.body.classList.add('agent-printing');
+  if (studentOnly && tool === 'exercices') document.body.classList.add('agent-print-student');
   const done = () => {
-    document.body.classList.remove('agent-printing');
+    document.body.classList.remove('agent-printing', 'agent-print-student');
     details.forEach((x, i) => { x.open = previous[i]; });
   };
   window.addEventListener('afterprint', done, { once: true });
@@ -1450,10 +1599,12 @@ async function compressImage(file) {
     return { name: file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_'), mime: 'image/jpeg', data: await blobToDataUrl(blob) };
   } finally { URL.revokeObjectURL(url); }
 }
+function invalidateCorrection() { results.correction = null; resultMeta.correction = null; correctionReview = null; }
 async function addCodeFiles(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length || busy) return;
   if (codeFiles.length + files.length > MAX_CODE_FILES) { error = `Vous pouvez ajouter au maximum ${MAX_CODE_FILES} fichiers de code par correction.`; draw(); return; }
+  const requestOwner = activeTeacherKey(), requestToken = generationToken;
   busy = true; error = ''; notice = '';
   draw();
   try {
@@ -1466,10 +1617,11 @@ async function addCodeFiles(fileList) {
       if (content.includes('\u0000')) throw new Error(`${file.name} : le fichier semble binaire et ne peut pas être analysé comme du code.`);
       prepared.push({ name: file.name.replace(/[^\p{L}\p{N}._ -]/gu, '_'), language: extension, content });
     }
-    codeFiles.push(...prepared);
+    if (requestOwner !== activeTeacherKey() || requestToken !== generationToken) return;
+    invalidateCorrection(); codeFiles.push(...prepared);
     notice = `${prepared.length} fichier(s) de code ajouté(s) à la correction.`;
-  } catch (e) { error = e.message || 'Impossible de lire ce fichier de code.'; }
-  finally { busy = false; draw(); }
+  } catch (e) { if (requestOwner === activeTeacherKey() && requestToken === generationToken) error = e.message || 'Impossible de lire ce fichier de code.'; }
+  finally { if (requestOwner === activeTeacherKey() && requestToken === generationToken) { busy = false; draw(); } }
 }
 async function readDocumentFile(fileList) {
   const file = Array.from(fileList || [])[0];
@@ -1502,18 +1654,18 @@ async function addImages(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length || busy) return;
   if (attachments.length + files.length > MAX_IMAGES) { error = `Vous pouvez analyser au maximum ${MAX_IMAGES} images à la fois.`; draw(); return; }
+  const requestOwner = activeTeacherKey(), requestToken = generationToken;
   busy = true; error = ''; notice = '';
   draw();
   try {
-    for (const file of files) attachments.push(await compressImage(file));
-    if (transcriptionReview) {
-      transcriptionReview = null;
-      transcriptionAcknowledged = false;
-      results.correction = null;
-    }
+    const prepared = [];
+    for (const file of files) prepared.push(await compressImage(file));
+    if (requestOwner !== activeTeacherKey() || requestToken !== generationToken) return;
+    attachments.push(...prepared); invalidateCorrection();
+    if (transcriptionReview) { transcriptionReview = null; transcriptionAcknowledged = false; }
     notice = `${files.length} image(s) préparée(s). Vous pouvez lancer l’analyse.`;
-  } catch (e) { error = e.message || 'Impossible de lire cette image.'; }
-  finally { busy = false; draw(); }
+  } catch (e) { if (requestOwner === activeTeacherKey() && requestToken === generationToken) error = e.message || 'Impossible de lire cette image.'; }
+  finally { if (requestOwner === activeTeacherKey() && requestToken === generationToken) { busy = false; draw(); } }
 }
 
 function fieldValue(target) {
@@ -1522,6 +1674,16 @@ function fieldValue(target) {
   return target.value;
 }
 document.addEventListener('input', e => {
+  const gradePoint = e.target.closest('[data-agent-grade-point]');
+  const gradeReason = e.target.closest('[data-agent-grade-reason]');
+  if (correctionReview && !correctionReview.confirmed && (gradePoint || gradeReason)) {
+    const field = gradePoint || gradeReason;
+    const index = Number(gradePoint ? field.dataset.agentGradePoint : field.dataset.agentGradeReason);
+    if (Number.isInteger(index) && index >= 0 && index < correctionReview.points.length) {
+      if (gradePoint) correctionReview.points[index] = field.value; else correctionReview.reasons[index] = field.value;
+    }
+    return;
+  }
   const catalogFilter = e.target.closest('[data-agent-catalog-filter]');
   if (catalogFilter) {
     const kind = catalogFilter.dataset.agentCatalogFilter;
@@ -1542,6 +1704,16 @@ document.addEventListener('input', e => {
   const field = e.target.closest('[data-agent-field]');
   if (!field || !forms[tool] || !(field.dataset.agentField in forms[tool])) return;
   forms[tool][field.dataset.agentField] = fieldValue(field);
+  if (tool === 'correction' && results.correction) {
+    results.correction = null; resultMeta.correction = null; correctionReview = null;
+    const focusField = field.dataset.agentField, position = field.selectionStart;
+    notice = 'La demande a changé : relancez l’analyse avant de valider une note.';
+    draw();
+    const replacement = el('v-agent')?.querySelector?.(`[data-agent-field="${focusField}"]`);
+    replacement?.focus();
+    if (position != null && typeof replacement?.setSelectionRange === 'function') replacement.setSelectionRange(position, position);
+    refreshContextReview(); return;
+  }
   if (tool === 'document') {
     results.document = null;
     resultMeta.document = null;
@@ -1562,6 +1734,18 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'agent-document-file') { readDocumentFile(e.target.files); return; }
+  const sourceSelection = e.target.closest('[data-agent-source]');
+  if (sourceSelection?.dataset?.agentSource !== undefined && ['fiche', 'exercices', 'repartition'].includes(tool)) {
+    const ids = new Set(asArray(selectedSourceIds[tool]).map(String));
+    if (sourceSelection.checked && ids.size >= (root.STI_AGENT_LIBRARY?.MAX_SELECTED || 3) && !ids.has(String(sourceSelection.value))) {
+      sourceSelection.checked = false; root.toast?.('Choisissez au maximum trois extraits.'); return;
+    }
+    if (sourceSelection.checked) ids.add(String(sourceSelection.value)); else ids.delete(String(sourceSelection.value));
+    selectedSourceIds[tool] = [...ids];
+    const summary = sourceSelection.closest('.agent-sources-picker')?.querySelector('summary span');
+    if (summary) summary.textContent = `${ids.size} sélectionné(s) · maximum 3`;
+    refreshContextReview(); return;
+  }
   const promptSelection = e.target.closest('[data-agent-prompt-selection]');
   if (promptSelection?.dataset?.agentPromptSelection !== undefined && TASKS[tool]) {
     const selected = new Set(asArray(selectedSharedPromptIds[tool]).map(String));
@@ -1592,6 +1776,8 @@ document.addEventListener('change', e => {
   }
   if (e.target.matches('[data-agent-class]')) {
     classe = e.target.value === '4SI2' ? '4SI2' : '3SI1';
+    Object.keys(selectedSourceIds).forEach(task => delete selectedSourceIds[task]);
+    correctionReview = null; results.correction = null; resultMeta.correction = null;
     forms.fiche.session = ''; forms.fiche.notions = []; forms.fiche.competences = []; forms.fiche.remplacer = false;
     forms.exercices.notions = []; forms.exercices.competences = []; forms.exercices.remplacement_id = '';
     forms.cahier.session = ''; forms.cahier.remplacer = false;
@@ -1630,7 +1816,7 @@ document.addEventListener('change', e => {
     }
     if (tool === 'fiche' && field.dataset.agentField === 'session') { forms.fiche.notions = storedNotionsForSession(forms.fiche.session); forms.fiche.remplacer = false; }
     if (tool === 'cahier' && field.dataset.agentField === 'session') forms.cahier.remplacer = false;
-    if (tool === 'correction' && ['type_devoir', 'mode_bareme'].includes(field.dataset.agentField)) results.correction = null;
+    if (tool === 'correction' && results.correction) { results.correction = null; resultMeta.correction = null; correctionReview = null; notice = 'La demande a changé : relancez l’analyse avant de valider une note.'; }
     if (tool === 'correction' && field.dataset.agentField === 'type_devoir') {
       transcriptionReview = null;
       transcriptionAcknowledged = false;
@@ -1639,7 +1825,7 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-print],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-download-student],[data-agent-archive],[data-agent-xlsx],[data-agent-print],[data-agent-print-student],[data-agent-validate-grade],[data-agent-edit-grade],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
@@ -1651,9 +1837,18 @@ document.addEventListener('click', e => {
   if (button.hasAttribute('data-agent-apply')) applyResult();
   if (button.hasAttribute('data-agent-restore-document')) restoreDocumentVersion();
   if (button.hasAttribute('data-agent-download')) downloadResult();
+  if (button.hasAttribute('data-agent-download-student')) downloadResult(true);
+  if (button.hasAttribute('data-agent-archive')) archiveResult();
+  if (button.hasAttribute('data-agent-xlsx')) {
+    try { root.STI_AGENT_XLSX?.download(tool, results[tool], resultMeta[tool] || { classe }, correctionReview); }
+    catch (e) { error = e.message || 'Export Excel impossible.'; draw(); }
+  }
   if (button.hasAttribute('data-agent-print')) printResult();
-  if (button.dataset.agentRemove !== undefined) { attachments.splice(Number(button.dataset.agentRemove), 1); draw(); }
-  if (button.dataset.agentRemoveCode !== undefined) { codeFiles.splice(Number(button.dataset.agentRemoveCode), 1); draw(); }
+  if (button.hasAttribute('data-agent-print-student')) printResult(true);
+  if (button.hasAttribute('data-agent-validate-grade')) validateGrade();
+  if (button.hasAttribute('data-agent-edit-grade') && correctionReview?.confirmed) { correctionReview.confirmed = false; notice = ''; draw(); }
+  if (button.dataset.agentRemove !== undefined) { attachments.splice(Number(button.dataset.agentRemove), 1); invalidateCorrection(); transcriptionReview = null; transcriptionAcknowledged = false; draw(); }
+  if (button.dataset.agentRemoveCode !== undefined) { codeFiles.splice(Number(button.dataset.agentRemoveCode), 1); invalidateCorrection(); draw(); }
   if (button.dataset.agentHistory) {
     const item = currentHistory().find(x => x.id === button.dataset.agentHistory);
     if (item) {
@@ -1682,6 +1877,7 @@ root.STI_AGENT = {
     if (owner !== workspaceOwnerKey) {
       workspaceOwnerKey = owner;
       resetTeacherWorkspace();
+      if (owner) loadLibrary(owner);
     }
     const signedInEmail = typeof root.authUser === 'function' ? String(root.authUser() || '').trim().toLocaleLowerCase('en') : '';
     if (ctx?.view === 'v-agent' && !signedInEmail) {
@@ -1697,16 +1893,19 @@ root.STI_AGENT = {
   },
   reloadPrompts: reloadSharedPromptLibrary,
   _test: {
-    ficheText, relatedNotions, relatedCompetences, sessionData, curriculumCatalog, curriculumSelection, validate,
-    shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings,
+    ficheText, relatedNotions, relatedCompetences, sessionData, curriculumCatalog, curriculumSelection, validate, plannedSessions, periodLabel, selectedSources, lockedSession,
+    setLibraryDocs: docs => { libraryDocs = docs; }, setSelectedSources: (task, ids) => { selectedSourceIds[task] = ids; },
+    shouldTranscribeHandwriting, hasUncertainTranscription, preserveTranscriptionWarnings, containsUnsupportedComplianceClaim,
     documentIdentity, documentIdentityHtml, rubricToText, buildRequestSpec, contextWarnings, containsPossiblePersonalIdentifier, contextDisclosureText, contextReviewHtml,
     currentHistory, activeTeacherKey, saveCurrentHistory,
     setSharedPrompts: prompts => { sharedPrompts = Array.isArray(prompts) ? prompts : []; sharedPromptState = 'loaded'; },
     setSelectedSharedPromptIds: (task, ids) => { selectedSharedPromptIds[task] = Array.isArray(ids) ? ids : []; },
     selectedPromptsForTask, sharedPromptPickerHtml, requestPreview,
     documentVersions, currentDocumentVersion, currentDocumentVersionIndex, newDocumentHistoryEntry, appendDocumentHistoryVersion, restoreDocumentHistoryVersion,
-    applyResult, restoreDocumentVersion, readDocumentFile,
-    setResult: (task, result, meta) => { results[task] = result; resultMeta[task] = meta; tool = task; },
+    applyResult, restoreDocumentVersion, readDocumentFile, createGradeReview, calculateGradeReview, validateGrade, verifyDeepSeekDeployment, printableDocument, archiveResult,
+    getGradeReview: () => correctionReview,
+    setGradeReview: review => { correctionReview = review; },
+    setResult: (task, result, meta) => { results[task] = result; resultMeta[task] = meta; tool = task; if (task === 'correction') correctionReview = createGradeReview(result); },
     renderers: { fiche: renderFiche, exercices: renderExercices, cahier: renderCahier, repartition: renderRepartition, document: renderDocument, correction: renderCorrection },
     formFor: task => { const previous = tool; tool = task; try { return formHtml(); } finally { tool = previous; } },
     buildPayloadFor: task => { const previous = tool; tool = task; try { return buildPayload(); } finally { tool = previous; } },

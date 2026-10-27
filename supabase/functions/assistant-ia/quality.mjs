@@ -160,7 +160,45 @@ function durationInMinutes(value) {
   return minutes ? Number(minutes[1]) : null;
 }
 
+export function containsUnsupportedComplianceClaim(value) {
+  const strings = [];
+  function visit(item) {
+    if (typeof item === "string") strings.push(item);
+    else if (Array.isArray(item)) item.forEach(visit);
+    else if (item && typeof item === "object") Object.values(item).forEach(visit);
+  }
+  visit(value);
+  return strings.some(item => {
+    const text = item.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const affirmative = /\b(?:conforme(?:s|ment)?|respecte(?:nt)?|aligne(?:e|s|es)?|correspond(?:ent)?)\b[^.!?\n]{0,100}\bprogrammes?\b[^.!?\n]{0,50}\bofficiel(?:le)?s?\b/g;
+    for (const match of text.matchAll(affirmative)) {
+      const before = text.slice(Math.max(0, match.index - 45), match.index).split(/[.!?\n]/).pop();
+      if (!/\b(?:non|pas|jamais|sans|verifier|verifiez|verifie|verifiee|verification|incertain)\b/.test(before)) return true;
+    }
+    return /\bofficiellement\b[^.!?\n]{0,45}\bconforme(?:s)?\b/.test(text)
+      || /\bconformite\b[^.!?\n]{0,80}\bprogrammes?\b[^.!?\n]{0,50}\bofficiel(?:le)?s?\b[^.!?\n]{0,50}\b(?:garantie|assuree|confirmee)\b/.test(text)
+      || /\bprogrammes?\b[^.!?\n]{0,50}\bofficiel(?:le)?s?\b[^.!?\n]{0,40}\b(?:pleinement respecte|entierement respecte)\b/.test(text);
+  });
+}
+
+// A practical copy can consist solely of source files; never execute them.
+export function validCodeFiles(input) {
+  if (!Array.isArray(input)) return [];
+  const languages = new Set(["html", "htm", "css", "js", "php", "sql", "txt", "json"]);
+  const clean = (value, max) => String(value ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").slice(0, max);
+  return input.slice(0, 8).filter(file => file && languages.has(String(file.language || "").toLowerCase())
+    && typeof file.content === "string" && file.content.trim() && file.content.length <= 200 * 1024 && !file.content.includes("\u0000"))
+    .map(file => ({ name: clean(file.name, 120), language: clean(file.language, 12).toLowerCase(), content: clean(file.content, 200 * 1024) }));
+}
+export function hasCorrectionEvidence(input, attachments) {
+  if (String(input?.copie || "").trim() || (Array.isArray(attachments) && attachments.length)) return true;
+  return input?.type_devoir === "pratique" && validCodeFiles(input?.fichiers_code).length > 0;
+}
+
 export function requestConsistencyError(task, result, payload, maxDocumentChars = 80_000) {
+  if (["fiche", "exercices", "repartition"].includes(task) && containsUnsupportedComplianceClaim(result)) {
+    return "La réponse affirme une conformité officielle non vérifiée. Relancez la demande et comparez la proposition au programme applicable.";
+  }
   if (task === "transcription") {
     if (["note", "sur", "points_attribues", "points_max", "appreciation"].some(key => key in result)) {
       return "La prélecture doit fournir une transcription sans évaluation.";
@@ -172,13 +210,16 @@ export function requestConsistencyError(task, result, payload, maxDocumentChars 
   }
   if (task === "fiche") {
     if (result.deroulement.length < 4 || result.deroulement.length > 7) {
-      return "Le déroulement doit comporter de 4 à 7 phases pour une séance de 2 heures.";
+      return "Le déroulement doit comporter de 4 à 7 phases pour la séance.";
     }
+    const expectedMinutes = Number(payload?.input?.duree_minutes ?? 120);
+    if (!Number.isFinite(expectedMinutes) || expectedMinutes < 15 || expectedMinutes > 300) return "La durée demandée doit être comprise entre 15 et 300 minutes.";
     const durations = result.deroulement.map(phase => durationInMinutes(phase.duree));
-    if (durations.some(minutes => minutes === null)) return "Exprimez chaque durée en minutes ou en heures afin de vérifier les 120 minutes de la séance.";
+    if (durations.some(minutes => minutes === null)) return "Exprimez chaque durée en minutes ou en heures afin de vérifier la durée demandée.";
     const totalMinutes = durations.reduce((sum, minutes) => sum + minutes, 0);
-    if (totalMinutes < 110 || totalMinutes > 130) {
-      return `Les durées de la fiche totalisent ${totalMinutes} minutes au lieu d’environ 120.`;
+    const tolerance = Math.max(5, expectedMinutes / 12);
+    if (Math.abs(totalMinutes - expectedMinutes) > tolerance) {
+      return `Les durées de la fiche totalisent ${totalMinutes} minutes au lieu d’environ ${expectedMinutes}.`;
     }
   }
   if (task === "exercices") {
