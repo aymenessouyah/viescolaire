@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.26.1-deepseek";
+const APP_VER = "v1.27.0-smart-book-3si";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

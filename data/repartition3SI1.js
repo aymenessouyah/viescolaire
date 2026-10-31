@@ -3,7 +3,7 @@
    54 séances du 15/09/2026 au 20/05/2027, vacances, fériés et semaines bloquées déduits.
    Devoirs de contrôle : 10/11/2026 · 17/11/2026 · 19/01/2027 · 16/02/2027 · 13/04/2027 · 04/05/2027.
    Devoirs de synthèse : 10/12/2026 · 11/03/2027 · 25/05/2027.
-   Programme : Smart Book STI 3e (269 notions, p. 58-72) — HTML5, CSS3, JavaScript, SQL / BD.
+   Programme : Smart Book STI 3e (288 notions, p. 58-72) — HTML5, CSS3, JavaScript, SQL / BD.
    Fichier de données — modifiable sans toucher au code de l'application. */
 (function (root) {
 'use strict';
