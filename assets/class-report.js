@@ -104,12 +104,15 @@
       });
       const moyenne = notesEleve.length ? r2(notesEleve.reduce((a, b) => a + b, 0) / notesEleve.length) : null;
 
-      let absences = 0, retards = 0, excuses = 0, presents = 0;
+      /* codes d'appel : p présent, a absent, e exclu, s sorti, b entrée par billet, r retard */
+      let absences = 0, retards = 0, exclusions = 0, presents = 0, sorties = 0, billets = 0;
       datesPresence.forEach(iso => {
         const code = (presences[iso] || {})[eleve.id] || '';
         if (code === 'a') absences++;
         else if (code === 'r') retards++;
-        else if (code === 'e') excuses++;
+        else if (code === 'e') exclusions++;
+        else if (code === 's') sorties++;
+        else if (code === 'b') billets++;
         else if (code === 'p') presents++;
       });
 
@@ -128,7 +131,7 @@
       const vigilance = !alerte && ((moyenne !== null && moyenne < 12) || absences === 2 || retards >= 2);
       return {
         id: eleve.id, nom, groupe: eleve.groupe || '', pc: eleve.pc || '',
-        moyenne, nbNotes: notesEleve.length, absEval, absences, retards, excuses,
+        moyenne, nbNotes: notesEleve.length, absEval, absences, retards, exclusions, sorties, billets,
         acquis, enCours, aRenforcer,
         statut: alerte ? 'alerte' : (vigilance ? 'vigilance' : 'ok')
       };
@@ -138,7 +141,9 @@
     const moyenneClasse = moyennes.length ? r2(moyennes.reduce((a, b) => a + b, 0) / moyennes.length) : null;
     const totalAbsences = eleves.reduce((a, e) => a + e.absences, 0);
     const totalRetards = eleves.reduce((a, e) => a + e.retards, 0);
-    const totalExcuses = eleves.reduce((a, e) => a + e.excuses, 0);
+    const totalExclusions = eleves.reduce((a, e) => a + e.exclusions, 0);
+    const totalSorties = eleves.reduce((a, e) => a + e.sorties, 0);
+    const totalBillets = eleves.reduce((a, e) => a + e.billets, 0);
     const attendus = eleves.length * datesPresence.length;
 
     const suivre = eleves
@@ -168,7 +173,8 @@
       },
       assiduite: {
         seancesObservees: datesPresence.length,
-        attendus, absences: totalAbsences, retards: totalRetards, excuses: totalExcuses,
+        attendus, absences: totalAbsences, retards: totalRetards,
+        exclusions: totalExclusions, sorties: totalSorties, billets: totalBillets,
         tauxPresence: attendus ? pct(attendus - totalAbsences, attendus) : null,
         elevesSansAbsence: eleves.filter(e => e.absences === 0).length
       },
@@ -284,7 +290,8 @@
       '<tr><td>Élèves à 10 ou plus</td><td class="bl-num">' + fr(b.evaluations.reussite) + ' %</td></tr>' +
       '<tr><td>Séances avec appel</td><td class="bl-num">' + b.assiduite.seancesObservees + '</td></tr>' +
       '<tr><td>Taux de présence</td><td class="bl-num">' + (b.assiduite.tauxPresence === null ? '—' : fr(b.assiduite.tauxPresence) + ' %') + '</td></tr>' +
-      '<tr><td>Absences / retards / justifiées</td><td class="bl-num">' + b.assiduite.absences + ' / ' + b.assiduite.retards + ' / ' + b.assiduite.excuses + '</td></tr>' +
+      '<tr><td>Absences / retards / exclusions</td><td class="bl-num">' + b.assiduite.absences + ' / ' + b.assiduite.retards + ' / ' + b.assiduite.exclusions + '</td></tr>' +
+      '<tr><td>Sorties / entrées par billet</td><td class="bl-num">' + b.assiduite.sorties + ' / ' + b.assiduite.billets + '</td></tr>' +
       '</tbody></table></section>' +
 
       '<section class="bl-card bl-wide"><h3>Couverture des notions (' + b.notions.vues + ' / ' + b.notions.total + ')</h3>' +
