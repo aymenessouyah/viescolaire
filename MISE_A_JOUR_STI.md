@@ -17,14 +17,23 @@ Ce que la mise à jour change dans le site :
 - `data/livres-sti.js` : 19 entrées ajoutées avec leurs pages, aux identifiants `3si-r270` à `3si-r288` ;
   les 269 identifiants existants sont **inchangés**, donc les notions déjà cochées dans les fiches et
   les séances assurées restent valides ;
+- `data/livres-sti.js` publie aussi un bloc `edition` (date du 31 octobre 2026, libellé, pages 62/67/71,
+  19 notions ajoutées par domaine) qui sert de source unique aux textes affichés ; chaque complément
+  porte `"added": true` ;
 - les pages affichées, les filtres par domaine et les exports CSV reprennent automatiquement le nouveau
   référentiel ; le regroupement par sous-catégorie de l'annexe reste inchangé ;
-- `sw.js` : version `v1.27.0-smart-book-3si` et suppression ciblée de l'ancienne copie hors ligne du
+- l'édition est signalée là où un pourcentage est lu : grille des domaines de l'avancement (76 / 92 / 88 / 32
+  notions), tableau de bord (« Avancement — points de suivi », moyenne des deux livres), carte de couverture
+  et référentiel. Un badge **nouveau** distingue les 19 compléments dans la liste du référentiel, dans le
+  détail d'une notion et dans le sélecteur de notions des fiches ; un `+9 / +9 / +1` est affiché sur les
+  cartes de domaine. Le dénominateur reste 288 : aucune notion retirée, aucun identifiant renommé ;
+- `sw.js` : version `v1.28.0-referentiel-3si` et suppression ciblée de l'ancienne copie hors ligne du
   livre 3e SI, pour que le PDF mis à jour soit retéléchargé sans vider les autres documents ;
 - les **234 éléments des annexes** et leurs `id` (calculés sur le libellé et le titre de section) ne
   changent pas : aucune coche d'annexe n'est perdue ;
 - `tests/smart-book-3si.test.js` vérifie le nombre d'entrées, l'unicité des identifiants, la présence
-  des 19 compléments avec leur page et le dépôt du PDF.
+  des 19 compléments avec leur page, le bloc `edition` et le dépôt du PDF ; `tests/smart-book-3si-ui.test.js`
+  contrôle les textes réellement rendus (1/76, 1/92, 1/88, 1/32, 4/288, 0/333, note d'édition, 19 badges).
 
 Les annexes de cours (PDF d'A. Essouyah) ne sont pas modifiées : elles restent la référence des
 234 éléments suivis séparément.

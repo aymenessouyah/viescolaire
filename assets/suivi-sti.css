@@ -9,3 +9,7 @@
 @media print{.sti-filters,.sti-sessionbar,.sti-title .btn,.sti-ref-status,dialog.sti-detail{display:none!important}.sti-ref-list{max-height:none;overflow:visible}.sti-ref-row{break-inside:avoid}.sti-classes{grid-template-columns:1fr 1fr}.sti-stats{grid-template-columns:repeat(4,1fr)}}
 
 #v-suivi{scroll-margin-top:100px}
+/* Édition du référentiel : marqueur des notions ajoutées (p. 62, 67, 71 du livre 3e SI). */
+.sti-new{display:inline-block;margin-left:6px;padding:1px 5px;border-radius:4px;background:#fff3d6;border:1px solid #e7bf82;color:#8a5b12;font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;vertical-align:middle;font-style:normal}
+.sti-domain strong .sti-domain-new{display:inline-block;margin-left:6px;padding:1px 5px;border-radius:4px;background:var(--sti-soft);border:1px solid var(--sti-line);color:var(--sti-accent);font-size:9px;font-weight:700;font-style:normal;vertical-align:middle}
+@media print{.sti-new,.sti-domain-new{border-color:#999;color:#444;background:none}}
