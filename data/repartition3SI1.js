@@ -1,9 +1,9 @@
 /* Répartition 3SI1 (3e année SI — STI) — année scolaire 2026-2027.
    Mardi 8 h-12 h et jeudi 13 h-17 h : 2 séances de 2 h par semaine, deux groupes.
-   54 séances du 15/09/2026 au 20/05/2027, vacances, fériés et semaines bloquées déduits.
+   56 séances du 15/09/2026 au 03/06/2027 (dont 2 séances de la partie 1 en juin), vacances, fériés et semaines bloquées déduits.
    Devoirs de contrôle : 10/11/2026 · 17/11/2026 · 19/01/2027 · 16/02/2027 · 13/04/2027 · 04/05/2027.
    Devoirs de synthèse : 10/12/2026 · 11/03/2027 · 25/05/2027.
-   Programme : Smart Book STI 3e (288 notions, p. 67-81) — HTML5, CSS3, JavaScript, SQL / BD.
+   Programme : Smart Book STI 3e (298 notions : partie 1 p. 5-13, tableaux p. 67-81) — systèmes, réseaux, IoT, HTML5, CSS3, JavaScript, SQL / BD.
    Fichier de données — modifiable sans toucher au code de l'application. */
 (function (root) {
 'use strict';
@@ -116,6 +116,15 @@ const PLAN_3SI1 = [
       det:"Épreuve complète sur machine, en conditions réelles, sur les quatre domaines du programme ; barème type examen ; préparation de la correction collective." },
     { n:1, num:54, iso:"2027-05-20", tri:3, t:"Correction du sujet complet et conseils pour la 4e année", k:"corr", o:"Copies + vidéoprojecteur", d:"Évaluation — —",
       det:"Correction commentée au barème ; bilan de l'année par domaine et par élève ; conseils de travail pour l'été et présentation du programme de 4e année (PHP, PHP–MySQL, préparation du baccalauréat)." },
+    /* Deux séances de la partie 1 ajoutées après le bac blanc : le calendrier ne
+       compte aucun créneau libre avant le 15/09/2026, et décaler les séances
+       existantes réaffecterait les fiches déjà enregistrées (clé classe|numéro). */
+    { n:1, num:55, iso:"2027-06-01", tri:3, t:"Partie 1 — systèmes d'exploitation : rôles, types et sécurité", k:"cours", o:"Ordinateur + vidéoprojecteur", d:"Partie 1 — p. 5-7",
+      notions:["3si-r289","3si-r290","3si-r291"],
+      det:"Rôles du système d'exploitation (processeur, mémoire, fichiers, périphériques) ; systèmes propriétaires et libres, monoposte, réseau, mobile, embarqué ; logiciel système et logiciel d'application ; installation, virtualisation, mises à jour, comptes et droits. Les trois notions correspondantes sont pré-cochées dans la fiche." },
+    { n:1, num:56, iso:"2027-06-03", tri:3, t:"Partie 1 — réseaux et objets connectés : synthèse", k:"cours", o:"Ordinateur + vidéoprojecteur", d:"Partie 1 — p. 8-11",
+      notions:["3si-r292","3si-r293","3si-r294","3si-r295","3si-r296","3si-r297","3si-r298"],
+      det:"Équipements, topologies et échelle du réseau ; adresse IP, masque, passerelle et DNS ; protocoles TCP/IP, HTTP, DHCP et DNS ; activités de partage et diagnostic ; objets connectés : capteurs, actionneurs, domaines d'application et communication. Les sept notions correspondantes sont pré-cochées dans la fiche." },
 ];
 root.STI_DATA = root.STI_DATA || {};
 root.STI_DATA.repartition3SI1 = PLAN_3SI1;

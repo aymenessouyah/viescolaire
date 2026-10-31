@@ -40,21 +40,28 @@ const TABLES = {
   'Systèmes': [5, 7], 'Réseaux': [8, 10], IoT: [10, 11]
 };
 
-/* Partie 1 du livre : systèmes, réseaux et IoT, ajoutés au dénominateur. */
+/* Partie 1 du livre : dix notions (systèmes 3, réseaux 4, IoT 3). */
 const PARTIE1 = [
-  ['Système d’exploitation', 'Systèmes', [5, 6, 7]],
-  ['Réseaux informatiques', 'Réseaux', [8, 9, 10]],
-  ['Internet des objets (IoT)', 'IoT', [10, 11]]
+  ['3si-r289', 'Rôles et fonctionnement du système d’exploitation', 'Systèmes', [5]],
+  ['3si-r290', 'Types de systèmes et logiciels', 'Systèmes', [6]],
+  ['3si-r291', 'Installation, virtualisation et sécurité', 'Systèmes', [7]],
+  ['3si-r292', 'Équipements et topologies réseau', 'Réseaux', [8]],
+  ['3si-r293', 'Paramètres et configuration réseau', 'Réseaux', [8]],
+  ['3si-r294', 'Protocoles et architectures', 'Réseaux', [9]],
+  ['3si-r295', 'Activités et usages du réseau', 'Réseaux', [10]],
+  ['3si-r296', 'Internet des objets — principes et usages', 'IoT', [10]],
+  ['3si-r297', 'Composants et domaines d’application', 'IoT', [10]],
+  ['3si-r298', 'Communication des objets connectés', 'IoT', [11]]
 ];
 
-test('le référentiel 3SI1 suit le Smart Book mis à jour : 291 notions uniques', () => {
+test('le référentiel 3SI1 suit le Smart Book mis à jour : 298 notions uniques', () => {
   const L = books();
   const items = L['3SI1'].items;
-  assert.equal(items.length, 291);
-  assert.equal(new Set(items.map(item => item.id)).size, 291);
+  assert.equal(items.length, 298);
+  assert.equal(new Set(items.map(item => item.id)).size, 298);
   assert.deepEqual(
     Object.fromEntries([...new Set(items.map(item => item.domain))].map(d => [d, items.filter(item => item.domain === d).length])),
-    { HTML5: 76, CSS3: 92, JavaScript: 88, 'SQL / BD': 32, 'Systèmes': 1, 'Réseaux': 1, IoT: 1 }
+    { HTML5: 76, CSS3: 92, JavaScript: 88, 'SQL / BD': 32, 'Systèmes': 3, 'Réseaux': 4, IoT: 3 }
   );
   assert.equal(L['4SI2'].items.length, 333, 'le référentiel 4SI2 ne change pas');
 });
@@ -76,10 +83,10 @@ test('les compléments de la version finale sont référencés avec leur nouvell
 test('les identifiants ajoutés ne remplacent aucun identifiant existant', () => {
   const items = books()['3SI1'].items;
   const added = items.filter(item => Number(item.id.slice(5)) >= 270);
-  assert.equal(added.length, 22, '19 compléments + 3 notions de la partie 1');
+  assert.equal(added.length, 29, '19 compléments + 10 notions de la partie 1');
   assert.deepEqual(
     Array.from(added.map(item => item.id)),
-    Array.from({ length: 22 }, (_, i) => '3si-r' + String(270 + i))
+    Array.from({ length: 29 }, (_, i) => '3si-r' + String(270 + i))
   );
   const legacy = items.filter(item => Number(item.id.slice(5)) < 270);
   assert.equal(legacy.length, 269);
@@ -128,22 +135,38 @@ test('le référentiel publie la version et la plage des tableaux', () => {
   assert.ok(c.edition.partie[0] === books()['3SI1'].start, 'la partie 1 commence à la première page suivie');
 });
 
-test('les trois notions de la partie 1 portent le dénominateur à 291', () => {
+test('les dix notions de la partie 1 portent le dénominateur à 298', () => {
   const items = books()['3SI1'].items;
-  PARTIE1.forEach(([label, domain, pages]) => {
-    const found = items.filter(item => item.label === label);
-    assert.equal(found.length, 1, `notion absente ou en double : ${label}`);
-    assert.equal(found[0].domain, domain);
-    assert.deepEqual(Array.from(found[0].pages), pages);
-    assert.equal(found[0].complement, undefined, `${label} n'est pas un complément`);
-    assert.equal(found[0].absent, undefined, `${label} n'est pas absente`);
-    assert.ok(found[0].description.length > 20, `description de ${label}`);
-    assert.match(found[0].kind, /^Partie 1/);
+  PARTIE1.forEach(([id, label, domain, pages]) => {
+    const item = items.find(entry => entry.id === id);
+    assert.ok(item, `notion absente : ${id}`);
+    assert.equal(item.label, label);
+    assert.equal(item.domain, domain);
+    assert.deepEqual(Array.from(item.pages), pages);
+    assert.equal(item.complement, undefined, `${label} n'est pas un complément`);
+    assert.equal(item.absent, undefined, `${label} n'est pas absente`);
+    assert.ok(item.description.length > 20, `description de ${label}`);
+    assert.match(item.kind, /^Partie 1/);
   });
-  assert.deepEqual(
-    Array.from(items.slice(-3).map(item => item.id)),
-    ['3si-r289', '3si-r290', '3si-r291']
-  );
-  assert.equal(items.filter(item => item.id === '3si-r289').length, 1);
-  assert.ok(items.filter(item => item.pages.some(page => page < 58)).length === 3, 'seules ces trois notions sortent des tableaux');
+  assert.equal(new Set(PARTIE1.map(entry => entry[0])).size, 10);
+  assert.equal(items.filter(item => item.pages.some(page => page < 58)).length, 10, 'seules ces notions sortent des tableaux');
+});
+
+test('la répartition 3SI1 place la partie 1 en fin d’année avec ses notions', () => {
+  const window = {};
+  vm.runInNewContext(fs.readFileSync('data/repartition3SI1.js', 'utf8'), { window }, { filename: 'data/repartition3SI1.js' });
+  const plan = window.STI_DATA.repartition3SI1;
+  const items = books()['3SI1'].items;
+  const ids = new Set(items.map(item => item.id));
+  assert.equal(plan.length, 56);
+  const extra = plan.filter(entry => entry.num >= 55);
+  assert.equal(extra.length, 2, 'deux séances de la partie 1');
+  assert.deepEqual(Array.from(extra.map(entry => entry.iso)), ['2027-06-01', '2027-06-03']);
+  assert.deepEqual(Array.from(extra[0].notions), ['3si-r289', '3si-r290', '3si-r291']);
+  assert.equal(extra[1].notions.length, 7);
+  extra.forEach(entry => entry.notions.forEach(id => assert.ok(ids.has(id), `notion inconnue : ${id}`)));
+  const covered = new Set([...extra[0].notions, ...extra[1].notions]);
+  assert.equal(covered.size, 10, 'les dix notions de la partie 1 sont rattachées');
+  const nums = Array.from(plan.map(entry => entry.num));
+  assert.deepEqual(nums, Array.from({ length: 56 }, (_, i) => i + 1), 'aucune séance renumérotée');
 });

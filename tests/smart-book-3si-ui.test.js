@@ -11,7 +11,7 @@ function node(id) {
   return {
     id, innerHTML: '', textContent: '', value: '', hidden: false, dataset: {}, style: {},
     classList: { toggle() { return false; }, add() {}, remove() {}, contains() { return false; } },
-    append() {}, prepend() {}, remove() {}, addEventListener() {}, removeAttribute() {},
+    append() { this.innerHTML += (arguments[0] && arguments[0].innerHTML) || ''; }, prepend() {}, remove() {}, addEventListener() {}, removeAttribute() {},
     setAttribute() {}, getAttribute() { return ''; }, querySelector() { return null; },
     querySelectorAll() { return []; }, scrollIntoView() {}, close() {}, showModal() {},
     isConnected: true, dispatchEvent() {}, focus() {}
@@ -38,7 +38,7 @@ function boot() {
     vm.runInContext(fs.readFileSync(file, 'utf8'), sandbox, { filename: file }));
   vm.runInContext(fs.readFileSync('assets/interface-reference.js', 'utf8'), sandbox, { filename: 'assets/interface-reference.js' });
 
-  const sessions = rep => Array.from(rep || []).map(b => ({ n: b.num, iso: b.iso, blk: { t: b.t, d: b.d, k: b.k, o: b.o } }));
+  const sessions = rep => Array.from(rep || []).map(b => ({ n: b.num, iso: b.iso, blk: { t: b.t, d: b.d, k: b.k, o: b.o, notions: b.notions } }));
   const ctx = {
     store: {
       seances: { '3SI1|1': { done: true, notions: ['3si-r001', '3si-r270', '3si-r283', '3si-r288'] } },
@@ -57,21 +57,21 @@ function boot() {
 
 const rendered = boot();
 
-test('la grille des domaines compte les 291 notions et les 7 domaines suivis', () => {
+test('la grille des domaines compte les 298 notions et les 7 domaines suivis', () => {
   const html = rendered.els['v-avancement'].innerHTML;
   const counts = (html.match(/<b>\d+<\/b> \/ \d+/g) || [])
     .map(text => text.replace(/<[^>]*>/g, '').replace(/\s+/g, ''));
-  assert.deepEqual(counts, ['1/76', '1/92', '1/88', '1/32', '0/1', '0/1', '0/1']);
+  assert.deepEqual(counts, ['1/76', '1/92', '1/88', '1/32', '0/3', '0/4', '0/3']);
   assert.match(html, /Pourcentage de notions abordées/);
 });
 
 test('le tableau de bord initial affiche le dénominateur de l’édition en cours', () => {
   const dash = rendered.els['v-dash'].innerHTML;
   const text = rendered.text(dash);
-  assert.match(text, /1,4 %/);                       /* 4 notions cochées sur 291 */
-  assert.match(text, /4\/291 notions/);
+  assert.match(text, /1,3 %/);                       /* 4 notions cochées sur 298 */
+  assert.match(text, /4\/298 notions/);
   assert.match(text, /0\/333 notions/);
-  assert.match(text, /3SI1 : 291 notions · version finale \(31 octobre 2026\)/);
+  assert.match(text, /3SI1 : 298 notions · version finale \(31 octobre 2026\)/);
   assert.match(text, /19 notions des encadrés « Complément » \(CSS3 9 · JavaScript 9 · SQL \/ BD 1\)/);
 });
 
@@ -79,22 +79,33 @@ test('la note d’édition accompagne les pourcentages de l’avancement', () =>
   const text = rendered.text(rendered.els['v-avancement'].innerHTML);
   assert.match(text, /version finale du 31 octobre 2026, partie 1 p\. 5 à 13 — tableaux p\. 67 à 81/);
   assert.match(text, /\(HTML5 67-70 · CSS3 71-75 · JavaScript 76-79 · SQL \/ BD 80-81\)/);
-  assert.match(text, /Les pourcentages portent sur 291 notions/);
+  assert.match(text, /Les pourcentages portent sur 298 notions/);
 });
 
 test('le référentiel signale les 19 compléments et le total par domaine', () => {
   const suivi = rendered.els['v-suivi'].innerHTML;
   const rows = rendered.els['sti-results'].innerHTML;
-  assert.match(rendered.text(suivi), /291/);
-  assert.equal((rows.match(/data-sti-reference=/g) || []).length, 291);
+  assert.match(rendered.text(suivi), /298/);
+  assert.equal((rows.match(/data-sti-reference=/g) || []).length, 298);
   assert.equal((rows.match(/class="sti-new">complément/g) || []).length, 19);
   assert.equal((rows.match(/class="sti-new">nouveau/g) || []).length, 0);
   assert.deepEqual(
     (suivi.match(/sti-domain-new">\+\d+/g) || []).map(x => x.replace(/[^+0-9]/g, '')),
     ['+9', '+9', '+1']
   );
-  assert.match(rendered.text(suivi), /Référentiel 3SI1 : 291 notions, version finale du 31 octobre 2026, partie 1 p\. 5 à 13 — tableaux p\. 67 à 81, dont 19 notions des encadrés « Complément »/);
+  assert.match(rendered.text(suivi), /Référentiel 3SI1 : 298 notions, version finale du 31 octobre 2026, partie 1 p\. 5 à 13 — tableaux p\. 67 à 81, dont 19 notions des encadrés « Complément »/);
   assert.match(rendered.text(suivi), /Votre livre 5–81 Pages du livre · version finale du 31 octobre 2026/);
-  assert.match(rendered.text(rows), /Système d’exploitation[^·]*· livre p\. 5, 6, 7/);
-  assert.match(rendered.text(rows), /Internet des objets \(IoT\)/);
+  assert.match(rendered.text(rows), /Rôles et fonctionnement du système d’exploitation[^·]*· livre p\. 5/);
+  assert.match(rendered.text(rows), /Communication des objets connectés/);
+});
+
+test('les séances de la partie 1 pré-cochént leurs notions dans la fiche', () => {
+  const { sandbox } = rendered;
+  sandbox.STI_TRACK.mountModal('3SI1', 55, {});
+  assert.deepEqual(Array.from(sandbox.STI_TRACK.selection('3SI1')), ['3si-r289', '3si-r290', '3si-r291']);
+  assert.match(rendered.text(rendered.els['m-body'].innerHTML), /Notions proposées par la répartition de la classe/);
+  sandbox.STI_TRACK.mountModal('3SI1', 56, {});
+  assert.equal(sandbox.STI_TRACK.selection('3SI1').length, 7);
+  sandbox.STI_TRACK.mountModal('3SI1', 1, {});
+  assert.equal(sandbox.STI_TRACK.selection('3SI1').length, 0, 'une séance sans notions proposées reste vide');
 });

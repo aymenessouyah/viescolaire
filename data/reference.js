@@ -15,7 +15,7 @@ const SCHOOL = {
 
 /* Classes : jours de séance (0=dim … 6=sam), 2 h par séance et par groupe */
 const CLASSES = {
-  "3SI1": { short:"3SI1", long:"3<sup>ème</sup> année Sciences de l'Informatique — Groupes : 1 et 2", days:[2,4], dayTxt:"Mardi & Jeudi", heures:2, groupes:2, fin:"2027-05-29",
+  "3SI1": { short:"3SI1", long:"3<sup>ème</sup> année Sciences de l'Informatique — Groupes : 1 et 2", days:[2,4], dayTxt:"Mardi & Jeudi", heures:2, groupes:2, fin:"2027-06-05",
             note:"Classe de 3<sup>ème</sup> SI (matière STI) — mardi de 8 h à 12 h et jeudi de 13 h à 17 h, deux groupes de 2 h par jour. Période d'enseignement calculée jusqu'à la semaine bloquée de fin mai 2027 ; le mois de juin est consacré aux épreuves nationales, aux corrections et aux conseils de classe." },
   "4SI2": { short:"4SI2", long:"4<sup>ème</sup> année Sciences de l'Informatique — Groupes : 1 et 2", days:[1,5], dayTxt:"Lundi & Vendredi", heures:2, groupes:2, fin:"2027-05-15",
             note:"Classe de 4<sup>ème</sup> SI (matière STI) — lundi et vendredi de 8 h à 12 h, deux groupes de 2 h par jour ; la session du Baccalauréat se déroule en juin 2027." }
