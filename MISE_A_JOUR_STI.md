@@ -1,5 +1,45 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Version finale du Smart Book 3e SI — 81 pages, tableaux p. 67 à 81
+
+Le livre fourni (« STI-Smart Book-3SI-2026 », **Version finale**, 81 pages) remplace l'édition de 72 pages
+intégrée précédemment. Les tableaux récapitulatifs ont été recomposés et renumérotés, mais **chaque ligne
+du référentiel se retrouve à l'identique** : le référentiel 3SI1 reste de **288 notions** (4SI2 reste à 333).
+
+| Tableau | Édition précédente | Version finale | Notions |
+|---|---|---|---|
+| HTML5 — balises et attributs | p. 58–61 | **p. 67–70** | 76 |
+| CSS3 — aide-mémoire par thèmes | p. 62–66 | **p. 71–75** | 92 |
+| JavaScript — syntaxe et API | p. 67–70 | **p. 76–79** | 88 |
+| Bases de données et SQL | p. 71–72 | **p. 80–81** | 32 |
+
+Ce que la mise à jour change dans le site :
+
+- `docs/sti-smart-book-3si-2026.pdf` : version finale déposée (2 707 885 octets, md5 `aaabc102…`) ; `sw.js`
+  retire la copie hors ligne de l'édition précédente pour que le nouveau fichier soit retéléchargé sans
+  vider les autres documents ;
+- `data/livres-sti.js` : les **288 identifiants** `3si-r001…r288` sont conservés et seules les pages changent
+  (+9) ; `start`/`end` passent à **67 / 81** ; le bloc `edition` décrit la version finale — `label`,
+  `date`, `pages` (67–81), `tables` par domaine et `complements: { total: 19, domains: … }` — avec
+  `added: 0` et `removed: 0` ;
+- les 19 notions des encadrés **« Complément »** (p. 71, 76 et 80) restent distinguées dans la liste :
+  elles portent `complement: true` (au lieu de `added: true`) et le badge affiche « complément » ;
+  aucune notion n'est marquée absente ou supprimée, donc les coches déjà enregistrées restent valides ;
+- `data/repartition3SI1.js` et `data/fiches3SI1.js` : toutes les références au livre passent de « p. 58–72 »
+  à « p. 67–81 » (45 + 44 remplacements, séances et fiches comprises) ;
+- **grille des domaines (avancement)**, **tableau de bord initial** et **référentiel** reprennent la même
+  phrase, construite une seule fois dans `STI_TRACK.editionText` : « Référentiel 3SI1 : 288 notions,
+  version finale du 31 octobre 2026 — tableaux p. 67 à 81 (HTML5 67-70 · CSS3 71-75 · JavaScript 76-79 ·
+  SQL / BD 80-81), dont 19 notions des encadrés « Complément » (CSS3 9 · JavaScript 9 · SQL / BD 1).
+  Les pourcentages portent sur 288 notions. » Les dénominateurs restent **76 / 92 / 88 / 32** et **288** :
+  aucune couverture déjà enregistrée ne baisse ;
+- la carte de couverture du tableau de bord affiche « 3SI1 : 288 notions · version finale (31 octobre 2026) » ;
+- version **`v1.29.0-version-finale-3si`** (application, `index.html`, service worker) ;
+- tests : `tests/smart-book-3si.test.js` contrôle les pages par domaine, l'empreinte MD5 du PDF déposé, le
+  bloc `edition` et l'absence de notion absente ; `tests/smart-book-3si-ui.test.js` vérifie les textes
+  réellement rendus (grille 1/76 · 1/92 · 1/88 · 1/32, 4/288, 0/333, note d'édition, 19 badges « complément »).
+  Suite complète : **159 tests**.
+
 ## Mise à jour du Smart Book 3e SI — édition 2026 (pages 62, 67 et 71)
 
 Le livre de 3<sup>e</sup> année SI a été remplacé. Trois encadrés **« Complément »** ont été ajoutés

@@ -403,7 +403,7 @@ var LIVRE = (function () {
       '<span><code>' + esc2(r.label) + '</code>' +
       (r.description ? ' <span class="dd">— ' + esc2(r.description) + '</span>' : '') +
       (r.pages && r.pages.length ? ' <span class="pg">p. ' + r.pages.join(', ') + '</span>' : '') +
-      (r.added ? ' <span class="nv">nouveau</span>' : '') +
+      (r.complement ? ' <span class="nv">complément</span>' : '') +
       '</span></label>';
   }
   function peindre() {

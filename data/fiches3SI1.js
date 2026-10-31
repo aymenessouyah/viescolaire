@@ -15,7 +15,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 58",
+  "pages": "p. 67",
   "duree": 120,
   "objectifs": [
    {
@@ -104,7 +104,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 58",
+  "pages": "p. 67",
   "duree": 120,
   "objectifs": [
    {
@@ -192,7 +192,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 58-59",
+  "pages": "p. 67-68",
   "duree": 120,
   "objectifs": [
    {
@@ -280,7 +280,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 59",
+  "pages": "p. 68",
   "duree": 120,
   "objectifs": [
    {
@@ -368,7 +368,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 59-60",
+  "pages": "p. 68-69",
   "duree": 120,
   "objectifs": [
    {
@@ -456,7 +456,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 60",
+  "pages": "p. 69",
   "duree": 120,
   "objectifs": [
    {
@@ -544,7 +544,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5",
-  "pages": "p. 60-61",
+  "pages": "p. 69-70",
   "duree": 120,
   "objectifs": [
    {
@@ -632,7 +632,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "CSS3",
-  "pages": "p. 62",
+  "pages": "p. 71",
   "duree": 120,
   "objectifs": [
    {
@@ -720,7 +720,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "CSS3",
-  "pages": "p. 62-63",
+  "pages": "p. 71-72",
   "duree": 120,
   "objectifs": [
    {
@@ -808,7 +808,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "CSS3",
-  "pages": "p. 63",
+  "pages": "p. 72",
   "duree": 120,
   "objectifs": [
    {
@@ -896,7 +896,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "CSS3",
-  "pages": "p. 63-64",
+  "pages": "p. 72-73",
   "duree": 120,
   "objectifs": [
    {
@@ -1070,7 +1070,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "correction",
   "domaines": "CSS3",
-  "pages": "p. 64-65",
+  "pages": "p. 73-74",
   "duree": 120,
   "objectifs": [
    {
@@ -1157,7 +1157,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "CSS3",
-  "pages": "p. 64",
+  "pages": "p. 73",
   "duree": 120,
   "objectifs": [
    {
@@ -1245,7 +1245,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "HTML5 / CSS3",
-  "pages": "p. 58-66",
+  "pages": "p. 67-75",
   "duree": 120,
   "objectifs": [
    {
@@ -1421,7 +1421,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "correction",
   "domaines": "CSS3",
-  "pages": "p. 62-66",
+  "pages": "p. 71-75",
   "duree": 120,
   "objectifs": [
    {
@@ -1508,7 +1508,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 67",
+  "pages": "p. 76",
   "duree": 120,
   "objectifs": [
    {
@@ -1596,7 +1596,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 67-68",
+  "pages": "p. 76-77",
   "duree": 120,
   "objectifs": [
    {
@@ -1684,7 +1684,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 68",
+  "pages": "p. 77",
   "duree": 120,
   "objectifs": [
    {
@@ -1772,7 +1772,7 @@ const FICHES_3SI1 = {
   "tri": 1,
   "nature": "cours",
   "domaines": "Révision",
-  "pages": "p. 58-68",
+  "pages": "p. 67-77",
   "duree": 120,
   "objectifs": [
    {
@@ -1944,7 +1944,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 68-69",
+  "pages": "p. 77-78",
   "duree": 120,
   "objectifs": [
    {
@@ -2032,7 +2032,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 69",
+  "pages": "p. 78",
   "duree": 120,
   "objectifs": [
    {
@@ -2120,7 +2120,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 69",
+  "pages": "p. 78",
   "duree": 120,
   "objectifs": [
    {
@@ -2209,7 +2209,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 69-70",
+  "pages": "p. 78-79",
   "duree": 120,
   "objectifs": [
    {
@@ -2296,7 +2296,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 70",
+  "pages": "p. 79",
   "duree": 120,
   "objectifs": [
    {
@@ -2470,7 +2470,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "correction",
   "domaines": "JavaScript",
-  "pages": "p. 67-70",
+  "pages": "p. 76-79",
   "duree": 120,
   "objectifs": [
    {
@@ -2557,7 +2557,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 71",
+  "pages": "p. 80",
   "duree": 120,
   "objectifs": [
    {
@@ -2647,7 +2647,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 71",
+  "pages": "p. 80",
   "duree": 120,
   "objectifs": [
    {
@@ -2736,7 +2736,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 71-72",
+  "pages": "p. 80-81",
   "duree": 120,
   "objectifs": [
    {
@@ -2825,7 +2825,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 72",
+  "pages": "p. 81",
   "duree": 120,
   "objectifs": [
    {
@@ -3000,7 +3000,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "correction",
   "domaines": "SQL / BD",
-  "pages": "p. 72",
+  "pages": "p. 81",
   "duree": 120,
   "objectifs": [
    {
@@ -3087,7 +3087,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 72",
+  "pages": "p. 81",
   "duree": 120,
   "objectifs": [
    {
@@ -3175,7 +3175,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 72",
+  "pages": "p. 81",
   "duree": 120,
   "objectifs": [
    {
@@ -3263,7 +3263,7 @@ const FICHES_3SI1 = {
   "tri": 2,
   "nature": "cours",
   "domaines": "JavaScript / SQL",
-  "pages": "p. 67-72",
+  "pages": "p. 76-81",
   "duree": 120,
   "objectifs": [
    {
@@ -3439,7 +3439,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 72",
+  "pages": "p. 81",
   "duree": 120,
   "objectifs": [
    {
@@ -3527,7 +3527,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 71-72",
+  "pages": "p. 80-81",
   "duree": 120,
   "objectifs": [
    {
@@ -3616,7 +3616,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "HTML5 / CSS3",
-  "pages": "p. 58-66",
+  "pages": "p. 67-75",
   "duree": 120,
   "objectifs": [
    {
@@ -3792,7 +3792,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "correction",
   "domaines": "JavaScript",
-  "pages": "p. 67-70",
+  "pages": "p. 76-79",
   "duree": 120,
   "objectifs": [
    {
@@ -3879,7 +3879,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 67-70",
+  "pages": "p. 76-79",
   "duree": 120,
   "objectifs": [
    {
@@ -3967,7 +3967,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "CSS3",
-  "pages": "p. 62-66",
+  "pages": "p. 71-75",
   "duree": 120,
   "objectifs": [
    {
@@ -4055,7 +4055,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "HTML5 / CSS3 / JavaScript",
-  "pages": "p. 58-70",
+  "pages": "p. 67-79",
   "duree": 120,
   "objectifs": [
    {
@@ -4143,7 +4143,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "Révision",
-  "pages": "p. 58-72",
+  "pages": "p. 67-81",
   "duree": 120,
   "objectifs": [
    {
@@ -4403,7 +4403,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "SQL / BD",
-  "pages": "p. 71-72",
+  "pages": "p. 80-81",
   "duree": 120,
   "objectifs": [
    {
@@ -4492,7 +4492,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "cours",
   "domaines": "JavaScript",
-  "pages": "p. 67-70",
+  "pages": "p. 76-79",
   "duree": 120,
   "objectifs": [
    {
@@ -4580,7 +4580,7 @@ const FICHES_3SI1 = {
   "tri": 3,
   "nature": "sujet de bac",
   "domaines": "Bac blanc",
-  "pages": "p. 58-72",
+  "pages": "p. 67-81",
   "duree": 120,
   "objectifs": [
    {

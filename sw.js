@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.28.0-referentiel-3si';
+const VERSION='sti-espace-v1.29.0-version-finale-3si';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -189,9 +189,10 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  await self.clients.claim();
  const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('sti-espace-')&&k!==CORE_CACHE&&k!==DOCS_CACHE).map(k=>caches.delete(k)));
- /* Le Smart Book 3e SI a été remplacé (compléments p. 62, 67 et 71) : la copie
-    hors ligne de l'ancienne édition est retirée pour être retéléchargée à la
-    prochaine ouverture du document. Les autres PDF restent en cache. */
+ /* Le Smart Book 3e SI a été remplacé par la version finale 2026 (tableaux
+    p. 67 à 81) : la copie hors ligne de l'édition précédente est retirée pour
+    être retéléchargée à la prochaine ouverture du document. Les autres PDF
+    restent en cache. */
  await caches.open(DOCS_CACHE).then(c=>c.delete('./docs/sti-smart-book-3si-2026.pdf')).catch(()=>{});
 })()));
 let downloading=null;
