@@ -964,3 +964,6 @@ body.vs-fusion #v-carte .site-card-meta a{text-decoration:underline;text-underli
  body.sti-business-card-print #v-carte .site-card-stage{position:absolute!important;inset:0!important;width:85mm!important;height:55mm!important;margin:0!important;padding:0!important;overflow:hidden!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important}
  body.sti-business-card-print #v-carte .site-card-stage img{width:85mm!important;height:55mm!important;max-width:none!important;margin:0!important;border-radius:0!important;box-shadow:none!important;object-fit:fill!important}
 }
+/* Référentiel : rappel de l’édition à côté des pourcentages. */
+.ref-edition-note{margin-top:12px!important;padding:8px 11px;line-height:1.65;border-left:3px solid #C9A227;border-radius:6px;background:#FFFBF0}
+@media print{.ref-edition-note{background:none;border-left-color:#999}}

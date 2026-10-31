@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.27.0-smart-book-3si";
+const APP_VER = "v1.28.0-referentiel-3si";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

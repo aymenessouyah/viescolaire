@@ -77,3 +77,24 @@ test('le PDF du Smart Book 3e SI déposé correspond au référentiel annoncé',
   assert.ok(pdf.length > 100000, 'le PDF du livre est présent');
   assert.equal(pdf.subarray(0, 5).toString('latin1'), '%PDF-');
 });
+
+test('le référentiel publie la date d’édition et les 19 notions ajoutées', () => {
+  const c = books()['3SI1'];
+  assert.deepEqual(JSON.parse(JSON.stringify(c.edition)), {
+    date: '2026-10-31',
+    label: 'Édition 2026 — compléments p. 62, 67 et 71',
+    added: 19,
+    pages: [62, 67, 71],
+    domains: { CSS3: 9, JavaScript: 9, 'SQL / BD': 1 }
+  });
+  const flagged = c.items.filter(item => item.added === true);
+  assert.equal(flagged.length, 19);
+  assert.deepEqual(Array.from(flagged.map(item => item.id)), Array.from({ length: 19 }, (_, i) => '3si-r' + String(270 + i)));
+  COMPLEMENTS.forEach(([label, domain]) => {
+    const item = flagged.find(entry => entry.label === label);
+    assert.ok(item, `notion ajoutée non marquée : ${label}`);
+    assert.equal(item.domain, domain);
+  });
+  const legacy = c.items.filter(item => Number(item.id.slice(5)) < 270);
+  assert.equal(legacy.filter(item => item.added === true).length, 0);
+});
