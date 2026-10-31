@@ -71,13 +71,14 @@ Le bloc « nouvelle répartition » de l'onglet *Répartition annuelle* porte d�
 | Période | 18/09/2026 → 14/05/2027 | **15/09/2026 → 20/05/2027** |
 | Devoirs de contrôle | 02/11 · 16/11 · 25/01 · 12/02 · 12/04 · 26/04 | **03/11 · 17/11 · 19/01 · 16/02 · 13/04 · 04/05** |
 | Devoirs de synthèse | 07/12 · 08/03 · 07/05 | **10/12 · 11/03 · 25/05** |
-| Programme | HTML5, CSS3, JS, SQL, PHP (333 notions) | HTML5, CSS3, JavaScript, SQL / BD (**288 notions** depuis l'édition 2026 du livre, pas de PHP) |
+| Programme | HTML5, CSS3, JS, SQL, PHP (333 notions) | Systèmes, réseaux, IoT, HTML5, CSS3, JavaScript, SQL / BD (**291 notions**, pas de PHP) |
 
 Données : `data/repartition3SI1.js` (`STI_DATA.repartition3SI1`, 54 blocs numérotés).
 Sources : `plan3.py` → `plan3.json` → `gen_js3.py`.
 Les relevés de vérification plus bas qui mentionnent **269** notions datent de l'édition précédente du livre ;
-les compléments portent le référentiel à **288**. La **version finale 2026** du Smart Book (81 pages) déplace
-les tableaux récapitulatifs en pages **67 à 81** sans changer les 288 notions (voir `MISE_A_JOUR_STI.md`).
+la **version finale 2026** du Smart Book (81 pages) place les tableaux récapitulatifs en pages **67 à 81**
+(288 notions) ; la **partie 1** du livre (systèmes, réseaux, IoT, p. 5 à 13) ajoute **3 notions** au dénominateur,
+soit **291** (voir `MISE_A_JOUR_STI.md`).
 **Le devoir de contrôle n°1 de la 3SI1 a lieu le mardi 3 novembre 2026** (séance 12) ; la séance 13
 du 5 novembre est sa correction, suivie des transitions et transformations CSS3.
 

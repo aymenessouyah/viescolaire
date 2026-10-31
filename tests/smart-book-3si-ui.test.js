@@ -57,42 +57,44 @@ function boot() {
 
 const rendered = boot();
 
-test('la grille des domaines compte les 288 notions avec leurs nouveaux totaux', () => {
+test('la grille des domaines compte les 291 notions et les 7 domaines suivis', () => {
   const html = rendered.els['v-avancement'].innerHTML;
   const counts = (html.match(/<b>\d+<\/b> \/ \d+/g) || [])
     .map(text => text.replace(/<[^>]*>/g, '').replace(/\s+/g, ''));
-  assert.deepEqual(counts, ['1/76', '1/92', '1/88', '1/32']);
+  assert.deepEqual(counts, ['1/76', '1/92', '1/88', '1/32', '0/1', '0/1', '0/1']);
   assert.match(html, /Pourcentage de notions abordées/);
 });
 
 test('le tableau de bord initial affiche le dénominateur de l’édition en cours', () => {
   const dash = rendered.els['v-dash'].innerHTML;
   const text = rendered.text(dash);
-  assert.match(text, /1,4 %/);                       /* 4 notions cochées sur 288 */
-  assert.match(text, /4\/288 notions/);
+  assert.match(text, /1,4 %/);                       /* 4 notions cochées sur 291 */
+  assert.match(text, /4\/291 notions/);
   assert.match(text, /0\/333 notions/);
-  assert.match(text, /3SI1 : 288 notions · version finale \(31 octobre 2026\)/);
+  assert.match(text, /3SI1 : 291 notions · version finale \(31 octobre 2026\)/);
   assert.match(text, /19 notions des encadrés « Complément » \(CSS3 9 · JavaScript 9 · SQL \/ BD 1\)/);
 });
 
 test('la note d’édition accompagne les pourcentages de l’avancement', () => {
   const text = rendered.text(rendered.els['v-avancement'].innerHTML);
-  assert.match(text, /version finale du 31 octobre 2026 — tableaux p\. 67 à 81/);
+  assert.match(text, /version finale du 31 octobre 2026, partie 1 p\. 5 à 13 — tableaux p\. 67 à 81/);
   assert.match(text, /\(HTML5 67-70 · CSS3 71-75 · JavaScript 76-79 · SQL \/ BD 80-81\)/);
-  assert.match(text, /Les pourcentages portent sur 288 notions/);
+  assert.match(text, /Les pourcentages portent sur 291 notions/);
 });
 
 test('le référentiel signale les 19 compléments et le total par domaine', () => {
   const suivi = rendered.els['v-suivi'].innerHTML;
   const rows = rendered.els['sti-results'].innerHTML;
-  assert.match(rendered.text(suivi), /288/);
-  assert.equal((rows.match(/data-sti-reference=/g) || []).length, 288);
+  assert.match(rendered.text(suivi), /291/);
+  assert.equal((rows.match(/data-sti-reference=/g) || []).length, 291);
   assert.equal((rows.match(/class="sti-new">complément/g) || []).length, 19);
   assert.equal((rows.match(/class="sti-new">nouveau/g) || []).length, 0);
   assert.deepEqual(
     (suivi.match(/sti-domain-new">\+\d+/g) || []).map(x => x.replace(/[^+0-9]/g, '')),
     ['+9', '+9', '+1']
   );
-  assert.match(rendered.text(suivi), /Référentiel 3SI1 : 288 notions, version finale du 31 octobre 2026 — tableaux p\. 67 à 81, dont 19 notions des encadrés « Complément »/);
-  assert.match(rendered.text(suivi), /Votre livre 67–81 Pages des tableaux · version finale du 31 octobre 2026/);
+  assert.match(rendered.text(suivi), /Référentiel 3SI1 : 291 notions, version finale du 31 octobre 2026, partie 1 p\. 5 à 13 — tableaux p\. 67 à 81, dont 19 notions des encadrés « Complément »/);
+  assert.match(rendered.text(suivi), /Votre livre 5–81 Pages du livre · version finale du 31 octobre 2026/);
+  assert.match(rendered.text(rows), /Système d’exploitation[^·]*· livre p\. 5, 6, 7/);
+  assert.match(rendered.text(rows), /Internet des objets \(IoT\)/);
 });
