@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="assets/color-mode.css">
 <link rel="stylesheet" href="assets/agent-sti.css">
 <link rel="stylesheet" href="assets/fiches.css">
+<link rel="stylesheet" href="assets/plateforme-plus.css">
 <script>try{document.documentElement.dataset.colorMode=localStorage.getItem("sti_color_mode_v1")==="dark"?"dark":"light";}catch(e){document.documentElement.dataset.colorMode="light";}</script>
 </head>
 <body>
@@ -78,6 +79,7 @@
     <div class="row" style="gap:12px">
       <span id="tb-today"></span>
       <span class="hide-sm">|</span>
+      <button class="btn-link hide-sm" type="button" onclick="STI_SEARCH.toggle()" title="Rechercher dans toute la plateforme (Ctrl + K)">Rechercher <kbd class="gs-kbd" aria-hidden="true">Ctrl K</kbd></button>
       
       <span class="hide-sm">|</span>
       <button class="btn-link hide-sm" onclick="go('v-dash')" title="État de la sauvegarde">Sauvegarde : <span>—</span></button>
@@ -120,7 +122,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.31.0-partie-1-seances-3si";
+  var ATTENDU = "v1.32.0-recherche-bilan-donnees";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -182,6 +184,7 @@
   <section id="v-prog" class="view"></section>
   <section id="v-eleves" class="view"></section>
   <section id="v-cahier" class="view"></section>
+  <section id="v-bilan" class="view"></section>
   <section id="v-ref" class="view"></section>
   <section id="v-carte" class="view ref-ui">
     <div class="site-card-page">
@@ -539,6 +542,19 @@
   </div>
 </div>
 
+<div id="gs-palette" class="gs-palette no-print" hidden role="dialog" aria-modal="true" aria-labelledby="gs-title">
+  <div class="gs-box">
+    <p id="gs-title" hidden>Recherche globale</p>
+    <div class="gs-head">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <input id="gs-input" type="search" placeholder="Séance, notion, annexe, compétence, élève, document…" autocomplete="off" spellcheck="false" aria-label="Recherche globale" aria-describedby="gs-help" aria-controls="gs-results">
+      <kbd class="gs-kbd" aria-hidden="true">Échap</kbd>
+    </div>
+    <div id="gs-results" class="gs-results" aria-label="Résultats de la recherche"></div>
+    <div class="gs-foot" id="gs-help"><span>↑ ↓ pour naviguer · Entrée pour ouvrir</span><span id="gs-count" aria-live="polite"></span></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"><span id="toast-txt">Enregistré</span></div>
 
 <!-- ===================== DONNÉES ===================== -->
@@ -583,6 +599,9 @@
 <script src="assets/color-mode.js"></script>
 <script src="assets/cahier-print-data.js"></script>
 <script src="assets/fiches.js"></script>
+<script src="assets/global-search.js"></script>
+<script src="assets/class-report.js"></script>
+<script src="assets/data-audit.js"></script>
 <dialog id="ref-dialog" class="ref-ui" aria-labelledby="ref-dialog-title"></dialog>
 <dialog id="logout-confirm-dialog" class="logout-confirm-dialog" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-description">
   <div class="logout-confirm-content">

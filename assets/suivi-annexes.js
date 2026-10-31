@@ -186,9 +186,11 @@ function renderCoverage(ctx){
   search.addEventListener('input',event=>{coverageQuery=event.target.value.toLocaleLowerCase('fr');filterCoverageRows(panel);});
   filterCoverageRows(panel);
 }
+/* Met en avant un élément d'annexe depuis la recherche globale. */
+function focus(id){const item=itemById.get(id);if(!item)return false;coverageQuery=item.labelText.toLocaleLowerCase('fr');const panel=el('sti-annex-coverage');if(panel){const search=panel.querySelector('[data-annex-coverage-search]');if(search){search.value=coverageQuery;filterCoverageRows(panel);}if(panel.scrollIntoView)panel.scrollIntoView({behavior:'smooth',block:'start'});}return true;}
 function render(ctx){renderCoverage(ctx);}
 
 root.STI_ANNEX_TRACK={
-  version:VERSION,items,ids,summary,mountModal,selection,render
+  version:VERSION,items,ids,summary,mountModal,selection,render,focus
 };
 })(typeof window!=='undefined'?window:globalThis);

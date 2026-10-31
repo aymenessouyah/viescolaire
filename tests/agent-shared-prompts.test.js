@@ -123,7 +123,8 @@ test('la migration réserve l’écriture à service_role et limite la lecture a
 test('la vérification verify_jwt=false reste limitée à assistant-ia et le cache statique est renouvelé', () => {
   assert.match(supabaseConfig, /\[functions\.assistant-ia\][\s\S]*?verify_jwt\s*=\s*false/);
   assert.doesNotMatch(supabaseConfig, /\[functions\.prompt-manager\]/);
-  assert.match(appSource, /v1\.31\.0-partie-1-seances-3si/);
-  assert.match(indexSource, /var ATTENDU = "v1\.31\.0-partie-1-seances-3si"/);
-  assert.match(workerSource, /sti-espace-v1\.31\.0-partie-1-seances-3si/);
+  const version = /const APP_VER = "([^"]+)"/.exec(appSource)[1];
+  assert.ok(version.startsWith('v1.'));
+  assert.ok(indexSource.includes('var ATTENDU = "' + version + '"'));
+  assert.ok(workerSource.includes('sti-espace-' + version));
 });

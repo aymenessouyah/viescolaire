@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.31.0-partie-1-seances-3si";
+const APP_VER = "v1.32.0-recherche-bilan-donnees";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -202,10 +202,11 @@ const TABS = [
   { id:"v-prog",   t:"Programme &amp; compétences", ico:"target" },
   { id:"v-eleves", t:"Mes classes &amp; élèves", ico:"users" },
   { id:"v-cahier", t:"Cahier de textes", ico:"pen" },
+  { id:"v-bilan",  t:"Bilan &amp; données", ico:"check" },
   { id:"v-ref",    t:"Annexes &amp; mémo", ico:"book" },
   { id:"v-carte",  t:"Carte de visite", ico:"web" }
 ];
-const GUEST_HIDDEN_VIEWS=["v-fiche","v-devoirs","v-rep","v-cahier"];
+const GUEST_HIDDEN_VIEWS=["v-fiche","v-devoirs","v-rep","v-cahier","v-bilan"];
 let currentTab = "v-dash";
 let repCls = "3SI1", repTri = 1;
 
@@ -240,6 +241,8 @@ function renderAll(silent){
   renderVerChip();
   renderLoginInvite();
   if (window.STI_INTERFACE) window.STI_INTERFACE.render({store:Object.assign({},store,{profil:activeProfessorProfile()}),sessions:SESSIONS,view:currentTab,term:repTri});
+  if (window.STI_SEARCH) window.STI_SEARCH.setContext({store:store,sessions:SESSIONS,tabs:TABS});
+  if (window.STI_CLASS_REPORT && currentTab==="v-bilan") window.STI_CLASS_REPORT.render({store:store,sessions:SESSIONS});
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id===currentTab));
   if(connected)restorePrivateWorkspace();else renderPrivateWorkspace();
 }
@@ -263,7 +266,7 @@ function privateEmptyState(){ return `<section class="private-empty-state" role=
 function renderPrivateWorkspace(){
   const dashboard=document.getElementById("v-dash");
   if(dashboard)dashboard.innerHTML=`<div class="view-head"><div><h1 class="page-title">Bonjour professeur, veuillez entrer vos données de connexion.</h1><p class="page-sub">Connectez-vous pour consulter votre espace personnel.</p></div><div class="head-actions"><button class="btn btn-primary" type="button" onclick="openAuth()">Se connecter</button></div></div><div class="stats-grid auth-zero-grid">${[["users","green","0","Élèves suivis"],["target","gold","0 %","Couverture moyenne"],["pen","terra","0","Notes saisies"],["calendar","violet","—","Prochain devoir prévu"]].map(x=>`<div class="stat-card"><div class="stat-icon ${x[1]}">${ic(x[0])}</div><div><div class="stat-value">${x[2]}</div><div class="stat-label">${x[3]}</div><div class="stat-foot">Aucune donnée à afficher</div></div></div>`).join("")}</div><section class="class-dashboard-section auth-no-classes" aria-labelledby="auth-no-classes-title"><div class="class-dashboard-section-head"><div><h2 id="auth-no-classes-title">Aucune classe à afficher</h2><p>Les classes et leurs données apparaîtront après connexion au compte professeur.</p></div></div><div class="auth-no-classes-card"><span>${ic("users")}</span><strong>Aucun dossier de classe disponible</strong><small>Connectez-vous pour afficher vos classes.</small></div></section>`;
-  const privateViews=["v-cours","v-avancement","v-agent","v-suivi","v-edt","v-cal","v-prog","v-eleves","v-ref"];
+  const privateViews=["v-cours","v-avancement","v-agent","v-suivi","v-edt","v-cal","v-prog","v-eleves","v-ref","v-bilan"];
   privateViews.forEach(id=>{const view=document.getElementById(id);if(view)view.innerHTML=privateEmptyState();});
   GUEST_HIDDEN_VIEWS.forEach(id=>{const view=document.getElementById(id);if(view){view.innerHTML="";view.hidden=true;view.style.display="none";}});
   const year=document.getElementById("ref-year");if(year)year.replaceChildren();
