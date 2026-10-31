@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="assets/agent-sti.css">
 <link rel="stylesheet" href="assets/fiches.css">
 <link rel="stylesheet" href="assets/plateforme-plus.css">
+<link rel="stylesheet" href="assets/help.css">
 <script>try{document.documentElement.dataset.colorMode=localStorage.getItem("sti_color_mode_v1")==="dark"?"dark":"light";}catch(e){document.documentElement.dataset.colorMode="light";}</script>
 </head>
 <body>
@@ -44,6 +45,7 @@
 <button class="btn btn-ghost" id="btn-compte" onclick="toggleCompte(event)" title="Votre compte professeur : connexion, profil, déconnexion"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg> <span id="compte-txt">Connexion</span> <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:14px;height:14px" viewbox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></svg></button>
 <div class="hidden" id="menu-compte" style="position:absolute;right:0;top:calc(100% + 6px);min-width:250px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;z-index:80;text-align:left">
 <div class="tiny" id="mc-id" style="padding:8px 10px;border-bottom:1px solid var(--line-2);margin-bottom:4px"></div>
+<button class="btn btn-line" onclick="document.getElementById('menu-compte').classList.add('hidden');STI_HELP.open()" style="display:block;width:100%;text-align:left;margin:2px 0" title="Guide du professeur (F1)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8v.5"></path><path d="M12 17h.01"></path></svg> Aide et guide</button>
 <button class="btn btn-line" onclick="menuAction('connexion')" style="display:block;width:100%;text-align:left;margin:2px 0">
 <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:15px;height:15px;vertical-align:-2px" viewbox="0 0 24 24"><rect height="11" rx="2" width="16" x="4" y="10"></rect><path d="M8 10V7a4 4 0 0 1 8 0v3"></path></svg> Se connecter / Changer de compte</button>
 <button class="btn btn-line" onclick="menuAction('profil')" style="display:block;width:100%;text-align:left;margin:2px 0">
@@ -60,6 +62,7 @@
 </div>
 </div>
 <button class="btn btn-ghost" id="btn-cloud" onclick="openCloud()" title="Sauvegarde distante (Supabase)"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M18 10h-1.3A6 6 0 1 0 6 15.7"></path><path d="M17 18H7a4 4 0 0 1 0-8"></path><path d="M12 12v6M9.5 15.5 12 18l2.5-2.5"></path></svg> Cloud</button><button class="btn btn-ghost" id="btn-drive-backup" type="button" onclick="window.STI_DRIVE_BACKUP ? window.STI_DRIVE_BACKUP.openSettings() : toast('La sauvegarde Drive n’est pas encore chargée.')" title="Autoriser et gérer les copies dans le Google Drive personnel du professeur">Exporter vers Google Drive</button><button class="btn btn-ghost" id="btn-cloud-send" onclick="cloudPush(false)" title="Envoyer une sauvegarde de cet appareil au Cloud" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 17V3M7 8l5-5 5 5M5 17v4h14v-4"></path></svg><span>Envoyer au Cloud</span></button><button class="btn btn-ghost" id="btn-cloud-restore" onclick="cloudPull(false)" title="Recevoir et fusionner les modifications ; les conflits restent à valider" type="button"><svg fill="none" height="16" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24" width="16"><path d="M12 3v14M7 12l5 5 5-5M5 17v4h14v-4"></path></svg><span>Recevoir du Cloud</span></button>
+<button class="btn btn-ghost" id="btn-aide" type="button" onclick="STI_HELP.toggle()" title="Guide du professeur : toutes les fonctions de la plateforme (F1)" aria-haspopup="dialog"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1 1-1.1 1.8v.5"></path><path d="M12 17h.01"></path></svg>Aide <kbd class="aide-kbd" aria-hidden="true">F1</kbd></button>
 <button class="btn btn-ghost" id="btn-print-menu" type="button" title="Choisir le document et les filtres à imprimer"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M6 9V2h12v7"></path><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect height="8" width="12" x="6" y="14"></rect></svg> Centre d'impression</button>
 <button class="btn btn-ghost" onclick="exportJSON()"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="M7 10l5 5 5-5M12 15V3"></path></svg> Exporter</button>
 <button class="btn btn-ghost" id="btn-install" onclick="installApp()" style="display:none"><svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg> Installer l'application</button>
@@ -122,7 +125,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.32.0-recherche-bilan-donnees";
+  var ATTENDU = "v1.33.0-aide-enseignant";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -571,6 +574,7 @@
 <script src="data/repartition3SI1.js"></script>
 <script src="data/fiches.js"></script>
 <script src="data/fiches3SI1.js"></script>
+<script src="data/aide.js"></script>
 
 <!-- ===================== CONFIGURATION SUPABASE (facultatif) ===================== -->
 <script src="supabase/config.js"></script>
@@ -602,6 +606,7 @@
 <script src="assets/global-search.js"></script>
 <script src="assets/class-report.js"></script>
 <script src="assets/data-audit.js"></script>
+<script src="assets/help.js"></script>
 <dialog id="ref-dialog" class="ref-ui" aria-labelledby="ref-dialog-title"></dialog>
 <dialog id="logout-confirm-dialog" class="logout-confirm-dialog" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-description">
   <div class="logout-confirm-content">
@@ -629,6 +634,29 @@
       <button id="drive-backup-primary" class="btn btn-primary" type="button" hidden>Continuer</button>
     </div>
     <p class="drive-backup-footnote">L’accès Google est limité aux fichiers créés par cette application. L’application ne chiffre pas ces copies en plus : elles sont protégées par les paramètres d’accès de votre compte Google Drive. « Désactiver » arrête les futurs envois sur cet appareil, sans supprimer les copies ni révoquer l’autorisation Google ; pour retirer cette autorisation, utilisez <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">les paramètres de sécurité Google</a>.</p>
+  </div>
+</dialog>
+<dialog id="aide-dialog" class="aide-dialog" aria-labelledby="aide-title-txt">
+  <div class="aide-shell">
+    <header class="aide-head">
+      <div class="aide-head-title">
+        <span class="aide-kicker">GUIDE DU PROFESSEUR</span>
+        <h2 id="aide-title-txt">Aide</h2>
+      </div>
+      <div class="aide-head-actions">
+        <label class="aide-search" for="aide-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+          <input id="aide-search" type="search" placeholder="Chercher une fonction, un écran, un mot-clé…" autocomplete="off" spellcheck="false">
+        </label>
+        <span id="aide-compte" class="aide-compte" aria-live="polite"></span>
+        <button class="btn btn-xs btn-line no-print" type="button" onclick="STI_HELP.print()" title="Imprimer ou enregistrer en PDF la page d'aide affichée">Imprimer</button>
+        <button class="btn btn-xs btn-line no-print" type="button" onclick="STI_HELP.close()" aria-label="Fermer l'aide">Fermer</button>
+      </div>
+    </header>
+    <div class="aide-body">
+      <nav id="aide-sommaire" class="aide-sommaire" aria-label="Sommaire de l'aide"></nav>
+      <article id="aide-article" class="aide-article"></article>
+    </div>
   </div>
 </dialog>
 </body>

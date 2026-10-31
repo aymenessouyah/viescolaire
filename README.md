@@ -29,6 +29,10 @@ fiches de séances, annexes) et une sauvegarde des données.
 | **Bilan & données** | **Bilan de fin de trimestre** par classe (séances et heures, couverture des notions et des annexes, évaluations, assiduité, compétences, élèves à suivre) prêt pour le conseil de classe et imprimable en PDF, puis **contrôle d'intégrité** des données et **sauvegarde/restauration JSON complète**. |
 | **Annexes & mémo** | **Mémo consolidé** (6 familles C1→C6 : contenu des annexes réorganisé selon les compétences), **annexes intégrales** (HTML5, CSS3, JavaScript, PHP, SQL) et les 8 documents PDF, avec recherche instantanée |
 
+Un bouton **Aide** (touche **F1**) ouvre à tout moment le **guide du professeur** : une rubrique par
+écran et par fonction, avec les étapes, les astuces et un bouton pour ouvrir directement l'écran concerné.
+Le même contenu est disponible en Markdown dans [`docs/AIDE-ENSEIGNANT.md`](docs/AIDE-ENSEIGNANT.md).
+
 La **recherche globale** s'ouvre partout avec **Ctrl + K** (ou ⌘ + K) ou le bouton « Rechercher » de la barre
 d'état : elle parcourt les 631 notions des deux livres, les séances datées des deux classes, les 234 éléments d'annexes, les
 compétences du programme, les documents PDF, les élèves saisis et les onglets. Les résultats sont classés
@@ -58,7 +62,9 @@ sti-espace/
 │   ├── global-search.js        recherche globale (Ctrl + K) dans toute la plateforme
 │   ├── class-report.js         bilan de fin de trimestre par classe (imprimable)
 │   ├── data-audit.js           contrôle d'intégrité et export/import JSON complet
-│   └── plateforme-plus.css     styles de la recherche, du bilan et du contrôle des données
+│   ├── help.js                 guide du professeur (bouton Aide, F1)
+│   ├── plateforme-plus.css     styles de la recherche, du bilan et du contrôle des données
+│   └── help.css                styles du guide du professeur et mise en page d'impression
 ├── data/                       données séparées : à modifier sans toucher au code
 │   ├── reference.js            établissement, classes, horaires par défaut, calendrier tunisien
 │   ├── repartition.js          répartition du 1er trimestre (3SI1 et 4SI2)
@@ -66,8 +72,12 @@ sti-espace/
 │   ├── competences.js          pont compétences ↔ annexes ↔ séances
 │   ├── memo.js                 mémo consolidé (annexes adaptées à l'aide pédagogique)
 │   ├── annexes.js              annexes intégrales HTML5 / CSS3 / JS / PHP / SQL
+│   ├── aide.js                 contenu du guide du professeur (source unique)
 │   └── docs.js                 liste des documents PDF
-├── docs/                       8 PDF du site : aide pédagogique, 2 répartitions T1, 5 annexes
+├── tools/
+│   └── aide-md.js              génère docs/AIDE-ENSEIGNANT.md depuis data/aide.js
+├── docs/                       PDF du site (aide pédagogique, répartitions, 5 annexes)
+│   └── AIDE-ENSEIGNANT.md      guide du professeur généré (ne pas modifier à la main)
 ├── documents/                  bibliothèque de travail (également liée depuis l'application)
 │   ├── repartition/3si et 4si/ répartitions des 1er, 2e et 3e trimestres
 │   ├── annexes/                les 5 annexes de cours (mêmes documents que dans docs/)
@@ -386,7 +396,37 @@ bouton « Export JSON » (`donnees`) restent acceptés. En cas de doute, exporte
 
 ---
 
-## 10. Vérifications techniques (facultatif)
+## 10. Aide du professeur
+
+Le bouton **Aide** de la barre d'outils, l'entrée « Aide et guide » du menu Compte ou la touche **F1**
+ouvrent le guide du professeur dans une fenêtre plein écran.
+
+- **Un sommaire par thème** : découvrir la plateforme, préparer et donner cours, suivre les élèves,
+  organiser l'année, données et sécurité.
+- **Une rubrique par écran et par fonction** : tableau de bord, suivi des cours, fiche pédagogique,
+  avancement, devoirs, notions du Smart Book, annexes et mémo, programme, agent IA, classes et élèves,
+  appel, notes et bulletins, compétences, bilan de trimestre, emploi du temps, calendrier, répartition,
+  cahier de textes, impression, carte de visite, sauvegardes, profil et badge, contrôle des données,
+  confidentialité, raccourcis, dépannage.
+- **Chaque rubrique** donne l'objectif, les étapes numérotées, les points d'attention et, quand c'est
+  utile, un bouton **« Ouvrir l'écran concerné »**.
+- **Recherche instantanée** dans le guide (sans accents), ouverture directe sur la rubrique de l'écran
+  où vous êtes, et bouton **Imprimer** qui n'imprime que la page d'aide affichée.
+- **Questions fréquentes** en fin de guide (hors ligne, emplacement des données, plusieurs appareils,
+  rôle de l'assistant, changement d'ordinateur).
+
+Le contenu vit dans `data/aide.js` (source unique). Le fichier `docs/AIDE-ENSEIGNANT.md` en est généré :
+
+```bash
+node tools/aide-md.js
+```
+
+Un test vérifie que le Markdown publié reste identique aux données : s'il diverge, la suite échoue avec le
+rappel de la commande à lancer.
+
+---
+
+## 11. Vérifications techniques (facultatif)
 
 Les tests sans dépendance vérifient les règles essentielles de fusion entre appareils (y compris les
 cases d’annexes cochées séparément), la couverture des 234 éléments et le statut des séances :

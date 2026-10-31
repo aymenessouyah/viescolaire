@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.32.0-recherche-bilan-donnees";
+const APP_VER = "v1.33.0-aide-enseignant";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};

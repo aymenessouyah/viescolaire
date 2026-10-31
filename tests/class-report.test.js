@@ -67,7 +67,7 @@ function contexte() {
       },
       presences: {
         '3SI1': {
-          '2026-09-15': { s1: 'a', s2: 'p' },
+          '2026-09-15': { s1: 'a', s2: 'p', s3: 'e' },
           '2026-09-22': { s2: 'p' },
           '2026-10-06': { s1: 'a', s2: 'r' }
         }
@@ -119,6 +119,8 @@ test('l’assiduité et les compétences sont agrégées par élève', () => {
   assert.equal(b.assiduite.absences, 2);
   assert.equal(b.assiduite.retards, 1);
   assert.equal(b.assiduite.tauxPresence, 77.8);
+  assert.equal(b.assiduite.exclusions, 1);
+  assert.equal(b.assiduite.excuses, undefined, 'le code e signifie exclu, pas excusé');
   const competenceA = b.competences.definitions.find(c => c.code === 'A');
   assert.deepEqual(
     { acquis: competenceA.acquis, 'en-cours': competenceA['en-cours'], renforcer: competenceA.renforcer, non: competenceA.non },

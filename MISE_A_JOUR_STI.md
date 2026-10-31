@@ -1,5 +1,35 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Guide du professeur — bouton « Aide » et touche F1 (`v1.33.0`)
+
+Toutes les fonctions de la plateforme sont désormais documentées dans l'application elle-même.
+
+- `data/aide.js` : **contenu unique** du guide — 29 rubriques réparties en cinq thèmes (découvrir,
+  préparer et donner cours, suivre les élèves, organiser l'année, données et sécurité) et 5 questions
+  fréquentes. Chaque rubrique porte un résumé, un objectif, des étapes numérotées, des points d'attention
+  et, si elle concerne un écran, l'onglet à ouvrir.
+- `assets/help.js` (`STI_HELP`) : fenêtre plein écran avec sommaire groupé, recherche instantanée sans
+  accents, ouverture directe sur la rubrique de l'écran courant, bouton « Ouvrir l'écran concerné » et
+  impression de la page affichée. Raccourcis : **F1** ou **?** pour ouvrir, **Échap** pour fermer.
+- `assets/help.css` : mise en page à deux colonnes (une seule sur mobile), styles d'impression qui ne
+  laissent sortir que la page d'aide (classe `body.aide-ouverte`).
+- `index.html` : bouton **Aide** dans la barre d'outils (à côté du centre d'impression), entrée
+  « Aide et guide » dans le menu Compte, dialogue `#aide-dialog`.
+- `tools/aide-md.js` + `docs/AIDE-ENSEIGNANT.md` : le guide au format Markdown est **généré** depuis les
+  mêmes données (`node tools/aide-md.js`) ; `tests/help.test.js` échoue si le fichier diverge.
+
+Vérifications :
+
+- version **`v1.33.0-aide-enseignant`** (application, `index.html`, service worker) ; `help.css`,
+  `help.js` et `data/aide.js` ajoutés au cache hors ligne ;
+- `tests/help.test.js` (7 tests) : couverture de **tous** les onglets de `TABS`, rubriques complètes et
+  identifiants uniques, recherche, rendu et filtrage de la fenêtre, présence des boutons et du cache,
+  synchronisation du Markdown ;
+- correction au passage du bilan de trimestre : le code d'appel `e` (exclu) était libellé « absence
+  justifiée » ; il est désormais compté et affiché comme **exclusion**, avec les sorties et entrées par
+  billet ;
+- suite complète : **191 tests**, tous verts.
+
 ## Recherche globale, bilan de trimestre et contrôle des données — `v1.32.0`
 
 Trois ajouts de confort, sans migration Supabase ni modification des données existantes.
