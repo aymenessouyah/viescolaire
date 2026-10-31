@@ -26,7 +26,13 @@ fiches de séances, annexes) et une sauvegarde des données.
 | **Suivi des notions & annexes** | Référentiel des Smart Books (**298 notions 3SI1**, **333 notions 4SI2**, version finale 2026 du livre 3SI1 : partie 1 p. 5 à 13 et tableaux p. 67 à 81) et cases de suivi dans les fiches de séance pour les **234 éléments** HTML5, CSS3, JavaScript, PHP et SQL ; bilan des éléments couverts, prévus ou restant à traiter, filtrable par classe. |
 | **Cahier de textes** | Relevé chronologique séance par séance (contenu, observations, état d'avancement) pour les deux classes |
 | **Assistant pédagogique** | Fiches, exercices, répartitions, correction à valider, bibliothèque locale et exports. Génération IA sous réserve d’une fonction Supabase compatible déployée et configurée. |
+| **Bilan & données** | **Bilan de fin de trimestre** par classe (séances et heures, couverture des notions et des annexes, évaluations, assiduité, compétences, élèves à suivre) prêt pour le conseil de classe et imprimable en PDF, puis **contrôle d'intégrité** des données et **sauvegarde/restauration JSON complète**. |
 | **Annexes & mémo** | **Mémo consolidé** (6 familles C1→C6 : contenu des annexes réorganisé selon les compétences), **annexes intégrales** (HTML5, CSS3, JavaScript, PHP, SQL) et les 8 documents PDF, avec recherche instantanée |
+
+La **recherche globale** s'ouvre partout avec **Ctrl + K** (ou ⌘ + K) ou le bouton « Rechercher » de la barre
+d'état : elle parcourt les 631 notions des deux livres, les séances datées des deux classes, les 234 éléments d'annexes, les
+compétences du programme, les documents PDF, les élèves saisis et les onglets. Les résultats sont classés
+(intitulé exact, puis début d'intitulé) et la touche Entrée ouvre directement la cible.
 
 Deux accès directs exigés par le cahier des charges sont présents dans l'onglet « Programme & compétences »
 et dans « Annexes & mémo » : **lien vers l'aide pédagogique** et **liens vers les annexes**.
@@ -48,7 +54,11 @@ sti-espace/
 │   ├── agent-library.js        bibliothèque personnelle locale (IndexedDB)
 │   ├── agent-xlsx.js           exports Excel Open XML
 │   ├── suivi-sti.js            suivi commun des notions des Smart Books
-│   └── suivi-annexes.js        checklist des 234 éléments et bilan de couverture des annexes
+│   ├── suivi-annexes.js        checklist des 234 éléments et bilan de couverture des annexes
+│   ├── global-search.js        recherche globale (Ctrl + K) dans toute la plateforme
+│   ├── class-report.js         bilan de fin de trimestre par classe (imprimable)
+│   ├── data-audit.js           contrôle d'intégrité et export/import JSON complet
+│   └── plateforme-plus.css     styles de la recherche, du bilan et du contrôle des données
 ├── data/                       données séparées : à modifier sans toucher au code
 │   ├── reference.js            établissement, classes, horaires par défaut, calendrier tunisien
 │   ├── repartition.js          répartition du 1er trimestre (3SI1 et 4SI2)
@@ -338,7 +348,45 @@ L’administrateur peut aussi demander à Claude trois brouillons de **prompts g
 
 ---
 
-## 9. Vérifications techniques (facultatif)
+## 9. Recherche globale, bilan de trimestre et sauvegarde JSON
+
+### 9.1 Recherche globale — Ctrl + K
+
+Le raccourci **Ctrl + K** (⌘ + K sur Mac) ouvre la palette de recherche, également accessible par le bouton
+« Rechercher » de la barre d'état. Elle interroge en une passe : onglets, séances datées, notions des Smart
+Books (3SI1 et 4SI2), éléments des cinq annexes, compétences du programme, documents PDF et élèves saisis.
+La comparaison ignore accents, majuscules et balises de mise en forme ; les intitulés exacts passent devant.
+`↑` `↓` parcourent les résultats, `Entrée` ouvre le résultat (page, fiche de séance, notion, annexe, document
+ou élève), `Échap` ferme la palette.
+
+### 9.2 Bilan de fin de trimestre
+
+L'onglet **Bilan & données** produit, pour la classe et le trimestre choisis : séances assurées, reportées,
+à confirmer et à venir avec les heures correspondantes ; couverture des notions par domaine et des éléments
+d'annexes ; nombre d'épreuves, moyenne de classe, notes extrêmes et part des élèves à 10 ou plus ; assiduité
+(absences, retards, absences justifiées, taux de présence) ; synthèse des compétences officielles (acquis,
+en cours, à renforcer, non évaluée) ; liste des élèves à suivre (moyenne < 10, 3 absences ou 2 compétences à
+renforcer, avec un cran « vigilance »). Le bouton **Imprimer / PDF** applique une mise en page dédiée : les
+menus et les contrôles disparaissent, seul le bilan est imprimé. Aucun calcul n'est enregistré dans les
+données : le bilan est recalculé à chaque affichage.
+
+### 9.3 Contrôle d'intégrité et sauvegarde JSON
+
+La même page vérifie la cohérence des données à chaque affichage : fiches rattachées à une séance supprimée,
+notions ou annexes cochées devenues inconnues, identifiants dupliqués dans le référentiel, épreuves en
+double (même titre, même date), notes d'une épreuve supprimée ou d'un élève retiré, appels saisis un jour
+sans séance, élèves en double. Chaque point est classé **À corriger**, **À vérifier** ou **Information**,
+avec le détail des clés concernées.
+
+**Exporter le JSON complet** télécharge un fichier daté et versionné contenant tout l'espace (fiches,
+horaires, profil, classes, élèves, épreuves, notes, appels) et le rapport de contrôle. **Importer un JSON…**
+relit et valide le fichier avant tout remplacement : format, sections présentes et compte des fiches sont
+affichés, puis l'écriture n'a lieu qu'après le bouton **Remplacer mes données**. Les exports de l'ancien
+bouton « Export JSON » (`donnees`) restent acceptés. En cas de doute, exporter d'abord la version actuelle.
+
+---
+
+## 10. Vérifications techniques (facultatif)
 
 Les tests sans dépendance vérifient les règles essentielles de fusion entre appareils (y compris les
 cases d’annexes cochées séparément), la couverture des 234 éléments et le statut des séances :

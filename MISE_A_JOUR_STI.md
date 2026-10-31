@@ -1,5 +1,53 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Recherche globale, bilan de trimestre et contrôle des données — `v1.32.0`
+
+Trois ajouts de confort, sans migration Supabase ni modification des données existantes.
+
+### 1. Recherche globale (Ctrl + K)
+
+- `assets/global-search.js` construit un index unique à partir des onglets, des séances
+  (`window.SESSIONS`), des notions des deux livres (`STI_DATA.livresSTI`), des 234 éléments d'annexes
+  (`STI_ANNEX_TRACK.items`), des compétences (`STI_DATA.competences`), des documents (`STI_DATA.docs`) et
+  des élèves du store.
+- Normalisation sans accents ni majuscules ; les balises de mise en forme sont retirées mais un intitulé qui
+  *est* une balise (`<sup>`, `<div>`…) reste lisible et cherchable.
+- Classement : intitulé exact, puis début d'intitulé, puis présence dans l'intitulé, puis ailleurs.
+- Palette `#gs-palette` (index.html) : `↑` `↓` parcourent, `Entrée` ouvre, `Échap` ferme ; le bouton
+  « Rechercher » de la barre d'état fait la même chose au doigt.
+- `STI_TRACK.focusNotion(c, id)` et `STI_ANNEX_TRACK.focus(id)` permettent d'atterrir directement sur la
+  notion ou l'élément d'annexe trouvé.
+
+### 2. Bilan de fin de trimestre par classe
+
+- `assets/class-report.js` (`STI_CLASS_REPORT.build`) calcule, sans rien enregistrer : séances assurées,
+  reportées, à confirmer et à venir avec les heures, couverture des notions par domaine et des annexes,
+  évaluations de la période (nombre, moyenne de classe, extrêmes, part des élèves ≥ 10), assiduité
+  (absences, retards, absences justifiées, taux de présence), synthèse des compétences officielles et
+  liste des élèves à suivre (moyenne < 10, 3 absences ou 2 compétences à renforcer, plus un cran
+  « vigilance »).
+- Nouvel onglet **Bilan & données** (`#v-bilan`) : sélecteurs de classe et de trimestre, phrase de synthèse,
+  bouton **Imprimer / PDF** et feuille de style d'impression dédiée (`assets/plateforme-plus.css`).
+- Les sessions sont classées par leur champ `tri` ; les épreuves par leur date dans la période du trimestre.
+
+### 3. Contrôle d'intégrité et sauvegarde JSON complète
+
+- `assets/data-audit.js` (`STI_DATA_AUDIT.audit`) signale : fiches d'une séance supprimée, notions ou
+  annexes cochées inconnues, identifiants dupliqués dans le référentiel, épreuves en double, notes d'une
+  épreuve supprimée ou d'un élève retiré, appels un jour sans séance, élèves en double, classes sans
+  séances. Niveaux : **À corriger**, **À vérifier**, **Information**.
+- `exportBundle` / `exportJSON` produisent un fichier `espace-pedagogique-sti` daté et versionné contenant
+  tout le store et le rapport de contrôle ; `readBundle` relit un export actuel **ou** l'ancien format
+  (`donnees`), puis affiche un aperçu avant que `restore` ne remplace les sections connues après confirmation.
+
+### Vérifications
+
+- Version **`v1.32.0-recherche-bilan-donnees`** (application, `index.html`, service worker).
+- Nouveaux tests : `tests/global-search.test.js` (6), `tests/class-report.test.js` (7),
+  `tests/data-audit.test.js` (9). Suite complète : **184 tests**, tous verts.
+- `tests/agent-shared-prompts.test.js` compare désormais la version de `index.html` et du service worker à
+  celle de `assets/app.js` au lieu de la répéter.
+
 ## Partie 1 suivie : systèmes, réseaux et IoT — dénominateur 3SI1 à 298 notions
 
 La **partie 1** du Smart Book (« Systèmes, technologies et Internet », p. 5 à 13) n'était suivie par aucune

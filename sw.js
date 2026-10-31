@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.31.0-partie-1-seances-3si';
+const VERSION='sti-espace-v1.32.0-recherche-bilan-donnees';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -47,6 +47,10 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/offline-sync.css",
   "./assets/sync-merge.js",
   "./assets/fiches.js",
+  "./assets/plateforme-plus.css",
+  "./assets/global-search.js",
+  "./assets/class-report.js",
+  "./assets/data-audit.js",
   "./assets/cahier-print-data.js",
   "./assets/fiches.css",
   "./assets/fiche-formulaire.html",
