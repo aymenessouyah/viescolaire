@@ -1,5 +1,34 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Mise à jour du Smart Book 3e SI — édition 2026 (pages 62, 67 et 71)
+
+Le livre de 3<sup>e</sup> année SI a été remplacé. Trois encadrés **« Complément »** ont été ajoutés
+aux tableaux récapitulatifs ; ils portent le référentiel 3SI1 de **269 à 288 notions** (4SI2 reste à 333).
+
+| Page | Encadré | Notions ajoutées |
+|---|---|---|
+| 62 | Complément — variantes utilisées dans les fiches (CSS3) | `transform` : `translateX(px)`, `translateY(px)`, `skewX(deg)`, `skewY(deg)` · fonds : `linear-gradient(direction, couleur1, couleur2, …)` · couleurs : `rgb(r, v, b)`, `hsl(h, s%, l%)` · filtres : `blur(px)`, `invert(%)` |
+| 67 | Complément — autres API utilisées dans les fiches (JavaScript) | `parseInt(ch)`, `parseFloat(ch)`, `x.valueOf()`, `confirm(message)` · minuteurs : `setTimeout(fonction, délai)`, `clearInterval(id)`, `removeEventListener(événement, fonction)` · dates : `d.getTime()`, `d.setTime(ms)` |
+| 71 | Complément — fonction utilisée dans les fiches (SQL) | `NOW()` |
+
+Ce que la mise à jour change dans le site :
+
+- `docs/sti-smart-book-3si-2026.pdf` : nouvelle édition déposée (même chemin, 72 pages, tableaux p. 58–72) ;
+- `data/livres-sti.js` : 19 entrées ajoutées avec leurs pages, aux identifiants `3si-r270` à `3si-r288` ;
+  les 269 identifiants existants sont **inchangés**, donc les notions déjà cochées dans les fiches et
+  les séances assurées restent valides ;
+- les pages affichées, les filtres par domaine et les exports CSV reprennent automatiquement le nouveau
+  référentiel ; le regroupement par sous-catégorie de l'annexe reste inchangé ;
+- `sw.js` : version `v1.27.0-smart-book-3si` et suppression ciblée de l'ancienne copie hors ligne du
+  livre 3e SI, pour que le PDF mis à jour soit retéléchargé sans vider les autres documents ;
+- les **234 éléments des annexes** et leurs `id` (calculés sur le libellé et le titre de section) ne
+  changent pas : aucune coche d'annexe n'est perdue ;
+- `tests/smart-book-3si.test.js` vérifie le nombre d'entrées, l'unicité des identifiants, la présence
+  des 19 compléments avec leur page et le dépôt du PDF.
+
+Les annexes de cours (PDF d'A. Essouyah) ne sont pas modifiées : elles restent la référence des
+234 éléments suivis séparément.
+
 **Version préparée : `v1.4.5-cahier-confirmation`**  
 **Dépôt existant :** https://github.com/aymenessouyah/viescolaire  
 **État : code préparé et testé localement, non publié.** Aucune écriture n’a été faite dans votre dépôt ou votre base réelle. Le script SQL reste à appliquer dans votre environnement.
@@ -164,7 +193,7 @@ La connexion réelle, les permissions de votre projet et l’hébergement GitHub
 - Les cinq écrans du modèle : tableau de bord, suivi des cours, fiche papier, avancement et calendrier des devoirs, reliés aux données réelles ; les outils STI existants restent accessibles.
 - **3SI1 en bleu, 4SI2 en vert**. Identifiants et clés historiques `classe|numéro` conservés.
 - Deux groupes de 2 h par classe et par jour, avec **suivi partagé** : 3SI1 mardi 08–12 et jeudi 13–17 ; 4SI2 lundi/vendredi 08–12. Cela représente 4 h par groupe et 8 h enseignant par semaine pour chaque classe.
-- Référentiels séparés : **269 entrées 3SI1**, **333 entrées 4SI2**. Une notion compte une seule fois dans la couverture, uniquement si cochée dans une séance explicitement assurée et non future. Le taux mesure les tableaux du livre, pas tout le programme ni la maîtrise des élèves.
+- Référentiels séparés : **288 entrées 3SI1**, **333 entrées 4SI2**. Une notion compte une seule fois dans la couverture, uniquement si cochée dans une séance explicitement assurée et non future. Le taux mesure les tableaux du livre, pas tout le programme ni la maîtrise des élèves.
 - Aucun historique fictif, aucune coche ajoutée automatiquement. Les préparations et propositions ne certifient pas le contenu réellement enseigné.
 - PHP en 4SI2 à partir du **9 octobre 2026**, DC1 au **2 novembre 2026** ; calendrier tunisien et propositions déjà préparés conservés. Les titres personnalisés ne sont pas remplacés automatiquement.
 - Les fiches, notions, horaires, profil, classes, élèves, épreuves, notes et présences gardent leur structure métier. Le nouveau stockage IndexedDB ajoute des métadonnées de synchronisation et des copies de secours, pas une nouvelle base métier distante.

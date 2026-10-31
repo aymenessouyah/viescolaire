@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.26.1-deepseek';
+const VERSION='sti-espace-v1.27.0-smart-book-3si';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -189,6 +189,10 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  await self.clients.claim();
  const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('sti-espace-')&&k!==CORE_CACHE&&k!==DOCS_CACHE).map(k=>caches.delete(k)));
+ /* Le Smart Book 3e SI a été remplacé (compléments p. 62, 67 et 71) : la copie
+    hors ligne de l'ancienne édition est retirée pour être retéléchargée à la
+    prochaine ouverture du document. Les autres PDF restent en cache. */
+ await caches.open(DOCS_CACHE).then(c=>c.delete('./docs/sti-smart-book-3si-2026.pdf')).catch(()=>{});
 })()));
 let downloading=null;
 async function cacheDocuments(force=false){if(downloading)return downloading;downloading=(async()=>{const cache=await caches.open(DOCS_CACHE);for(const path of DOC_ASSETS){try{if(!force&&await cache.match(path))continue;const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),15000);try{const r=await fetch(path,{signal:ctl.signal});if(r.ok)await cache.put(path,r);}finally{clearTimeout(t);}}catch(e){/* Missing PDFs don't block the offline interface. */}}})();try{await downloading;}finally{downloading=null;}}
