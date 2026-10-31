@@ -15,13 +15,13 @@
 
 const KEY = 'sti_fiches_edits_v1';
 const CLS = '4SI2';                 // classe du cahier de textes (préparations)
-/* deux jeux de fiches : 4SI2 (50 séances) et 3SI1 (54 séances) */
+/* deux jeux de fiches : 4SI2 (50 séances) et 3SI1 (56 séances) */
 const FICHES_CLS = {
   '4SI2': { cle: 'fiches4SI2', label: '4ème SI', nom: '4<sup>e</sup> année SI (4SI2)',
             modules: 'SQL · HTML5 · CSS · JavaScript · PHP', nb: 50, heures: '100 h',
             docs: 'docs/fiches-4si-2026', evaluations: '9', synchro: true },
   '3SI1': { cle: 'fiches3SI1', label: '3ème SI', nom: '3<sup>e</sup> année SI (3SI1)',
-            modules: 'Systèmes · Réseaux · IoT · HTML5 · CSS3 · JavaScript · SQL / BD', nb: 54, heures: '108 h',
+            modules: 'Systèmes · Réseaux · IoT · HTML5 · CSS3 · JavaScript · SQL / BD', nb: 56, heures: '112 h',
             docs: 'docs/fiches-3si-2026', evaluations: '9', synchro: true }
 };
 let ficCls = '4SI2';
@@ -216,7 +216,7 @@ let repTri = 0;
 let repCls = '4SI2';
 const CLS_REP = {
   '4SI2': { cle: 'repartition4SI2', nom: '4e année SI (4SI2)', h: '100 h', fiches: true },
-  '3SI1': { cle: 'repartition3SI1', nom: '3e année SI (3SI1)', h: '108 h', fiches: true }
+  '3SI1': { cle: 'repartition3SI1', nom: '3e année SI (3SI1)', h: '112 h', fiches: true }
 };
 function plan() { return (root.STI_DATA && root.STI_DATA[CLS_REP[repCls].cle]) || []; }
 /* État de l'application : la classe et le trimestre sont choisis par les boutons

@@ -75,6 +75,12 @@ const PLAN = {
       det:"Séries de révision : syntaxe et objets JS, formulaires et requêtes PHP ; annales et sujets théoriques." },
     { n:2, t:"Révision orientée examen (2) — bases de données et épreuve pratique", k:"cours", o:"XAMPP + VS Code", d:"Révision",
       det:"Révision SQL (LDD, LMD, sélections) et bac pratique ; préparation de l'épreuve de fin d'année." },
+    { n:1, t:"Partie 1 — systèmes d'exploitation : rôles, types et sécurité", k:"cours", o:"Ordinateur + vidéoprojecteur", d:"Partie 1 · p. 5-7",
+      notions:["3si-r289","3si-r290","3si-r291"],
+      det:"Rôles du système d'exploitation (processeur, mémoire, fichiers, périphériques) ; systèmes propriétaires et libres, monoposte, réseau, mobile, embarqué ; logiciel système et logiciel d'application ; installation, virtualisation, mises à jour, comptes et droits." },
+    { n:1, t:"Partie 1 — réseaux et objets connectés : synthèse", k:"cours", o:"Ordinateur + vidéoprojecteur", d:"Partie 1 · p. 8-11",
+      notions:["3si-r292","3si-r293","3si-r294","3si-r295","3si-r296","3si-r297","3si-r298"],
+      det:"Équipements, topologies et échelle du réseau ; adresse IP, masque, passerelle et DNS ; protocoles TCP/IP, HTTP, DHCP et DNS ; activités de partage et diagnostic ; objets connectés : capteurs, actionneurs, domaines d'application et communication." },
   ],
   "4SI2": [
     { n:1, t:"Rappel HTML & CSS", k:"cours", o:"VS Code", d:"HTML5 / CSS3",
