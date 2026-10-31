@@ -1,5 +1,47 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Ajout des systèmes, réseaux et IoT — dénominateur 3SI1 à 291 notions
+
+La **partie 1** du Smart Book (« Systèmes, technologies et Internet », p. 5 à 13) n'était suivie par aucune
+notion : la couverture ne portait que sur les quatre tableaux récapitulatifs. Trois notions de synthèse sont
+ajoutées au référentiel, une par domaine, à la suite des identifiants existants.
+
+| Domaine | Notion | Pages | Identifiant |
+|---|---|---|---|
+| Systèmes | Système d'exploitation | 5–7 | `3si-r289` |
+| Réseaux | Réseaux informatiques | 8–10 | `3si-r290` |
+| IoT | Internet des objets (IoT) | 10–11 | `3si-r291` |
+
+Le référentiel 3SI1 passe de **288 à 291 notions** et de **4 à 7 domaines** ; le cumul des deux livres passe
+de 621 à **624 notions** (289 + 333). Les 288 identifiants précédents sont inchangés : aucune coche enregistrée
+n'est perdue. Les trois nouvelles entrées ne portent ni `complement` ni `absent`, donc elles ne sont marquées
+d'aucun badge et comptent comme des notions ordinaires.
+
+Ce que la mise à jour change dans le site :
+
+- `data/livres-sti.js` : `items` reçoit les trois entrées (domaines `Systèmes`, `Réseaux`, `IoT`, `kind`
+  « Partie 1 · … »), `start` passe de 67 à **5** (`end` reste 81) et le bloc `edition` reçoit
+  `partie: [5, 13]` en plus de `pages: [67, 81]` et de `complements` ;
+- la phrase d'édition (`STI_TRACK.editionText`) devient : « Référentiel 3SI1 : 291 notions, version finale
+  du 31 octobre 2026, partie 1 p. 5 à 13 — tableaux p. 67 à 81 (HTML5 67-70 · CSS3 71-75 · JavaScript 76-79 ·
+  SQL / BD 80-81), dont 19 notions des encadrés « Complément » (CSS3 9 · JavaScript 9 · SQL / BD 1).
+  Les pourcentages portent sur 291 notions. » ;
+- la carte de couverture du tableau de bord affiche « 3SI1 : 291 notions · version finale (31 octobre 2026) » ;
+- le libellé du repère de pages passe de « Pages des tableaux » à « **Pages du livre** » (5–81) et la note de
+  bas de page parle des « notions suivies du livre », plus seulement des tableaux ;
+- la grille des domaines affiche **sept cartes** : 76, 92, 88, 32 puis 1, 1, 1 ; les pourcentages par domaine
+  d'un domaine à une seule notion valent donc 0 % ou 100 % ;
+- `assets/fiches.js` : la fiche de classe 3SI1 annonce « Systèmes · Réseaux · IoT · HTML5 · CSS3 ·
+  JavaScript · SQL / BD » ;
+- version **`v1.30.0-partie-1-3si`** (application, `index.html`, service worker) ;
+- tests : `tests/smart-book-3si.test.js` vérifie les 291 entrées, la répartition par domaine, les pages des
+  trois nouvelles notions et `edition.partie` ; `tests/smart-book-3si-ui.test.js` vérifie les textes rendus
+  (1/76 · 1/92 · 1/88 · 1/32 · 0/1 · 0/1 · 0/1, 4/291, 0/333, 7 cartes de domaine). Suite complète : **160 tests**.
+
+Les trois notions ne sont rattachées à aucune séance de `data/repartition3SI1.js` (le planning commence
+directement par HTML5) : elles restent « à aborder » tant qu'elles ne sont cochées dans aucune fiche, mais
+elles sont cochables comme n'importe quelle autre notion.
+
 ## Version finale du Smart Book 3e SI — 81 pages, tableaux p. 67 à 81
 
 Le livre fourni (« STI-Smart Book-3SI-2026 », **Version finale**, 81 pages) remplace l'édition de 72 pages

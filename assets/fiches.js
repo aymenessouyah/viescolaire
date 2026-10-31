@@ -21,7 +21,7 @@ const FICHES_CLS = {
             modules: 'SQL · HTML5 · CSS · JavaScript · PHP', nb: 50, heures: '100 h',
             docs: 'docs/fiches-4si-2026', evaluations: '9', synchro: true },
   '3SI1': { cle: 'fiches3SI1', label: '3ème SI', nom: '3<sup>e</sup> année SI (3SI1)',
-            modules: 'HTML5 · CSS3 · JavaScript · SQL / BD', nb: 54, heures: '108 h',
+            modules: 'Systèmes · Réseaux · IoT · HTML5 · CSS3 · JavaScript · SQL / BD', nb: 54, heures: '108 h',
             docs: 'docs/fiches-3si-2026', evaluations: '9', synchro: true }
 };
 let ficCls = '4SI2';

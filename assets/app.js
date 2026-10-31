@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.29.0-version-finale-3si";
+const APP_VER = "v1.30.0-partie-1-3si";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
