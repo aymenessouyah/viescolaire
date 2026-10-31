@@ -26,8 +26,10 @@ const summary=c=>root.STI_TRACK.summary(c);
    avec son dénominateur. */
 function editionNote(c){
  const e=(root.STI_DATA.livresSTI[c]||{}).edition;if(!e||!e.date)return '';
- const d=Object.keys(e.domains||{}).map(k=>k+' +'+e.domains[k]).join(' · ');
- return `<div class="mini-note ref-edition-note">Référentiel ${esc(c)} : ${esc(e.label)} (${esc(full(e.date))}) — ${e.added} notions ajoutées${d?' ('+esc(d)+')':''}. Les pourcentages portent sur ${refs(c).length} notions.</div>`;}
+ const total=refs(c).length;
+ const txt=root.STI_TRACK&&root.STI_TRACK.editionText?root.STI_TRACK.editionText(c,total)
+  :`Référentiel ${c} : ${total} notions, ${e.label||'édition'} du ${full(e.date)}. Les pourcentages portent sur ${total} notions.`;
+ return `<div class="mini-note ref-edition-note">${esc(txt)}</div>`;}
 
 const find=k=>all().find(s=>s.key===k);
 const clsBadge=c=>`<span class="cls" style="--cc:${colors[c]||'#656B5C'}">${esc(c)}</span>`;
@@ -63,7 +65,7 @@ function covCard(mean){
      <div class="cov-top"><span class="stat-value" data-ref-kpi="1">${num(mean)} %</span>
        <span class="cov-title">Couverture moyenne</span></div>
      <div class="cov-cols">${col('3SI1',a,1)}${col('4SI2',b,1)}</div>
-     <div class="stat-foot">Moyenne des deux livres · notions uniques${(root.STI_DATA.livresSTI['3SI1']||{}).edition?` · 3SI1 : ${a.total} notions, ${esc(fmt((root.STI_DATA.livresSTI['3SI1']).edition.date,{day:'numeric',month:'long',year:'numeric'}))}`:''}</div>
+     <div class="stat-foot">Moyenne des deux livres · notions uniques${(root.STI_DATA.livresSTI['3SI1']||{}).edition?` · 3SI1 : ${a.total} notions · ${esc(((root.STI_DATA.livresSTI['3SI1']).edition.label||'édition').toLowerCase())} (${esc(fmt((root.STI_DATA.livresSTI['3SI1']).edition.date,{day:'numeric',month:'long',year:'numeric'}))})`:''}</div>
    </div></div>`;
 }
 

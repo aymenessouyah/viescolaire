@@ -76,7 +76,8 @@ Le bloc « nouvelle répartition » de l'onglet *Répartition annuelle* porte d�
 Données : `data/repartition3SI1.js` (`STI_DATA.repartition3SI1`, 54 blocs numérotés).
 Sources : `plan3.py` → `plan3.json` → `gen_js3.py`.
 Les relevés de vérification plus bas qui mentionnent **269** notions datent de l'édition précédente du livre ;
-les trois compléments des pages 62, 67 et 71 portent le référentiel à **288** (voir `MISE_A_JOUR_STI.md`).
+les compléments portent le référentiel à **288**. La **version finale 2026** du Smart Book (81 pages) déplace
+les tableaux récapitulatifs en pages **67 à 81** sans changer les 288 notions (voir `MISE_A_JOUR_STI.md`).
 **Le devoir de contrôle n°1 de la 3SI1 a lieu le mardi 3 novembre 2026** (séance 12) ; la séance 13
 du 5 novembre est sa correction, suivie des transitions et transformations CSS3.
 

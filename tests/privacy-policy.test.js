@@ -48,7 +48,7 @@ test('la politique expose les choix et limites essentiels de sauvegarde et de co
 
 test('la politique est incluse au cache hors ligne et les versions d’interface concordent', () => {
   assert.match(worker, /"\.\/politique-confidentialite\.html"/);
-  const expected = 'v1.28.0-referentiel-3si';
+  const expected = 'v1.29.0-version-finale-3si';
   assert.ok(index.includes(expected));
   assert.ok(app.includes(expected));
   assert.ok(worker.includes('sti-espace-' + expected));
