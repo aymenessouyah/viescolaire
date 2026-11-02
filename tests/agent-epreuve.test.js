@@ -307,9 +307,12 @@ test('rouvrir une copie du relevé restaure la proposition et sa revalidation', 
 test('le module est publié avec la version de l’application et mis en cache', () => {
   assert.match(indexHtml, /assets\/agent-epreuve\.js[\s\S]*assets\/agent-sti\.js/);
   assert.match(workerSource, /\.\/assets\/agent-epreuve\.js/);
-  assert.match(workerSource, /v1\.34\.0-epreuve-pratique/);
-  assert.match(indexHtml, /v1\.34\.0-epreuve-pratique/);
-  assert.match(appSource, /APP_VER = "v1\.34\.0-epreuve-pratique"/);
+  // Les trois versions doivent rester identiques : application, index.html, service worker.
+  const worker = workerSource.match(/const VERSION='sti-espace-(v[\w.-]+)';/)[1];
+  const expected = indexHtml.match(/var ATTENDU = "(v[\w.-]+)";/)[1];
+  const application = appSource.match(/APP_VER = "(v[\w.-]+)";/)[1];
+  assert.equal(worker, expected);
+  assert.equal(worker, application);
 });
 
 test('parcours complet : dossier importé → file → copie rouverte → note validée → relevé', async () => {

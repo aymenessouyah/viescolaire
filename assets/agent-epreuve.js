@@ -102,6 +102,7 @@ function copyRecord(input = {}) {
     identifiant: clean(input.identifiant, 60) || 'Copie anonyme',
     statut,
     type_devoir: type,
+    mode: input.mode === 'local' ? 'local' : 'ia',
     texte: result ? '' : texte,
     fichiers,
     pieces,
@@ -306,10 +307,18 @@ function normalizeEpreuve(owner, input = {}, previous = null) {
     sujet: clean(input.sujet ?? previous?.sujet, 8000),
     bareme: clean(input.bareme ?? previous?.bareme, 8000),
     sur,
+    grille: normalizeGrille(input.grille ?? previous?.grille),
     copies,
     created: clean(previous?.created, 40) || now,
     updated: now
   };
+}
+/* La grille locale est validée par le module de vérification quand il est
+   chargé ; sinon elle est simplement conservée telle quelle. */
+function normalizeGrille(grille) {
+  if (!grille || !Array.isArray(grille.criteres) || !grille.criteres.length) return null;
+  if (root.STI_VERIF?.normalizeGrille) return root.STI_VERIF.normalizeGrille(grille);
+  return { criteres: grille.criteres.slice(0, 80), total: numberOrNull(grille.total) };
 }
 function openDb() {
   return new Promise((resolve, reject) => {

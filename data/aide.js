@@ -218,6 +218,23 @@
         ]
       },
       {
+        id: 'agent-verif', categorie: 'enseigner', titre: 'Corriger sans IA, sur cet appareil', vue: 'v-agent', icone: 'check',
+        resume: 'Vérifier objectivement les fichiers rendus, sans clé, sans réseau et sans coût.',
+        objectif: 'Corriger une épreuve pratique quand la fonction IA n’est pas disponible, ou en complément.',
+        etapes: [
+          'Ouvrez l’agent → « Correction de copies » → type « Pratique », puis dépliez « Grille de correction locale · sans IA ».',
+          'Cochez les technologies à contrôler (HTML, CSS, JavaScript, PHP, SQL) et ajustez les points de chaque contrôle.',
+          'Ajoutez vos critères manuels (une ligne « Libellé | points ») et, si vous avez un corrigé, des textes attendus (« Libellé | texte à retrouver | points »).',
+          'Cliquez sur « Ajuster au barème » pour que le total de la grille atteigne la note maximale, puis « Enregistrer la grille dans l’épreuve ».',
+          'Pour chaque copie : « Corriger cette copie sans IA », relisez les constats, tranchez les critères « à vérifier » et « à évaluer », validez la note, puis enregistrez la copie dans le relevé.'
+        ],
+        astuces: [
+          'Un contrôle ne juge pas la qualité : il constate qu’un motif figure dans les fichiers (balise, sélecteur, requête, écouteur…).',
+          'Le programme n’est pas exécuté : le résultat à l’écran reste à vérifier sur le rendu, comme le rappellent les limites affichées.',
+          'Aucune donnée ne quitte l’appareil avec la vérification locale : ni clé, ni requête, ni fonction Supabase nécessaires.'
+        ]
+      },
+      {
         id: 'eleves', categorie: 'eleves', titre: 'Mes classes et élèves', vue: 'v-eleves', icone: 'users',
         resume: 'Créer les classes, saisir les élèves, gérer les groupes et les numéros de PC.',
         objectif: 'Disposer d’une liste à jour pour l’appel, les notes et les bulletins.',

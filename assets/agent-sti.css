@@ -610,3 +610,33 @@ dialog.agent-dialog-fallback[open]{position:fixed;inset:14px;width:calc(100vw - 
   #v-agent .agent-epreuve-fields{grid-template-columns:1fr}
   #v-agent .agent-epreuve-table th:nth-child(2),#v-agent .agent-epreuve-table td:nth-child(2){white-space:nowrap}
 }
+
+/* --- Grille de correction locale (sans IA) ------------------------------- */
+#v-agent .agent-verif{border:1px solid #cfdcd3;border-radius:11px;background:var(--agent-card)}
+#v-agent .agent-verif>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;cursor:pointer;list-style:none;color:var(--agent-ink);font-size:11px;font-weight:750}
+#v-agent .agent-verif>summary::-webkit-details-marker{display:none}
+#v-agent .agent-verif>summary:after{content:"▾";margin-left:auto;color:var(--agent-muted);font-size:12px;font-weight:400}
+#v-agent .agent-verif[open]>summary:after{content:"▴"}
+#v-agent .agent-verif>summary strong{color:var(--agent-green);font-size:10px;white-space:nowrap}
+#v-agent .agent-verif>summary strong.warn{color:#8a5a12}
+#v-agent .agent-verif[open]>summary{border-bottom:1px solid var(--agent-line)}
+#v-agent .agent-verif-help{margin:9px 12px;color:var(--agent-muted);font-size:10px;line-height:1.55}
+#v-agent .agent-verif-technos{display:flex;flex-wrap:wrap;gap:8px;padding:0 12px}
+#v-agent .agent-verif-technos label{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--agent-line);border-radius:999px;background:var(--agent-soft);font-size:10px;font-weight:650;cursor:pointer}
+#v-agent .agent-verif-technos input{width:14px;height:14px;margin:0;accent-color:var(--agent-green-2)}
+#v-agent .agent-verif-checks{display:grid;gap:4px;margin:10px 12px 0;max-height:320px;overflow:auto;padding:6px;border:1px solid var(--agent-line);border-radius:9px;background:var(--agent-soft)}
+#v-agent .agent-verif-check{display:grid;grid-template-columns:62px minmax(0,1fr);align-items:center;gap:8px;padding:3px 4px}
+#v-agent .agent-verif-check input{width:100%;height:30px;padding:0 6px;border:1px solid #cfd8d1;border-radius:7px;color:var(--agent-ink);background:var(--agent-card);font-size:11px;text-align:center}
+#v-agent .agent-verif-check span{color:var(--agent-ink);font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+#v-agent .agent-verif-empty{margin:4px;color:var(--agent-muted);font-size:10px}
+#v-agent .agent-verif-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:11px 12px 0}
+#v-agent .agent-verif-fields .agent-field textarea{min-height:78px;font-size:11px}
+#v-agent .agent-verif-actions{display:flex;flex-wrap:wrap;gap:7px;padding:11px 12px 0}
+#v-agent .agent-verif-actions .btn{min-height:34px;padding:0 11px;font-size:10.5px}
+:root[data-color-mode="dark"] #v-agent .agent-verif{background:#233428;border-color:#3d5145}
+:root[data-color-mode="dark"] #v-agent .agent-verif-checks{background:#1c2a22;border-color:#3d5145}
+:root[data-color-mode="dark"] #v-agent .agent-verif-check input{background:#233428;border-color:#405348}
+:root[data-color-mode="dark"] #v-agent .agent-verif-technos label{background:#1c2a22;border-color:#3d5145}
+@media(max-width:700px){
+  #v-agent .agent-verif-fields{grid-template-columns:1fr}
+}

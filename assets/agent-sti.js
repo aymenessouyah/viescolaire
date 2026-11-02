@@ -64,6 +64,8 @@ let epreuveNom = '';
 let epreuveError = '';
 let dossierGroups = [];
 let epreuveBusy = false;
+let verif = { technos: ['html', 'css', 'js', 'php', 'sql'], points: {}, manuel: '', attendus: '' };
+let verifOpen = false;
 const selectedSourceIds = {};
 let sharedPrompts = [];
 let sharedPromptState = 'idle';
@@ -375,6 +377,7 @@ function resetTeacherWorkspace() {
   correctionReview = null;
   libraryDocs = []; libraryError = ''; libraryOwner = '';
   epreuves = []; epreuveId = ''; epreuveNom = ''; epreuveError = ''; dossierGroups = []; epreuveBusy = false;
+  verif = defaultVerifEditor(); verifOpen = false;
   Object.keys(selectedSourceIds).forEach(task => delete selectedSourceIds[task]);
   Object.keys(selectedSharedPromptIds).forEach(task => delete selectedSharedPromptIds[task]);
   Object.assign(forms, defaultForms());
@@ -475,7 +478,7 @@ async function refreshEpreuves(owner = activeTeacherKey()) {
   }
   if (ctx) draw();
 }
-async function persistEpreuve({ copies, nom, sujet, bareme, type } = {}) {
+async function persistEpreuve({ copies, nom, sujet, bareme, type, grille } = {}) {
   const owner = activeTeacherKey();
   if (!owner || !root.STI_AGENT_EPREUVE) throw new Error('Le relevé local n’est pas disponible : connectez-vous à votre compte professeur.');
   const current = currentEpreuve();
@@ -487,7 +490,8 @@ async function persistEpreuve({ copies, nom, sujet, bareme, type } = {}) {
     sujet: sujet ?? current?.sujet ?? forms.correction.sujet,
     bareme: bareme ?? current?.bareme ?? forms.correction.bareme,
     sur: Number(forms.correction.sur) || Number(current?.sur) || 20,
-    copies: copies ?? (current?.copies || [])
+    copies: copies ?? (current?.copies || []),
+    grille: grille ?? current?.grille ?? null
   }, epreuveId);
   epreuveId = saved.id;
   epreuveNom = saved.nom;
@@ -505,10 +509,12 @@ function selectEpreuve(id) {
     if (Number(current.sur) > 0) forms.correction.sur = current.sur;
     if (current.sujet) forms.correction.sujet = current.sujet;
     if (current.bareme) { forms.correction.bareme = current.bareme; forms.correction.mode_bareme = 'fourni'; }
+    verif = current.grille?.criteres?.length && root.STI_VERIF ? root.STI_VERIF.editorFromGrille(current.grille) : defaultVerifEditor();
     invalidateCorrection(); transcriptionReview = null; transcriptionAcknowledged = false;
     notice = `Épreuve « ${current.nom} » reprise : même sujet, même barème et même note maximale pour la copie en cours.`;
   } else {
     epreuveNom = defaultEpreuveName();
+    verif = defaultVerifEditor();
     notice = 'Nouvelle épreuve : le nom, le sujet et le barème seront enregistrés avec la première copie.';
   }
   draw();
@@ -523,7 +529,7 @@ function applyCopyToForm(copy) {
   transcriptionReview = null; transcriptionAcknowledged = false;
   if (copy.result) {
     results.correction = copy.result;
-    resultMeta.correction = { classe, identifiant: forms.correction.identifiant, type_devoir: copy.type_devoir || 'pratique', sur: copy.sur || Number(forms.correction.sur) };
+    resultMeta.correction = { classe, identifiant: forms.correction.identifiant, type_devoir: copy.type_devoir || 'pratique', sur: copy.sur || Number(forms.correction.sur), mode: copy.mode === 'local' ? 'local' : 'ia' };
     correctionReview = copy.review && asArray(copy.review.points).length ? { ...copy.review } : createGradeReview(copy.result);
   } else {
     results.correction = null;
@@ -623,6 +629,7 @@ async function saveCurrentCopy() {
       fichiers: codeFiles.length ? codeFiles.map(file => file.name) : asArray(existing?.fichiers),
       texte: forms.correction.copie,
       type_devoir: forms.correction.type_devoir,
+      mode: resultMeta.correction?.mode === 'local' ? 'local' : 'ia',
       sur: Number(forms.correction.sur)
     });
     const merged = root.STI_AGENT_EPREUVE.upsertCopy({ copies: currentEpreuve()?.copies || [] }, copy);
@@ -675,6 +682,103 @@ async function deleteEpreuve() {
     await refreshEpreuves(owner);
   } catch (e) { error = e.message || 'Suppression impossible.'; draw(); }
 }
+/* --- Grille de correction locale (sans IA) ------------------------------- */
+function defaultVerifEditor() {
+  return {
+    technos: root.STI_VERIF ? root.STI_VERIF.TECHNOS.map(techno => techno.id) : [],
+    points: root.STI_VERIF ? root.STI_VERIF.defaultPoints() : {},
+    manuel: '', attendus: ''
+  };
+}
+function currentGrille() {
+  if (!root.STI_VERIF) return { technos: [], criteres: [], total: 0 };
+  return root.STI_VERIF.buildGrille(verif);
+}
+function verifEditorHtml(f) {
+  const api = root.STI_VERIF;
+  if (!api) return '';
+  const grille = currentGrille();
+  const total = grille.total;
+  const sur = Number(forms.correction.sur) || 0;
+  const coherent = total > 0 && total === sur;
+  const copiePrete = codeFiles.length > 0 || (forms.correction.type_devoir === 'theorique' && forms.correction.copie.trim());
+  return `<details class="agent-verif" ${verifOpen ? 'open' : ''} data-agent-verif-block>
+    <summary><span>Grille de correction locale · sans IA</span><strong data-verif-total>${esc(total)} / ${esc(sur)} pts</strong></summary>
+    <p class="agent-verif-help">Les contrôles automatiques constatent ce qui est présent dans les fichiers rendus (balise, sélecteur, requête…). Vous ajoutez les critères que la machine ne peut pas juger, et vous tranchez. Aucun appel réseau, aucune clé, aucun envoi de copie.</p>
+    <div class="agent-verif-technos">${api.TECHNOS.map(techno => `<label><input type="checkbox" data-verif-techno="${techno.id}" ${verif.technos.includes(techno.id) ? 'checked' : ''}> <span>${esc(techno.label)}</span></label>`).join('')}</div>
+    <div class="agent-verif-checks">${api.CHECKS.filter(check => verif.technos.includes(check.techno)).map(check => `<label class="agent-verif-check"><input type="number" min="0" max="100" step="0.5" data-verif-points="${check.id}" value="${esc(verif.points[check.id] ?? check.points)}" aria-label="Points pour ${esc(check.libelle)}"><span>${esc(check.libelle)}</span></label>`).join('') || '<p class="agent-verif-empty">Choisissez au moins une technologie pour activer les contrôles automatiques.</p>'}</div>
+    <div class="agent-verif-fields">
+      <label class="agent-field"><span>Critères manuels <em>un par ligne · Libellé | points</em></span><textarea data-verif-manuel rows="4" placeholder="Respect du cahier des charges | 3&#10;Clarté du code | 2">${esc(verif.manuel)}</textarea></label>
+      <label class="agent-field"><span>Textes attendus <em>Libellé | texte à retrouver dans les fichiers | points</em></span><textarea data-verif-attendu rows="4" placeholder="Fonction de connexion | function connexion | 2&#10;Requête préparée | prepare( | 2">${esc(verif.attendus)}</textarea></label>
+    </div>
+    <div class="agent-verif-actions">
+      <button type="button" class="btn btn-ghost" data-agent-verif-scale ${total > 0 && total !== sur && !busy ? '' : 'disabled'}>Ajuster au barème (${esc(sur)} pts)</button>
+      <button type="button" class="btn btn-ghost" data-agent-verif-save ${grille.criteres.length && !busy ? '' : 'disabled'}>Enregistrer la grille dans l’épreuve</button>
+      <button type="button" class="btn btn-primary" data-agent-verif-run ${coherent && copiePrete && !busy ? '' : 'disabled'}>Corriger cette copie sans IA</button>
+    </div>
+    <p class="agent-verif-help">${coherent
+      ? `Grille cohérente : ${grille.criteres.length} critère(s), ${total} points.`
+      : total === 0 ? 'Ajoutez des critères : le total de la grille doit atteindre la note maximale de l’épreuve.' : `La grille totalise ${total} points alors que l’épreuve est notée sur ${sur}. Utilisez « Ajuster au barème » ou corrigez les points avant de lancer la vérification.`}</p>
+    ${copiePrete ? '' : '<p class="agent-verif-help">Chargez d’abord la copie à corriger (dossier des rendus ou fichiers de code ci-dessus).</p>'}
+  </details>`;
+}
+function refreshVerifTotal() {
+  const label = ctx ? document.querySelector('[data-verif-total]') : null;
+  if (!label || !root.STI_VERIF) return;
+  const sur = Number(forms.correction.sur) || 0;
+  const total = currentGrille().total;
+  label.textContent = `${total} / ${sur} pts`;
+  label.classList.toggle('warn', total !== sur);
+}
+async function saveVerifGrid() {
+  if (busy || epreuveBusy || !root.STI_VERIF) return;
+  const grille = currentGrille();
+  if (!grille.criteres.length) { error = 'Ajoutez au moins un critère à la grille locale.'; draw(); return; }
+  const requestOwner = activeTeacherKey(), requestToken = generationToken;
+  epreuveBusy = true; error = ''; notice = ''; draw();
+  try {
+    await persistEpreuve({ grille });
+    if (requestOwner !== activeTeacherKey() || requestToken !== generationToken) return;
+    notice = `Grille enregistrée avec l’épreuve « ${currentEpreuve()?.nom || epreuveNom} » : ${grille.criteres.length} critère(s), ${grille.total} points. Elle s’applique à toutes les copies de cette épreuve.`;
+  } catch (e) {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) error = e.message || 'Enregistrement de la grille impossible.';
+  } finally {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) { epreuveBusy = false; draw(); }
+  }
+}
+function scaleVerifGrid() {
+  if (!root.STI_VERIF) return;
+  const grille = currentGrille();
+  if (!grille.criteres.length) { error = 'La grille est vide : aucun point à ajuster.'; draw(); return; }
+  const scaled = root.STI_VERIF.scaleGrille(grille, Number(forms.correction.sur) || 20);
+  verif = root.STI_VERIF.editorFromGrille(scaled);
+  verifOpen = true;
+  error = '';
+  notice = `Grille ajustée à ${scaled.total} points, répartis proportionnellement sur ${scaled.criteres.length} critère(s). Vérifiez les demi-points avant d’enregistrer.`;
+  draw();
+}
+function localCorrection() {
+  if (busy || epreuveBusy || !root.STI_VERIF) return;
+  const grille = currentGrille();
+  const pieces = codeFiles.length
+    ? codeFiles.map(file => ({ name: file.name, language: file.language, content: file.content }))
+    : (forms.correction.copie.trim() ? [{ name: 'copie.txt', language: 'txt', content: forms.correction.copie }] : []);
+  if (!pieces.length) { error = 'Chargez la copie à vérifier : dossier des rendus, fichiers de code ou texte de la copie.'; draw(); return; }
+  const identifiant = forms.correction.identifiant.trim() || 'Copie anonyme';
+  try {
+    const result = root.STI_VERIF.localResult({ files: pieces, grille, identifiant, sur: Number(forms.correction.sur) || 20 });
+    results.correction = result;
+    resultMeta.correction = { classe, identifiant, type_devoir: forms.correction.type_devoir, sur: result.sur, mode: 'local', grille: grille.criteres.map(item => item.libelle) };
+    correctionReview = createGradeReview(result);
+    transcriptionReview = null; transcriptionAcknowledged = false;
+    error = '';
+    notice = `Vérification locale terminée : ${result.note} / ${result.sur} proposés sur ${grille.criteres.length} critère(s), sans aucune requête vers l’IA. Relisez les critères « à vérifier » et « à évaluer », ajustez les points, validez la note, puis enregistrez la copie dans le relevé.`;
+  } catch (e) {
+    error = e.message || 'Vérification locale impossible.';
+  }
+  verifOpen = true;
+  draw();
+}
 function epreuvePanelHtml(f) {
   const api = root.STI_AGENT_EPREUVE;
   if (!api) return '';
@@ -704,6 +808,7 @@ function epreuvePanelHtml(f) {
     ${groups}
     <div class="agent-epreuve-summary"><span><strong>${summary.total}</strong> copie(s)</span><span><strong>${summary.validees}</strong> validée(s)</span><span><strong>${summary.proposees}</strong> à valider</span><span><strong>${summary.enAttente}</strong> en attente</span>${summary.moyenne !== null ? `<span>Moyenne provisoire <strong>${esc(summary.moyenne)}</strong> / ${esc(summary.sur ?? '')}</span>` : ''}</div>
     ${recap}
+    ${verifEditorHtml(f)}
     <div class="agent-epreuve-actions">
       <button type="button" class="btn btn-primary" data-agent-epreuve-save ${results.correction && !frozen ? '' : 'disabled'}>Enregistrer cette correction dans le relevé</button>
       <button type="button" class="btn btn-ghost" data-agent-epreuve-csv ${copies.length && !frozen ? '' : 'disabled'}>Relevé CSV</button>
@@ -1056,7 +1161,8 @@ function renderCorrection(r, meta) {
   const questions = asArray(r.questions);
   const uncertain = asArray(r.transcription_incertaine);
   const limitations = asArray(r.limites_analyse);
-  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · ${meta.type_devoir || 'théorique'} · note proposée à contrôler`)}${renderGradeReview(r)}<div id="agent-result" class="agent-document">
+  const local = meta.mode === 'local';
+  return `${resultHeader(`Correction · ${meta.identifiant}`, `${meta.classe} · ${meta.type_devoir || 'théorique'} · ${local ? 'vérification locale, sans IA' : 'note proposée à contrôler'}`, '', '', local ? 'VÉRIFICATION LOCALE · SANS IA · À VALIDER' : undefined)}${renderGradeReview(r)}<div id="agent-result" class="agent-document">
     ${documentIdentityHtml(meta)}
     <div class="agent-doc-heading"><span>CORRECTION ${esc((meta.type_devoir || 'théorique').toUpperCase())} · ${esc(meta.classe)} · ${esc(meta.identifiant)}</span><h2>Proposition d’évaluation</h2></div>
     <div class="agent-grade"><div><strong>${esc(r.note ?? '—')}</strong><span>/ ${esc(r.sur ?? meta.sur)}</span></div><p><b>Note proposée par l’agent</b> · confiance de lecture : ${esc(r.confiance || 'à vérifier')}<br>Cette note n’est pas enregistrée automatiquement.</p></div>
@@ -1951,6 +2057,16 @@ function fieldValue(target) {
   return target.value;
 }
 document.addEventListener('input', e => {
+  const verifPoints = e.target.closest('[data-verif-points]');
+  if (verifPoints && root.STI_VERIF) {
+    verif.points[verifPoints.dataset.verifPoints] = verifPoints.value;
+    refreshVerifTotal();
+    return;
+  }
+  const verifManuel = e.target.closest?.('[data-verif-manuel]');
+  if (verifManuel) { verif.manuel = verifManuel.value; refreshVerifTotal(); return; }
+  const verifAttendu = e.target.closest?.('[data-verif-attendu]');
+  if (verifAttendu) { verif.attendus = verifAttendu.value; refreshVerifTotal(); return; }
   const epreuveNameField = e.target.closest('[data-agent-epreuve-name]');
   if (epreuveNameField) { epreuveNom = epreuveNameField.value; return; }
   const gradePoint = e.target.closest('[data-agent-grade-point]');
@@ -2069,6 +2185,16 @@ document.addEventListener('change', e => {
   if (e.target.id === 'agent-code-files') { addCodeFiles(e.target.files); return; }
   if (e.target.id === 'agent-epreuve-folder') { importEpreuveFolder(e.target.files); return; }
   if (e.target.matches('[data-agent-epreuve-select]')) { selectEpreuve(e.target.value); return; }
+  const verifTechno = e.target.closest('[data-verif-techno]');
+  if (verifTechno) {
+    const id = verifTechno.dataset.verifTechno;
+    const set = new Set(verif.technos);
+    if (verifTechno.checked) set.add(id); else set.delete(id);
+    verif.technos = [...set];
+    verifOpen = true;
+    draw();
+    return;
+  }
   if (e.target.id === 'agent-transcription-ack') {
     transcriptionAcknowledged = e.target.checked;
     const proceed = document.querySelector('[data-agent-transcription-proceed]');
@@ -2106,7 +2232,7 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-download-student],[data-agent-archive],[data-agent-xlsx],[data-agent-print],[data-agent-print-student],[data-agent-validate-grade],[data-agent-edit-grade],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload],[data-agent-epreuve-load],[data-agent-epreuve-queue],[data-agent-epreuve-open],[data-agent-epreuve-remove-copy],[data-agent-epreuve-save],[data-agent-epreuve-csv],[data-agent-epreuve-xlsx],[data-agent-epreuve-delete]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-download-student],[data-agent-archive],[data-agent-xlsx],[data-agent-print],[data-agent-print-student],[data-agent-validate-grade],[data-agent-edit-grade],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload],[data-agent-epreuve-load],[data-agent-epreuve-queue],[data-agent-epreuve-open],[data-agent-epreuve-remove-copy],[data-agent-epreuve-save],[data-agent-epreuve-csv],[data-agent-epreuve-xlsx],[data-agent-epreuve-delete],[data-agent-verif-save],[data-agent-verif-scale],[data-agent-verif-run]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
@@ -2156,6 +2282,9 @@ document.addEventListener('click', e => {
   if (button.hasAttribute('data-agent-epreuve-csv')) exportEpreuve('csv');
   if (button.hasAttribute('data-agent-epreuve-xlsx')) exportEpreuve('xlsx');
   if (button.hasAttribute('data-agent-epreuve-delete')) deleteEpreuve();
+  if (button.hasAttribute('data-agent-verif-save')) saveVerifGrid();
+  if (button.hasAttribute('data-agent-verif-scale')) scaleVerifGrid();
+  if (button.hasAttribute('data-agent-verif-run')) localCorrection();
 });
 
 root.STI_AGENT = {
@@ -2194,6 +2323,8 @@ root.STI_AGENT = {
     applyResult, restoreDocumentVersion, readDocumentFile, createGradeReview, calculateGradeReview, validateGrade, verifyDeepSeekDeployment, printableDocument, archiveResult,
     currentEpreuve, defaultEpreuveName, selectEpreuve, applyCopyToForm, epreuvePanelHtml, persistEpreuve, saveCurrentCopy,
     importEpreuveFolder, queueDossierCopies, openEpreuveCopy, removeEpreuveCopy, exportEpreuve,
+    localCorrection, currentGrille, saveVerifGrid, scaleVerifGrid, verifEditorHtml,
+    verifState: () => verif, setVerif: value => { verif = { ...defaultVerifEditor(), ...value }; },
     epreuveState: () => ({ epreuves, epreuveId, epreuveNom, dossierGroups }),
     setEpreuves: (items, id = '') => { epreuves = Array.isArray(items) ? items : []; epreuveId = id; epreuveNom = currentEpreuve()?.nom || ''; },
     getGradeReview: () => correctionReview,

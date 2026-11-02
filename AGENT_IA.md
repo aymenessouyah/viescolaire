@@ -43,6 +43,27 @@ L’outil **Correction de copies** accepte un type **Pratique** et des fichiers 
 - **Limites** : 60 copies par relevé, 6 millions de caractères en file d’attente, et toujours une seule génération à la fois. Un dossier plus volumineux se traite en plusieurs fois.
 - **Aucun déploiement supplémentaire** : l’atelier réutilise les tâches déjà déployées `correction`, `bareme` et `transcription`. Le protocole `sti-pedagogique-2026-10-27` est inchangé ; l’atelier ne contourne pas la vérification du fournisseur distant et n’apporte aucune clé IA dans le navigateur. Si la fonction Supabase n’est pas configurée, importer et préparer les copies reste possible, mais aucune correction ne peut être demandée.
 
+## Correction locale, sans IA : la solution de repli qui marche hors ligne
+
+Quand la fonction distante n’est pas configurée (ou qu’on ne veut aucune donnée envoyée), l’**atelier d’épreuve** corrige les copies avec une **grille locale** exécutée dans le navigateur.
+
+```text
+Grille de l’épreuve (une seule fois)
+  ├─ contrôles automatiques HTML / CSS / JS / PHP / SQL   → présents, absent ou à vérifier
+  ├─ critères manuels (ce que la machine ne juge pas)     → à évaluer par l’enseignant
+  └─ textes attendus (issus de votre corrigé)             → retrouvés ou non dans les fichiers
+        ↓ (aucun réseau, aucune clé)
+  proposition critère par critère → relecture → validation → relevé CSV / XLSX
+```
+
+- **`assets/agent-verif.js`** (`STI_VERIF`) : 36 contrôles déterministes sur les fichiers rendus. Chaque contrôle rend un constat, jamais une note : `ok` (motif trouvé, avec fichier et ligne), `absent`, `indetermine` (l’élément concerné n’existe pas dans la copie, par exemple l’attribut `alt` sans aucune image) ou `manuel`.
+- **Exemples de contrôles** : `<!DOCTYPE html>`, `lang`, `title`, formulaire avec `method`, champs `name`, `<label>`, feuille de style liée, structure sémantique ; sélecteurs, couleurs, `margin`/`padding`, `display:flex|grid`, `@media`, `:hover` ; fonctions, sélection DOM, `addEventListener`, conditions, boucles, `const`/`let` ; `<?php`, `$_POST`, `isset`, connexion PDO/mysqli, `->prepare`, `echo` ; `SELECT … FROM` (même réparti sur plusieurs lignes), `WHERE`, `JOIN`, `INSERT/UPDATE/DELETE`, `PRIMARY KEY`, `ORDER BY`/`GROUP BY`.
+- **Textes attendus** : collez votre corrigé au format `Libellé | texte à retrouver | points`. La recherche ignore la casse, les accents et les espaces multiples ; la preuve affiche le fichier et l’extrait.
+- **Grille cohérente** : le total doit égaler la note maximale de l’épreuve. Le bouton **Ajuster au barème** répartit les points proportionnellement en demi-points, de façon visible et réversible. La grille est enregistrée **avec l’épreuve** : elle s’applique à toutes ses copies.
+- **Ce que la vérification locale ne fait pas** : elle n’exécute pas le programme, n’observe pas le rendu dans un navigateur, ne juge ni la qualité, ni la pertinence, ni la conformité au sujet. Ces trois limites sont écrites dans chaque résultat et dans le relevé.
+- **Validation inchangée** : la note proposée n’est jamais validée seule ; impossible d’obtenir une note sans relecture. Comme pour l’IA, le relevé rappelle qu’aucune note n’est saisie dans le registre des élèves.
+- **Fonctionnement** : aucun `fetch`, aucune clé, aucune fonction Supabase. La vérification locale fonctionne hors ligne, gratuitement, et sur une copie dont les fichiers viennent de l’atelier d’épreuve. Le mode (`ia` ou `local`) est conservé avec chaque copie du relevé.
+
 ## Architecture
 
 ```text
