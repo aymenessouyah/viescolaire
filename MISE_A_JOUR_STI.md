@@ -1,5 +1,40 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Correction locale des épreuves, sans IA — `v1.35.0`
+
+Une épreuve pratique se corrige désormais **sans DeepSeek, sans clé et sans réseau**, avec des
+contrôles objectifs sur les fichiers rendus et une grille où l’enseignant tranche le reste.
+
+- `assets/agent-verif.js` (nouveau, `STI_VERIF`) : **36 contrôles déterministes** répartis sur
+  HTML, CSS, JavaScript, PHP et SQL. Chaque contrôle rend un constat — `ok` (avec fichier et
+  ligne), `absent`, `indetermine` ou `manuel` — jamais une note. Ajout de deux familles de
+  critères : **libres** (une ligne « Libellé | points ») et **textes attendus** tirés de votre
+  corrigé (« Libellé | texte à retrouver | points »), recherchés sans tenir compte de la casse,
+  des accents ni des espaces.
+- **Grille cohérente** : le total doit atteindre la note maximale ; « Ajuster au barème »
+  répartit les points proportionnellement en demi-points, de façon visible. La grille est
+  **enregistrée avec l’épreuve** et s’applique à toutes ses copies.
+- `assets/agent-sti.js` : bloc « Grille de correction locale · sans IA » dans l’atelier
+  d’épreuve (technologies cochées, points éditables, critères manuels, textes attendus, total
+  en direct) et bouton **« Corriger cette copie sans IA »**. Le résultat porte la mention
+  « VÉRIFICATION LOCALE · SANS IA · À VALIDER » : relecture, ajustement des points et
+  validation restent obligatoires, puis la copie rejoint le relevé comme les autres.
+- `assets/agent-epreuve.js` : la grille est conservée avec l’épreuve et le mode de correction
+  (`ia` ou `local`) avec chaque copie.
+- Limites explicites dans chaque résultat : le programme **n’est pas exécuté**, le rendu
+  **n’est pas observé** dans un navigateur, la qualité et la conformité au sujet **ne sont pas
+  jugées**. Le relevé rappelle toujours qu’aucune note n’est saisie dans le registre des élèves.
+- `assets/agent-sti.css` : styles du bloc de grille et du tableau des contrôles (mode sombre et
+  mobile inclus). `data/aide.js` + `docs/AIDE-ENSEIGNANT.md` (régénéré) : rubrique
+  « Corriger sans IA, sur cet appareil ».
+- `tests/agent-verif.test.js` (13 tests) : constats HTML/CSS/JS/PHP/SQL, formats de lignes,
+  nettoyage de la grille, ajustement au barème, refus d’une grille vide ou incohérente,
+  recherche insensible aux accents, **absence totale d’appel réseau**, intégration à l’atelier
+  et enregistrement d’une copie corrigée localement avec son mode.
+- Version **`v1.35.0-correction-locale`** (application, `index.html`, service worker) ;
+  `agent-verif.js` ajouté au cache hors ligne.
+- Suite complète : **217 tests**, tous verts.
+
 ## Atelier d’épreuve pratique et relevé de correction — `v1.34.0`
 
 Corriger une épreuve pratique ne demande plus d’ouvrir l’agent pour chaque élève : les copies

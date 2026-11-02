@@ -26,6 +26,7 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 - [Programme et compétences](#programme-et-competences)
 - [Agent Vie Scolaire AI](#agent-vie-scolaire-ai)
 - [Corriger une épreuve pratique](#corriger-une-epreuve-pratique)
+- [Corriger sans IA, sur cet appareil](#corriger-sans-ia-sur-cet-appareil)
 
 **Suivre les élèves**
 
@@ -306,6 +307,26 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 - Chaque copie transmet au maximum 8 fichiers (HTML, CSS, JS, PHP, SQL, JSON, TXT, 200 Ko chacun) ; les fichiers techniques passent en premier.
 - Le nom du sous-dossier devient l’identifiant anonyme de la copie : évitez les noms complets d’élèves.
 - Le relevé reste local à cet appareil et à votre compte ; sa suppression est définitive.
+
+### Corriger sans IA, sur cet appareil
+
+*Vérifier objectivement les fichiers rendus, sans clé, sans réseau et sans coût.*
+
+**Objectif.** Corriger une épreuve pratique quand la fonction IA n’est pas disponible, ou en complément.
+
+**Comment faire**
+
+1. Ouvrez l’agent → « Correction de copies » → type « Pratique », puis dépliez « Grille de correction locale · sans IA ».
+2. Cochez les technologies à contrôler (HTML, CSS, JavaScript, PHP, SQL) et ajustez les points de chaque contrôle.
+3. Ajoutez vos critères manuels (une ligne « Libellé | points ») et, si vous avez un corrigé, des textes attendus (« Libellé | texte à retrouver | points »).
+4. Cliquez sur « Ajuster au barème » pour que le total de la grille atteigne la note maximale, puis « Enregistrer la grille dans l’épreuve ».
+5. Pour chaque copie : « Corriger cette copie sans IA », relisez les constats, tranchez les critères « à vérifier » et « à évaluer », validez la note, puis enregistrez la copie dans le relevé.
+
+**À savoir**
+
+- Un contrôle ne juge pas la qualité : il constate qu’un motif figure dans les fichiers (balise, sélecteur, requête, écouteur…).
+- Le programme n’est pas exécuté : le résultat à l’écran reste à vérifier sur le rendu, comme le rappellent les limites affichées.
+- Aucune donnée ne quitte l’appareil avec la vérification locale : ni clé, ni requête, ni fonction Supabase nécessaires.
 
 ## Suivre les élèves
 
