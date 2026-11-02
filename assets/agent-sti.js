@@ -7,11 +7,12 @@
 (function (root) {
 'use strict';
 
-const VERSION = '2.7.0-deepseek';
+const VERSION = '2.8.0-deepseek';
 const AGENT_PROTOCOL = 'sti-pedagogique-2026-10-27';
 const HISTORY_KEY = 'sti_agent_history_v1';
 const MAX_IMAGES = 6;
 const MAX_CODE_FILES = 8;
+const MAX_EPREUVE_CHARS = 6 * 1024 * 1024;
 const MAX_DOCUMENT_CHARS = 80000;
 const MAX_SHARED_PROMPTS = 5;
 const TASKS = {
@@ -57,6 +58,12 @@ let libraryDocs = [];
 let libraryError = '';
 let libraryOwner = '';
 let correctionReview = null;
+let epreuves = [];
+let epreuveId = '';
+let epreuveNom = '';
+let epreuveError = '';
+let dossierGroups = [];
+let epreuveBusy = false;
 const selectedSourceIds = {};
 let sharedPrompts = [];
 let sharedPromptState = 'idle';
@@ -367,6 +374,7 @@ function resetTeacherWorkspace() {
   resultMeta = {};
   correctionReview = null;
   libraryDocs = []; libraryError = ''; libraryOwner = '';
+  epreuves = []; epreuveId = ''; epreuveNom = ''; epreuveError = ''; dossierGroups = []; epreuveBusy = false;
   Object.keys(selectedSourceIds).forEach(task => delete selectedSourceIds[task]);
   Object.keys(selectedSharedPromptIds).forEach(task => delete selectedSharedPromptIds[task]);
   Object.assign(forms, defaultForms());
@@ -438,6 +446,275 @@ async function loadLibrary(owner) {
   }
   if (ctx) draw();
 }
+/* ---------------------------------------------------------------------------
+   Atelier d'épreuve : sujet et barème communs, copies corrigées une par une,
+   relevé local exportable. Aucune note n'est transmise ni saisie dans le
+   registre des élèves ; seules les tâches « correction » et « barème » déjà
+   déployées sont utilisées, la fonction Supabase reste inchangée.
+   --------------------------------------------------------------------------- */
+function currentEpreuve() {
+  return epreuves.find(item => item.id === epreuveId) || null;
+}
+function defaultEpreuveName() {
+  const kind = forms.correction.type_devoir === 'theorique' ? 'théorique' : 'pratique';
+  return `Épreuve ${kind} ${classe} — ${dateLong(today())}`;
+}
+async function refreshEpreuves(owner = activeTeacherKey()) {
+  if (!root.STI_AGENT_EPREUVE || !owner) { epreuves = []; epreuveId = ''; epreuveNom = ''; return; }
+  try {
+    const items = await root.STI_AGENT_EPREUVE.list(owner);
+    if (owner !== activeTeacherKey()) return;
+    epreuves = items;
+    if (epreuveId && !items.some(item => item.id === epreuveId)) { epreuveId = ''; epreuveNom = ''; }
+    if (epreuveId) epreuveNom = currentEpreuve()?.nom || epreuveNom;
+    epreuveError = '';
+  } catch (e) {
+    if (owner !== activeTeacherKey()) return;
+    epreuves = [];
+    epreuveError = e.message || 'Relevé local indisponible dans ce navigateur.';
+  }
+  if (ctx) draw();
+}
+async function persistEpreuve({ copies, nom, sujet, bareme, type } = {}) {
+  const owner = activeTeacherKey();
+  if (!owner || !root.STI_AGENT_EPREUVE) throw new Error('Le relevé local n’est pas disponible : connectez-vous à votre compte professeur.');
+  const current = currentEpreuve();
+  const saved = await root.STI_AGENT_EPREUVE.save(owner, {
+    id: epreuveId,
+    nom: nom || epreuveNom || current?.nom || defaultEpreuveName(),
+    classe,
+    type_devoir: type || current?.type_devoir || forms.correction.type_devoir,
+    sujet: sujet ?? current?.sujet ?? forms.correction.sujet,
+    bareme: bareme ?? current?.bareme ?? forms.correction.bareme,
+    sur: Number(forms.correction.sur) || Number(current?.sur) || 20,
+    copies: copies ?? (current?.copies || [])
+  }, epreuveId);
+  epreuveId = saved.id;
+  epreuveNom = saved.nom;
+  await refreshEpreuves(owner);
+  return saved;
+}
+function selectEpreuve(id) {
+  if (busy || epreuveBusy) return;
+  epreuveId = String(id || '');
+  error = '';
+  const current = currentEpreuve();
+  if (current) {
+    epreuveNom = current.nom;
+    forms.correction.type_devoir = current.type_devoir === 'theorique' ? 'theorique' : 'pratique';
+    if (Number(current.sur) > 0) forms.correction.sur = current.sur;
+    if (current.sujet) forms.correction.sujet = current.sujet;
+    if (current.bareme) { forms.correction.bareme = current.bareme; forms.correction.mode_bareme = 'fourni'; }
+    invalidateCorrection(); transcriptionReview = null; transcriptionAcknowledged = false;
+    notice = `Épreuve « ${current.nom} » reprise : même sujet, même barème et même note maximale pour la copie en cours.`;
+  } else {
+    epreuveNom = defaultEpreuveName();
+    notice = 'Nouvelle épreuve : le nom, le sujet et le barème seront enregistrés avec la première copie.';
+  }
+  draw();
+}
+function applyCopyToForm(copy) {
+  const theoretical = copy.type_devoir === 'theorique';
+  forms.correction.identifiant = String(copy.identifiant || 'Copie anonyme');
+  forms.correction.type_devoir = theoretical ? 'theorique' : 'pratique';
+  if (Number(copy.sur) > 0) forms.correction.sur = copy.sur;
+  codeFiles = asArray(copy.pieces).map(piece => ({ ...piece }));
+  forms.correction.copie = theoretical ? String(copy.texte || '') : '';
+  transcriptionReview = null; transcriptionAcknowledged = false;
+  if (copy.result) {
+    results.correction = copy.result;
+    resultMeta.correction = { classe, identifiant: forms.correction.identifiant, type_devoir: copy.type_devoir || 'pratique', sur: copy.sur || Number(forms.correction.sur) };
+    correctionReview = copy.review && asArray(copy.review.points).length ? { ...copy.review } : createGradeReview(copy.result);
+  } else {
+    results.correction = null;
+    resultMeta.correction = null;
+    correctionReview = null;
+  }
+}
+async function importEpreuveFolder(fileList) {
+  if (busy || epreuveBusy || !root.STI_AGENT_EPREUVE) return;
+  error = ''; notice = '';
+  try {
+    const groups = root.STI_AGENT_EPREUVE.groupFolderFiles(fileList);
+    dossierGroups = groups;
+    if (!groups.length) error = 'Aucun fichier HTML, CSS, JS, PHP, SQL, JSON ou TXT trouvé. Vérifiez que chaque élève a son propre sous-dossier de rendu.';
+    else notice = `${groups.length} copie(s) détectée(s) dans le dossier importé. Chargez une copie ou préparez la file de correction.`;
+  } catch (e) { error = e.message || 'Lecture du dossier impossible.'; }
+  draw();
+}
+async function loadEpreuveGroup(index) {
+  if (busy || epreuveBusy || !root.STI_AGENT_EPREUVE) return;
+  const group = dossierGroups[Number(index)];
+  if (!group) return;
+  const requestOwner = activeTeacherKey(), requestToken = generationToken;
+  epreuveBusy = true; error = ''; notice = ''; draw();
+  try {
+    const prepared = await root.STI_AGENT_EPREUVE.readCodeFiles(group.files, MAX_CODE_FILES);
+    if (requestOwner !== activeTeacherKey() || requestToken !== generationToken) return;
+    if (!prepared.pieces.length) { error = `Aucun fichier lisible pour « ${group.identifiant} ». Types acceptés : HTML, CSS, JS, PHP, SQL, JSON, TXT · 200 Ko maximum par fichier.`; return; }
+    applyCopyToForm({ identifiant: group.identifiant, pieces: prepared.pieces, sur: Number(forms.correction.sur) });
+    const kept = prepared.pieces.map(piece => piece.name);
+    notice = `Copie « ${group.identifiant} » chargée avec ${kept.length} fichier(s) : ${kept.join(', ')}.${prepared.ignored.length ? ` ${prepared.ignored.length} fichier(s) ignoré(s) par la limite de ${MAX_CODE_FILES} fichiers.` : ''}`;
+  } catch (e) {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) error = e.message || 'Chargement de la copie impossible.';
+  } finally {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) { epreuveBusy = false; draw(); }
+  }
+}
+async function queueDossierCopies() {
+  if (busy || epreuveBusy || !root.STI_AGENT_EPREUVE || !dossierGroups.length) return;
+  const requestOwner = activeTeacherKey(), requestToken = generationToken;
+  epreuveBusy = true; error = ''; notice = ''; draw();
+  try {
+    let working = { copies: currentEpreuve()?.copies || [] };
+    let added = 0, ignored = 0, skipped = 0;
+    let stored = working.copies.reduce((sum, copy) => sum + asArray(copy.pieces).reduce((n, piece) => n + String(piece.content || '').length, 0), 0);
+    for (const group of dossierGroups) {
+      const prepared = await root.STI_AGENT_EPREUVE.readCodeFiles(group.files, MAX_CODE_FILES);
+      ignored += prepared.ignored.length;
+      if (!prepared.pieces.length) continue;
+      const key = String(group.identifiant).toLocaleLowerCase('fr');
+      if (working.copies.some(copy => String(copy.identifiant || '').toLocaleLowerCase('fr') === key)) continue;
+      const size = prepared.pieces.reduce((sum, piece) => sum + piece.content.length, 0);
+      if (stored + size > MAX_EPREUVE_CHARS) { skipped++; continue; }
+      stored += size;
+      working = root.STI_AGENT_EPREUVE.upsertCopy(working, root.STI_AGENT_EPREUVE.copyRecord({ identifiant: group.identifiant, pieces: prepared.pieces, sur: Number(forms.correction.sur) }));
+      added++;
+    }
+    if (requestOwner !== activeTeacherKey() || requestToken !== generationToken) return;
+    if (!added) {
+      notice = skipped
+        ? `Capacité locale atteinte : ${skipped} copie(s) non préparée(s). Corrigez les copies déjà en file puis ajoutez le reste du dossier.`
+        : 'Toutes les copies du dossier sont déjà présentes dans ce relevé.';
+      return;
+    }
+    await persistEpreuve({ copies: working.copies });
+    notice = `${added} copie(s) ajoutée(s) au relevé${ignored ? ` · ${ignored} fichier(s) ignoré(s) par la limite de ${MAX_CODE_FILES} fichiers` : ''}${skipped ? ` · ${skipped} copie(s) non préparée(s) par manque de place locale` : ''}. Ouvrez une copie du tableau pour la corriger.`;
+  } catch (e) {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) error = e.message || 'Préparation de la file impossible.';
+  } finally {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) { epreuveBusy = false; draw(); }
+  }
+}
+async function openEpreuveCopy(id) {
+  if (busy || epreuveBusy || !root.STI_AGENT_EPREUVE) return;
+  const copy = root.STI_AGENT_EPREUVE.findCopy(currentEpreuve()?.copies, id);
+  if (!copy) { error = 'Cette copie n’est plus dans le relevé.'; draw(); return; }
+  applyCopyToForm(copy);
+  error = '';
+  notice = copy.result
+    ? `Copie « ${copy.identifiant} » rouverte avec sa correction ${copy.statut === 'validee' ? 'validée' : 'encore à valider'}. ${asArray(copy.pieces).length ? 'Les fichiers conservés permettent de relancer l’analyse.' : 'Les fichiers et photos d’origine ne sont pas conservés dans le relevé : cette réouverture sert à relire et ajuster la note.'} Vérifiez chaque point avant de l’enregistrer à nouveau.`
+    : `Copie « ${copy.identifiant} » prête : ${asArray(copy.fichiers).join(', ') || 'aucun fichier conservé'}. Lancez la correction quand vous êtes prêt.`;
+  draw();
+}
+async function saveCurrentCopy() {
+  if (busy || epreuveBusy || !root.STI_AGENT_EPREUVE) return;
+  if (!results.correction) { error = 'Corrigez d’abord une copie : le relevé enregistre une correction existante.'; draw(); return; }
+  if (!forms.correction.identifiant.trim()) { error = 'Donnez un identifiant anonyme à la copie avant de l’enregistrer dans le relevé.'; draw(); return; }
+  const requestOwner = activeTeacherKey(), requestToken = generationToken;
+  epreuveBusy = true; error = ''; notice = ''; draw();
+  try {
+    const identifiantKey = forms.correction.identifiant.trim().toLocaleLowerCase('fr');
+    const existing = asArray(currentEpreuve()?.copies).find(item => String(item.identifiant || '').trim().toLocaleLowerCase('fr') === identifiantKey);
+    const copy = root.STI_AGENT_EPREUVE.copyRecord({
+      identifiant: forms.correction.identifiant,
+      result: results.correction,
+      review: correctionReview,
+      fichiers: codeFiles.length ? codeFiles.map(file => file.name) : asArray(existing?.fichiers),
+      texte: forms.correction.copie,
+      type_devoir: forms.correction.type_devoir,
+      sur: Number(forms.correction.sur)
+    });
+    const merged = root.STI_AGENT_EPREUVE.upsertCopy({ copies: currentEpreuve()?.copies || [] }, copy);
+    if (requestOwner !== activeTeacherKey() || requestToken !== generationToken) return;
+    await persistEpreuve({ copies: merged.copies });
+    notice = correctionReview?.confirmed
+      ? `Copie « ${copy.identifiant} » validée et enregistrée : ${copy.note_retenue} / ${copy.sur}. Rien n’est saisi dans le registre des élèves.`
+      : `Copie « ${copy.identifiant} » enregistrée avec la note proposée ${copy.note_proposee ?? '—'} / ${copy.sur}. Validez-la avant l’export du relevé.`;
+  } catch (e) {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) error = e.message || 'Enregistrement dans le relevé impossible.';
+  } finally {
+    if (requestOwner === activeTeacherKey() && requestToken === generationToken) { epreuveBusy = false; draw(); }
+  }
+}
+async function removeEpreuveCopy(id) {
+  if (busy || epreuveBusy || !root.STI_AGENT_EPREUVE) return;
+  const copy = root.STI_AGENT_EPREUVE.findCopy(currentEpreuve()?.copies, id);
+  if (!copy) return;
+  if (!root.confirm?.(`Retirer « ${copy.identifiant} » du relevé de cette épreuve ? La correction disparaîtra de cet appareil.`)) return;
+  epreuveBusy = true; error = ''; notice = ''; draw();
+  try {
+    const next = root.STI_AGENT_EPREUVE.removeCopy(currentEpreuve(), id);
+    await persistEpreuve({ copies: next.copies });
+    if (forms.correction.identifiant === copy.identifiant) { invalidateCorrection(); codeFiles = []; }
+    notice = `Copie « ${copy.identifiant} » retirée du relevé.`;
+  } catch (e) { error = e.message || 'Retrait impossible.'; }
+  finally { epreuveBusy = false; draw(); }
+}
+function exportEpreuve(format) {
+  const current = currentEpreuve();
+  if (!current || !asArray(current.copies).length) { error = 'Le relevé est vide : corrigez au moins une copie avant l’export.'; draw(); return; }
+  try {
+    if (format === 'csv') root.STI_AGENT_EPREUVE.downloadCsv(current);
+    else root.STI_AGENT_EPREUVE.downloadXlsx(current);
+    error = '';
+    notice = `Relevé « ${current.nom} » exporté avec ${asArray(current.copies).length} copie(s). Les notes restent à reporter vous-même dans le registre des élèves.`;
+  } catch (e) { error = e.message || 'Export du relevé impossible.'; }
+  draw();
+}
+async function deleteEpreuve() {
+  if (busy || epreuveBusy || !epreuveId || !root.STI_AGENT_EPREUVE) return;
+  const current = currentEpreuve();
+  if (!root.confirm?.(`Supprimer définitivement le relevé « ${current?.nom || ''} » et ses ${asArray(current?.copies).length} copie(s) de cet appareil ?`)) return;
+  const owner = activeTeacherKey();
+  try {
+    await root.STI_AGENT_EPREUVE.remove(owner, epreuveId);
+    if (owner !== activeTeacherKey()) return;
+    epreuveId = ''; epreuveNom = ''; dossierGroups = [];
+    notice = 'Relevé supprimé de cet appareil.';
+    await refreshEpreuves(owner);
+  } catch (e) { error = e.message || 'Suppression impossible.'; draw(); }
+}
+function epreuvePanelHtml(f) {
+  const api = root.STI_AGENT_EPREUVE;
+  if (!api) return '';
+  const current = currentEpreuve();
+  const summary = api.stats(current || { copies: [] });
+  const copies = asArray(current?.copies);
+  const frozen = busy || epreuveBusy;
+  const options = ['<option value="">Nouvelle épreuve…</option>', ...epreuves.map(item => `<option value="${esc(item.id)}" ${item.id === epreuveId ? 'selected' : ''}>${esc(item.nom)} · ${esc(item.classe)} · ${asArray(item.copies).length} copie(s)</option>`)].join('');
+  const groups = dossierGroups.length ? `<div class="agent-epreuve-import"><div class="agent-epreuve-import-head"><strong>${dossierGroups.length} copie(s) détectée(s) dans le dossier</strong><button type="button" class="btn btn-ghost" data-agent-epreuve-queue ${frozen ? 'disabled' : ''}>Préparer la file de correction</button></div><div class="agent-epreuve-groups">${dossierGroups.map((group, index) => `<div class="agent-epreuve-group"><div><strong>${esc(group.identifiant)}</strong><small>${group.total} fichier(s) · ${esc(asArray(group.fichiers).slice(0, 4).join(', '))}${group.total > 4 ? '…' : ''}</small></div><button type="button" class="btn btn-ghost" data-agent-epreuve-load="${index}" ${frozen ? 'disabled' : ''}>Charger</button></div>`).join('')}</div></div>` : '';
+  const recap = copies.length
+    ? `<div class="agent-epreuve-table-wrap"><table class="agent-epreuve-table"><thead><tr><th>Copie</th><th>Note</th><th>Statut</th><th aria-label="Actions"></th></tr></thead><tbody>${copies.map(copy => {
+      const total = api.copyTotal(copy);
+      const active = String(copy.identifiant) === String(f.identifiant);
+      return `<tr class="${active ? 'current' : ''}"><td><strong>${esc(copy.identifiant)}</strong><small>${esc(asArray(copy.fichiers).join(', ') || 'Aucun fichier conservé')}</small></td><td>${total === null ? '—' : `${esc(total)} / ${esc(copy.sur ?? summary.sur ?? '')}`}</td><td><span class="agent-epreuve-status ${esc(copy.statut)}">${esc(api.statutLabel(copy.statut))}</span></td><td class="agent-epreuve-row-actions"><button type="button" class="btn btn-ghost" data-agent-epreuve-open="${esc(copy.id)}" ${frozen ? 'disabled' : ''}>${copy.result ? 'Rouvrir' : 'Corriger'}</button><button type="button" class="agent-epreuve-remove" data-agent-epreuve-remove-copy="${esc(copy.id)}" aria-label="Retirer ${esc(copy.identifiant)}" ${frozen ? 'disabled' : ''}>×</button></td></tr>`;
+    }).join('')}</tbody></table></div>`
+    : '<p class="agent-epreuve-empty">Aucune copie dans ce relevé. Importez le dossier des rendus, puis corrigez une copie et cliquez sur « Enregistrer cette correction dans le relevé ».</p>';
+  return `<section class="agent-epreuve full" aria-labelledby="agent-epreuve-title">
+    <div class="agent-epreuve-head"><div><small>ATELIER D’ÉPREUVE</small><h3 id="agent-epreuve-title">Corriger les copies d’une même épreuve</h3></div><span class="agent-epreuve-badge">Local · aucune note saisie</span></div>
+    <p class="agent-epreuve-help">Le sujet, le barème et la note maximale restent communs aux copies. Importez un dossier où <strong>chaque élève a son sous-dossier</strong> : l’identifiant anonyme et les fichiers sont préparés automatiquement. Chaque copie est analysée séparément, puis vous validez sa note.</p>
+    <div class="agent-epreuve-fields">
+      <label class="agent-field"><span>Épreuve en cours</span><select data-agent-epreuve-select ${frozen ? 'disabled' : ''}>${options}</select></label>
+      <label class="agent-field"><span>Nom de l’épreuve</span><input data-agent-epreuve-name maxlength="140" value="${esc(epreuveNom || current?.nom || '')}" placeholder="${esc(defaultEpreuveName())}" ${frozen ? 'disabled' : ''}></label>
+      <label class="agent-field full agent-upload"><span>Dossier des rendus · un sous-dossier par élève</span><input id="agent-epreuve-folder" type="file" webkitdirectory directory multiple ${frozen ? 'disabled' : ''}><small>HTML, CSS, JS, PHP, SQL, JSON ou TXT · ${api.MAX_CODE_FILES} fichiers retenus par copie, les fichiers techniques en premier · ${api.MAX_COPIES} copies par relevé. Si votre navigateur ne propose pas de dossier, utilisez « Fichiers de code de l’élève » ci-dessus.</small></label>
+    </div>
+    ${epreuveError ? `<div class="agent-message error" role="alert"><p>${nl(epreuveError)}</p></div>` : ''}
+    ${epreuveBusy ? '<div class="agent-message success" role="status"><p>Préparation du relevé sur cet appareil…</p></div>' : ''}
+    ${groups}
+    <div class="agent-epreuve-summary"><span><strong>${summary.total}</strong> copie(s)</span><span><strong>${summary.validees}</strong> validée(s)</span><span><strong>${summary.proposees}</strong> à valider</span><span><strong>${summary.enAttente}</strong> en attente</span>${summary.moyenne !== null ? `<span>Moyenne provisoire <strong>${esc(summary.moyenne)}</strong> / ${esc(summary.sur ?? '')}</span>` : ''}</div>
+    ${recap}
+    <div class="agent-epreuve-actions">
+      <button type="button" class="btn btn-primary" data-agent-epreuve-save ${results.correction && !frozen ? '' : 'disabled'}>Enregistrer cette correction dans le relevé</button>
+      <button type="button" class="btn btn-ghost" data-agent-epreuve-csv ${copies.length && !frozen ? '' : 'disabled'}>Relevé CSV</button>
+      <button type="button" class="btn btn-ghost" data-agent-epreuve-xlsx ${copies.length && !frozen ? '' : 'disabled'}>Relevé Excel</button>
+      ${current ? `<button type="button" class="btn btn-ghost" data-agent-epreuve-delete ${frozen ? 'disabled' : ''}>Supprimer ce relevé</button>` : ''}
+    </div>
+    <p class="agent-epreuve-help">La note validée reste dans ce relevé local, sur cet appareil et pour votre compte. Reportez-la vous-même dans le registre des élèves : l’agent n’y écrit jamais.</p>
+  </section>`;
+}
+
+
 function sourcePickerHtml() {
   if (!['fiche', 'exercices', 'repartition'].includes(tool) || !root.STI_AGENT_LIBRARY) return '';
   return `<div class="agent-source-area">${root.STI_AGENT_LIBRARY.picker(libraryDocs, selectedSourceIds[tool], classe, activeTeacherKey())}</div>`;
@@ -635,7 +912,7 @@ function formHtml() {
       <label class="agent-field full agent-upload"><span>${practical ? 'Captures du code, du rendu ou des tests' : 'Photos de la copie'} · ${attachments.length}/${MAX_IMAGES}</span><input id="agent-copy-files" type="file" accept="image/jpeg,image/png,image/webp" multiple><small>JPEG, PNG ou WebP. Les images sont réduites dans le navigateur avant l’envoi. 6 images maximum par analyse.</small></label>
       ${attachments.length ? `<div class="agent-attachments full">${attachments.map((a, i) => `<span>${esc(a.name)}<button type="button" data-agent-remove="${i}" aria-label="Retirer ${esc(a.name)}">×</button></span>`).join('')}</div>` : ''}
       <label class="agent-field full"><span>Règles d’appréciation <em>facultatif</em></span><input data-agent-field="consignes" value="${esc(f.consignes)}" placeholder="Ex. : valoriser la démarche, ne pas pénaliser deux fois la même erreur"></label>
-    </div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${transcriptionReview ? contextReviewHtml() + '<div class="agent-form-footer"><span>La transcription est prête. Relisez-la et poursuivez depuis l’avertissement ci-dessous.</span></div>' : generateButton(rubricFirst ? 'Proposer d’abord le barème' : handwritingFirst ? 'Transcrire avant correction' : 'Analyser et proposer une correction')}`;
+    ${epreuvePanelHtml(f)}</div><div class="agent-truth-note">${icon('shield')}<div><strong>${practical ? 'Le code n’est pas réputé exécuté par l’agent.' : 'Correction assistée, jamais note automatique définitive.'}</strong><span>${practical ? 'Sans résultat de test fourni, l’agent distingue l’analyse du code du fonctionnement réel à vérifier. Vous gardez la validation finale.' : 'Vérifiez chaque attribution de points et les passages marqués comme illisibles avant de saisir la note dans votre espace élèves.'}</span></div></div>${transcriptionReview ? contextReviewHtml() + '<div class="agent-form-footer"><span>La transcription est prête. Relisez-la et poursuivez depuis l’avertissement ci-dessous.</span></div>' : generateButton(rubricFirst ? 'Proposer d’abord le barème' : handwritingFirst ? 'Transcrire avant correction' : 'Analyser et proposer une correction')}`;
 }
 
 function resultHeader(title, subtitle, applyLabel = '', restoreLabel = '', statusLabel = 'PROPOSITION DE L’AGENT · À VÉRIFIER') {
@@ -1674,6 +1951,8 @@ function fieldValue(target) {
   return target.value;
 }
 document.addEventListener('input', e => {
+  const epreuveNameField = e.target.closest('[data-agent-epreuve-name]');
+  if (epreuveNameField) { epreuveNom = epreuveNameField.value; return; }
   const gradePoint = e.target.closest('[data-agent-grade-point]');
   const gradeReason = e.target.closest('[data-agent-grade-reason]');
   if (correctionReview && !correctionReview.confirmed && (gradePoint || gradeReason)) {
@@ -1788,6 +2067,8 @@ document.addEventListener('change', e => {
   }
   if (e.target.id === 'agent-copy-files') { addImages(e.target.files); return; }
   if (e.target.id === 'agent-code-files') { addCodeFiles(e.target.files); return; }
+  if (e.target.id === 'agent-epreuve-folder') { importEpreuveFolder(e.target.files); return; }
+  if (e.target.matches('[data-agent-epreuve-select]')) { selectEpreuve(e.target.value); return; }
   if (e.target.id === 'agent-transcription-ack') {
     transcriptionAcknowledged = e.target.checked;
     const proceed = document.querySelector('[data-agent-transcription-proceed]');
@@ -1825,7 +2106,7 @@ document.addEventListener('change', e => {
   }
 });
 document.addEventListener('click', e => {
-  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-download-student],[data-agent-archive],[data-agent-xlsx],[data-agent-print],[data-agent-print-student],[data-agent-validate-grade],[data-agent-edit-grade],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload]');
+  const button = e.target.closest('[data-agent-tool],[data-agent-generate],[data-agent-test],[data-agent-apply],[data-agent-restore-document],[data-agent-download],[data-agent-download-student],[data-agent-archive],[data-agent-xlsx],[data-agent-print],[data-agent-print-student],[data-agent-validate-grade],[data-agent-edit-grade],[data-agent-remove],[data-agent-remove-code],[data-agent-history],[data-agent-clear-history],[data-agent-transcription-proceed],[data-agent-transcription-reset],[data-agent-profile],[data-agent-prompts-reload],[data-agent-epreuve-load],[data-agent-epreuve-queue],[data-agent-epreuve-open],[data-agent-epreuve-remove-copy],[data-agent-epreuve-save],[data-agent-epreuve-csv],[data-agent-epreuve-xlsx],[data-agent-epreuve-delete]');
   if (!button) return;
   if (button.dataset.agentTool && !busy) { tool = button.dataset.agentTool; error = ''; notice = ''; draw(); }
   if (button.hasAttribute('data-agent-generate')) generate();
@@ -1867,6 +2148,14 @@ document.addEventListener('click', e => {
     }
   }
   if (button.hasAttribute('data-agent-clear-history') && confirm('Effacer vos documents récents enregistrés localement sur cet appareil ?')) { saveCurrentHistory([]); draw(); }
+  if (button.dataset.agentEpreuveLoad !== undefined) loadEpreuveGroup(button.dataset.agentEpreuveLoad);
+  if (button.hasAttribute('data-agent-epreuve-queue')) queueDossierCopies();
+  if (button.dataset.agentEpreuveOpen !== undefined) openEpreuveCopy(button.dataset.agentEpreuveOpen);
+  if (button.dataset.agentEpreuveRemoveCopy !== undefined) removeEpreuveCopy(button.dataset.agentEpreuveRemoveCopy);
+  if (button.hasAttribute('data-agent-epreuve-save')) saveCurrentCopy();
+  if (button.hasAttribute('data-agent-epreuve-csv')) exportEpreuve('csv');
+  if (button.hasAttribute('data-agent-epreuve-xlsx')) exportEpreuve('xlsx');
+  if (button.hasAttribute('data-agent-epreuve-delete')) deleteEpreuve();
 });
 
 root.STI_AGENT = {
@@ -1877,7 +2166,7 @@ root.STI_AGENT = {
     if (owner !== workspaceOwnerKey) {
       workspaceOwnerKey = owner;
       resetTeacherWorkspace();
-      if (owner) loadLibrary(owner);
+      if (owner) { loadLibrary(owner); refreshEpreuves(owner); }
     }
     const signedInEmail = typeof root.authUser === 'function' ? String(root.authUser() || '').trim().toLocaleLowerCase('en') : '';
     if (ctx?.view === 'v-agent' && !signedInEmail) {
@@ -1903,6 +2192,10 @@ root.STI_AGENT = {
     selectedPromptsForTask, sharedPromptPickerHtml, requestPreview,
     documentVersions, currentDocumentVersion, currentDocumentVersionIndex, newDocumentHistoryEntry, appendDocumentHistoryVersion, restoreDocumentHistoryVersion,
     applyResult, restoreDocumentVersion, readDocumentFile, createGradeReview, calculateGradeReview, validateGrade, verifyDeepSeekDeployment, printableDocument, archiveResult,
+    currentEpreuve, defaultEpreuveName, selectEpreuve, applyCopyToForm, epreuvePanelHtml, persistEpreuve, saveCurrentCopy,
+    importEpreuveFolder, queueDossierCopies, openEpreuveCopy, removeEpreuveCopy, exportEpreuve,
+    epreuveState: () => ({ epreuves, epreuveId, epreuveNom, dossierGroups }),
+    setEpreuves: (items, id = '') => { epreuves = Array.isArray(items) ? items : []; epreuveId = id; epreuveNom = currentEpreuve()?.nom || ''; },
     getGradeReview: () => correctionReview,
     setGradeReview: review => { correctionReview = review; },
     setResult: (task, result, meta) => { results[task] = result; resultMeta[task] = meta; tool = task; if (task === 'correction') correctionReview = createGradeReview(result); },

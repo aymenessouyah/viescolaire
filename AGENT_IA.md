@@ -22,6 +22,27 @@ Les fiches acceptent une durée ajustable, les répartitions peuvent couvrir un 
 - **Autres documents** : texte collé ou import TXT, Markdown et HTML (PDF/DOCX non extraits). La source et la version complète proposée sont comparées côte à côte. Une confirmation explicite enregistre le résultat et la source dans l’historique local; chaque version précédente reste restaurable. L’agent ne modifie pas le fichier externe : exportez le résultat pour le remplacer vous-même.
 - **Prompts partagés** : l’administrateur peut demander trois brouillons génériques à Claude, les modifier, puis en approuver un ou plusieurs. Les professeurs connectés choisissent ensuite jusqu’à cinq prompts publiés pour les demandes DeepSeek correspondantes.
 
+## Atelier d’épreuve pratique : corriger une série de copies
+
+L’outil **Correction de copies** accepte un type **Pratique** et des fichiers de code. L’**atelier d’épreuve** ajoute ce qui manquait pour une épreuve entière : un sujet et un barème communs, une file de copies et un relevé exportable.
+
+```text
+Épreuve nommée (classe, sujet, barème, note maximale)
+  → import du dossier des rendus (un sous-dossier par élève)
+  → copies « en attente » conservées localement
+  → copie par copie : analyse DeepSeek, relecture, validation de la note
+  → relevé local (CSV / XLSX) → report manuel dans le registre des élèves
+```
+
+- **Import du dossier** : chaque sous-dossier devient une copie (`index.html`, `style.css`, `app.js`…). Les dossiers techniques (`node_modules`, `dist`, `.git`, `vendor`…) sont ignorés ; les fichiers techniques passent en premier pour tenir dans la limite de **8 fichiers par copie** (200 Ko chacun, HTML, CSS, JS, PHP, SQL, JSON ou TXT).
+- **Sujet et barème communs** : choisir une épreuve existante reprend son sujet, son barème et sa note maximale. Le nom du sous-dossier devient l’identifiant anonyme : n’y mettez pas le nom complet de l’élève.
+- **Correction séparée** : une copie = une demande = une réponse. L’agent ne reçoit ni le relevé, ni les autres copies ; il ne reçoit pas non plus les notes déjà validées.
+- **Validation humaine** : la note proposée n’est retenue qu’après relecture, question par question, avec justification obligatoire en cas de modification. Une copie rouverte retrouve sa proposition, ses justifications et sa validation.
+- **Relevé local** : stocké dans IndexedDB (`sti_agent_epreuve_v1`), cloisonné par compte professeur, sur cet appareil uniquement. Il contient l’identifiant anonyme, les noms de fichiers, la note proposée, la note validée, le détail par question et l’appréciation. Les **contenus** des fichiers sont oubliés dès que la copie est corrigée ; pour une copie théorique en attente, le texte relu est conservé (20 000 caractères maximum) afin de pouvoir reprendre la correction.
+- **Export** : CSV (séparateur `;`, virgule décimale, encodage UTF-8 avec BOM) ou XLSX. Le relevé rappelle en tête et en pied qu’aucune note n’a été saisie dans le registre des élèves.
+- **Limites** : 60 copies par relevé, 6 millions de caractères en file d’attente, et toujours une seule génération à la fois. Un dossier plus volumineux se traite en plusieurs fois.
+- **Aucun déploiement supplémentaire** : l’atelier réutilise les tâches déjà déployées `correction`, `bareme` et `transcription`. Le protocole `sti-pedagogique-2026-10-27` est inchangé ; l’atelier ne contourne pas la vérification du fournisseur distant et n’apporte aucune clé IA dans le navigateur. Si la fonction Supabase n’est pas configurée, importer et préparer les copies reste possible, mais aucune correction ne peut être demandée.
+
 ## Architecture
 
 ```text

@@ -1,5 +1,41 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Atelier d’épreuve pratique et relevé de correction — `v1.34.0`
+
+Corriger une épreuve pratique ne demande plus d’ouvrir l’agent pour chaque élève : les copies
+d’une même épreuve se corrigent à la suite, avec un sujet et un barème communs, puis se
+retrouvent dans un relevé exportable.
+
+- `assets/agent-epreuve.js` (nouveau, `STI_AGENT_EPREUVE`) : import d’un dossier de rendus
+  (**un sous-dossier par élève**), sélection des 8 fichiers les plus utiles par copie
+  (HTML, CSS, JS, PHP, SQL, JSON, TXT · 200 Ko chacun), création des copies « en attente »,
+  calcul des moyennes et export du relevé en **CSV** (séparateur `;`, virgule décimale) et en
+  **XLSX** via le classeur existant. Stockage **IndexedDB** local `sti_agent_epreuve_v1`,
+  cloisonné par compte professeur.
+- `assets/agent-sti.js` : panneau « Atelier d’épreuve » dans le formulaire de correction —
+  choix de l’épreuve, nom, dossier des rendus, file de correction, tableau des copies
+  (note proposée, note retenue, statut), enregistrement de la copie courante, réouverture
+  d’une copie déjà corrigée, exports et suppression du relevé. Version d’agent **2.8.0**.
+- Les copies déjà corrigées peuvent être rouvertes avec leur proposition, leurs justifications
+  et leur validation, pour ajuster des points sans repartir de zéro.
+- Aucune tâche serveur nouvelle : l’atelier réutilise exclusivement les tâches **`correction`**,
+  **`bareme`** et **`transcription`** déjà déployées. Aucun redéploiement de `assistant-ia`
+  n’est nécessaire et le protocole `sti-pedagogique-2026-10-27` reste inchangé.
+- Limites explicites : 60 copies par relevé, 8 fichiers par copie, 200 Ko par fichier,
+  6 millions de caractères en file d’attente. Les contenus des fichiers sont oubliés dès que la
+  copie est corrigée ; seuls les noms restent, et le relevé rappelle que **les notes ne sont pas
+  saisies dans le registre des élèves**.
+- `assets/agent-sti.css` : styles de l’atelier (tableau du relevé, statuts, mode sombre, mobile).
+- `data/aide.js` + `docs/AIDE-ENSEIGNANT.md` (régénéré) : nouvelle rubrique « Corriger une
+  épreuve pratique » dans le guide du professeur.
+- `tests/agent-epreuve.test.js` (12 tests) : import et classement des dossiers, limites de
+  lecture, transitions en attente → proposée → validée, statistiques, échappement du CSV,
+  export XLSX, validation du stockage local, intégration au formulaire de correction, absence de
+  nouvelle tâche serveur, réouverture d’une copie, versions synchronisées.
+- Version **`v1.34.0-epreuve-pratique`** (application, `index.html`, service worker) ;
+  `agent-epreuve.js` ajouté au cache hors ligne.
+- Suite complète : **203 tests**, tous verts.
+
 ## Guide du professeur — bouton « Aide » et touche F1 (`v1.33.0`)
 
 Toutes les fonctions de la plateforme sont désormais documentées dans l'application elle-même.
