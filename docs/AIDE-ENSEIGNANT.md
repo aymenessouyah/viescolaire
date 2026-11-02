@@ -25,6 +25,7 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 - [Annexes et mémo](#annexes-et-memo)
 - [Programme et compétences](#programme-et-competences)
 - [Agent Vie Scolaire AI](#agent-vie-scolaire-ai)
+- [Corriger une épreuve pratique](#corriger-une-epreuve-pratique)
 
 **Suivre les élèves**
 
@@ -285,6 +286,26 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 
 - N’envoyez jamais de nom d’élève, de note ou de copie nominative à l’assistant.
 - Documents libres : texte collé, TXT, Markdown et HTML uniquement (pas de PDF ni de Word).
+
+### Corriger une épreuve pratique
+
+*Corriger les fichiers rendus, copie par copie, et tenir le relevé de l’épreuve.*
+
+**Objectif.** Éviter les allers-retours entre un dossier de rendus et une correction isolée, tout en gardant la main sur chaque note.
+
+**Comment faire**
+
+1. Ouvrez l’agent, choisissez « Correction de copies » puis le type « Pratique ».
+2. Renseignez le sujet et le barème (ou laissez l’agent les proposer) avec la note maximale : ils valent pour toute l’épreuve.
+3. Dans « Atelier d’épreuve », nommez l’épreuve puis importez le dossier des rendus : un sous-dossier par élève.
+4. « Préparer la file de correction » crée la liste des copies ; ouvrez chaque copie, lancez l’analyse, relisez et validez sa note.
+5. « Enregistrer cette correction dans le relevé » conserve la note sur cet appareil ; exportez le relevé CSV ou Excel et reportez vous-même les notes dans le registre.
+
+**À savoir**
+
+- Chaque copie transmet au maximum 8 fichiers (HTML, CSS, JS, PHP, SQL, JSON, TXT, 200 Ko chacun) ; les fichiers techniques passent en premier.
+- Le nom du sous-dossier devient l’identifiant anonyme de la copie : évitez les noms complets d’élèves.
+- Le relevé reste local à cet appareil et à votre compte ; sa suppression est définitive.
 
 ## Suivre les élèves
 

@@ -201,6 +201,23 @@
       },
 
       {
+        id: 'agent-epreuve', categorie: 'enseigner', titre: 'Corriger une épreuve pratique', vue: 'v-agent', icone: 'check',
+        resume: 'Corriger les fichiers rendus, copie par copie, et tenir le relevé de l’épreuve.',
+        objectif: 'Éviter les allers-retours entre un dossier de rendus et une correction isolée, tout en gardant la main sur chaque note.',
+        etapes: [
+          'Ouvrez l’agent, choisissez « Correction de copies » puis le type « Pratique ».',
+          'Renseignez le sujet et le barème (ou laissez l’agent les proposer) avec la note maximale : ils valent pour toute l’épreuve.',
+          'Dans « Atelier d’épreuve », nommez l’épreuve puis importez le dossier des rendus : un sous-dossier par élève.',
+          '« Préparer la file de correction » crée la liste des copies ; ouvrez chaque copie, lancez l’analyse, relisez et validez sa note.',
+          '« Enregistrer cette correction dans le relevé » conserve la note sur cet appareil ; exportez le relevé CSV ou Excel et reportez vous-même les notes dans le registre.'
+        ],
+        astuces: [
+          'Chaque copie transmet au maximum 8 fichiers (HTML, CSS, JS, PHP, SQL, JSON, TXT, 200 Ko chacun) ; les fichiers techniques passent en premier.',
+          'Le nom du sous-dossier devient l’identifiant anonyme de la copie : évitez les noms complets d’élèves.',
+          'Le relevé reste local à cet appareil et à votre compte ; sa suppression est définitive.'
+        ]
+      },
+      {
         id: 'eleves', categorie: 'eleves', titre: 'Mes classes et élèves', vue: 'v-eleves', icone: 'users',
         resume: 'Créer les classes, saisir les élèves, gérer les groupes et les numéros de PC.',
         objectif: 'Disposer d’une liste à jour pour l’appel, les notes et les bulletins.',
