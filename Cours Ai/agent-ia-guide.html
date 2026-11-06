@@ -8,6 +8,9 @@
 html[data-color-mode="dark"]{color-scheme:dark;--bg:#171C20;--card:#1B1B1B;--tx:#CFE0F2;--mu:#ABB7C4;--bd:#30363D;--ac:#87E8C4;--acbg:#18211D;--am:#E8C387;--ambg:#211E18;--hd:#171C20}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 56px);scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--tx);font:400 16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+.back-to-top{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:20;display:grid;place-items:center;width:48px;height:48px;padding:0;border:2px solid var(--am);border-radius:50%;background:var(--ac);color:var(--bg);box-shadow:0 8px 24px #0c201a40;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.back-to-top[hidden]{display:none!important}.back-to-top:hover{transform:translateY(-3px);box-shadow:0 12px 28px #0c201a55}.back-to-top:focus-visible{outline:3px solid var(--am);outline-offset:3px}.back-to-top svg{width:22px;height:22px;stroke:currentColor}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.back-to-top{transition:none}}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--hd);z-index:10}
 h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.15;margin:0}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--hd);border-bottom:1px solid var(--bd);display:flex;gap:4px;overflow-x:auto;padding:8px 16px}
@@ -80,6 +83,7 @@ footer{padding:40px 0;color:var(--mu);font-size:14px}
 <div class="bar"><input id="q" type="search" placeholder="Chercher un terme (RAG, MCP, API…)" aria-label="Chercher un terme"><span id="cats" style="display:contents"></span></div>
 <div class="gl" id="gl"></div></section>
 </main>
+<button class="back-to-top" id="back-to-top" type="button" aria-label="Remonter en haut de la page" title="Remonter en haut de la page" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 <footer><div class="w">Page de révision sur l’architecture et la création d’un agent IA.</div></footer>
 <script>
 var C=[["📜","System prompt","Définit l’identité, les règles, le ton et les limites.","La fiche de poste du chef"],
@@ -116,4 +120,9 @@ $("gl").innerHTML=G.filter(function(g){return(cat=="Tous"||g[1]==cat)&&g.join(" 
 function bt(){$("cats").innerHTML=cs.map(function(c){return '<button type="button" class="'+(c==cat?"on":"")+'" data-c="'+c+'">'+c+'</button>'}).join("")}
 $("cats").addEventListener("click",function(e){if(e.target.dataset.c){cat=e.target.dataset.c;bt();gl()}});
 $("q").addEventListener("input",gl);bt();gl();
+var topButton=$("back-to-top");
+function updateTopButton(){topButton.hidden=window.scrollY<360;}
+window.addEventListener("scroll",updateTopButton,{passive:true});
+topButton.addEventListener("click",function(){window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});});
+updateTopButton();
 </script></body></html>

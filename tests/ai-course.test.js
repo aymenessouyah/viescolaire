@@ -26,6 +26,13 @@ test('le guide autonome reprend les sections et le contenu du fichier fourni, sa
   assert.doesNotMatch(guide, /architecture_agent_ia\.xlsx|feuille Excel|XLSX/i);
 });
 
+test('un bouton accessible permet de revenir en haut après le défilement', () => {
+  assert.match(guide, /id="back-to-top" type="button" aria-label="Remonter en haut de la page"/);
+  assert.match(guide, /window\.scrollY<360/);
+  assert.match(guide, /window\.scrollTo\(\{top:0,behavior:/);
+  assert.match(guide, /prefers-reduced-motion: reduce/);
+});
+
 test('le thème du guide reprend le choix clair/sombre enregistré par le site', () => {
   assert.match(guide, /localStorage\.getItem\('sti_color_mode_v1'\)/);
   assert.match(guide, /html\[data-color-mode="dark"\]/);
