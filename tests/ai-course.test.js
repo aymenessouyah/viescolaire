@@ -5,22 +5,36 @@ const test = require('node:test');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'assets/app.js'), 'utf8');
-const interfaceReference = fs.readFileSync(path.join(root, 'assets/interface-reference.js'), 'utf8');
-const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
-const coursePath = path.join(root, 'Cours Ai', 'architecture_agent_ia.xlsx');
+const guide = fs.readFileSync(path.join(root, 'Cours Ai', 'agent-ia-guide.html'), 'utf8');
+const serviceWorker = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
+const theme = fs.readFileSync(path.join(root, 'assets/theme-classe.css'), 'utf8');
+const colorMode = fs.readFileSync(path.join(root, 'assets/color-mode.js'), 'utf8');
 
-test('le bouton Mon cours Ai est rendu immédiatement après l’onglet Agent Vie Scolaire AI', () => {
+test('Mon cours Ai ouvre uniquement la page de guide dédiée depuis l’onglet Agent Vie Scolaire AI', () => {
   assert.match(app, /t:"Agent Vie Scolaire AI"/);
   assert.match(app, /t\.id==="v-agent" \? '<a class="tab vs-course-ai" href="\.\/Cours%20Ai\/agent-ia-guide\.html"/);
   assert.doesNotMatch(app, /vs-course-ai[^>]+architecture_agent_ia\.xlsx/);
-  assert.match(app, /<span>Mon cours Ai<\/span><\/a>' : ''\)\)\.join/);
-  assert.match(fs.readFileSync(path.join(root, 'assets/theme-classe.css'), 'utf8'), /\.vs-sidebar \.vs-course-ai/);
-  assert.match(interfaceReference, /querySelectorAll\(':scope > button\.tab'\)/, 'le lien de téléchargement ne doit pas interrompre l’initialisation des autres boutons');
+  assert.match(guide, /class="back" href="\.\.\/index\.html"/);
+  assert.match(theme, /\.vs-sidebar \.vs-course-ai/);
 });
 
-test('le fichier Excel est inclus dans le dépôt et pris en charge hors ligne', () => {
-  const workbook = fs.readFileSync(coursePath);
-  assert.equal(workbook.subarray(0, 2).toString('hex'), '504b');
-  assert.match(sw, /\.\/Cours%20Ai\/architecture_agent_ia\.xlsx/);
-  assert.ok(sw.includes('pdf|xlsx'), 'le service worker doit mettre le classeur en cache comme document hors ligne');
+test('le guide autonome reprend les sections et le contenu du fichier fourni, sans dépendance externe', () => {
+  for (const id of ['archi', 'flux', 'cycle', 'agent', 'glossaire']) assert.match(guide, new RegExp('id="' + id + '"'));
+  assert.match(guide, /Construire un agent IA, comme ouvrir un restaurant/);
+  assert.match(guide, /Glossaire/);
+  assert.doesNotMatch(guide, /https?:\/\//);
+  assert.doesNotMatch(guide, /architecture_agent_ia\.xlsx|feuille Excel|XLSX/i);
+});
+
+test('le thème du guide reprend le choix clair/sombre enregistré par le site', () => {
+  assert.match(guide, /localStorage\.getItem\('sti_color_mode_v1'\)/);
+  assert.match(guide, /html\[data-color-mode="dark"\]/);
+  assert.match(colorMode, /sti_color_mode_v1/);
+  assert.match(guide, /#F5F2E8/i);
+  assert.match(guide, /#10402f/i);
+});
+
+test('le guide est disponible hors ligne dans le cache principal', () => {
+  assert.match(serviceWorker, /\.\/Cours%20Ai\/agent-ia-guide\.html/);
+  assert.doesNotMatch(serviceWorker, /agent-ia-guide-data\.js/);
 });

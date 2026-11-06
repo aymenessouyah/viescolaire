@@ -4,7 +4,6 @@ const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
   "./Cours%20Ai/agent-ia-guide.html",
-  "./Cours%20Ai/agent-ia-guide-data.js",
   "./politique-confidentialite.html",
   "./assets/carte-visite-site.png",
   "./assets/carte-visite-site.svg",
@@ -66,7 +65,6 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./data/repartition4SI2.js",
   "./data/repartition3SI1.js"
 ],DOC_ASSETS=[
-  "./Cours%20Ai/architecture_agent_ia.xlsx",
   "./docs/fiches-4si-2026/Fiches_4SI2_2026-2027.pdf",
   "./docs/fiches-4si-2026/S1.pdf",
   "./docs/fiches-4si-2026/S2.pdf",
@@ -263,7 +261,7 @@ self.addEventListener('fetch',event=>{
     catch(e){return (await cache.match(req,{ignoreSearch:true}))||new Response('Icône indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}
   })());return;
  }
- if(/\.(pdf|xlsx)$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')){
+ if(/\.pdf$/i.test(url.pathname)||url.pathname.includes('/assets/tesseract/')){
   event.respondWith((async()=>{const cache=await caches.open(DOCS_CACHE),hit=await cache.match(req,{ignoreSearch:true});if(hit)return hit;try{const r=await fetch(req);if(r.ok)await cache.put(req,r.clone());return r;}catch(e){return new Response('Ce document n’a pas encore été téléchargé. Reconnectez-vous puis ouvrez-le une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());
  }
 });
