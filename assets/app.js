@@ -223,7 +223,7 @@ function renderAll(silent){
   document.getElementById("tabs").innerHTML = visibleTabs.map(t =>
     '<button class="tab '+(currentTab===t.id?"on":"")+'" onclick="go(\''+t.id+'\')">'+ic(t.ico)+t.t+
     (connected&&t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].concat(SESSIONS["4SI2"]).filter(s => s.iso >= todayISO()).length) +'</span>' : '') +
-    '</button>').join("");
+    '</button>' + (t.id==="v-agent" ? '<a class="tab vs-course-ai" href="./Cours%20Ai/architecture_agent_ia.xlsx" download="architecture_agent_ia.xlsx" title="Télécharger le cours sur l’architecture des agents IA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8M8 14h5"/></svg><span>Mon cours Ai</span></a>' : '')).join("");
   document.getElementById("tb-today").innerHTML = "Nous sommes le <strong>"+fmtLong(todayISO())+"</strong>";
   document.getElementById("ft-year").textContent = "Mise à jour : " + (typeof store.saved === "string" ? fmtShort(store.saved.slice(0,10)) + " " + store.saved.slice(11,16) : "session en cours");
   renderDash();
