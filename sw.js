@@ -3,6 +3,8 @@ const VERSION='sti-espace-v1.34.0-epreuve-pratique';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
+  "./Cours%20Ai/agent-ia-guide.html",
+  "./Cours%20Ai/agent-ia-guide-data.js",
   "./politique-confidentialite.html",
   "./assets/carte-visite-site.png",
   "./assets/carte-visite-site.svg",
