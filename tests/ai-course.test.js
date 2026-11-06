@@ -5,6 +5,7 @@ const test = require('node:test');
 
 const root = path.join(__dirname, '..');
 const app = fs.readFileSync(path.join(root, 'assets/app.js'), 'utf8');
+const interfaceReference = fs.readFileSync(path.join(root, 'assets/interface-reference.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'sw.js'), 'utf8');
 const coursePath = path.join(root, 'Cours Ai', 'architecture_agent_ia.xlsx');
 
@@ -13,6 +14,7 @@ test('le bouton Mon cours Ai est rendu immédiatement après l’onglet Agent Vi
   assert.match(app, /t\.id==="v-agent" \? '<a class="tab vs-course-ai" href="\.\/Cours%20Ai\/architecture_agent_ia\.xlsx" download="architecture_agent_ia\.xlsx"/);
   assert.match(app, /<span>Mon cours Ai<\/span><\/a>' : ''\)\)\.join/);
   assert.match(fs.readFileSync(path.join(root, 'assets/theme-classe.css'), 'utf8'), /\.vs-sidebar \.vs-course-ai/);
+  assert.match(interfaceReference, /querySelectorAll\(':scope > button\.tab'\)/, 'le lien de téléchargement ne doit pas interrompre l’initialisation des autres boutons');
 });
 
 test('le fichier Excel est inclus dans le dépôt et pris en charge hors ligne', () => {
