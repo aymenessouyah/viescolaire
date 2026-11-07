@@ -1,5 +1,9 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Version de la plateforme — `v1.34.1` (mise à jour 2026-11-07, GMT+1)
+
+La version visible et le cache hors ligne sont synchronisés. La date de mise à jour GMT+1 apparaît dans le pied de page. Pour chaque prochaine modification publiée, avancer `APP_VER`, synchroniser la version attendue de `index.html` et le cache de `sw.js`, puis mettre à jour `APP_UPDATED_AT`.
+
 ## Atelier d’épreuve pratique et relevé de correction — `v1.34.0`
 
 Corriger une épreuve pratique ne demande plus d’ouvrir l’agent pour chaque élève : les copies
