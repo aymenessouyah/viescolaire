@@ -2,26 +2,22 @@
 <html lang="fr"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Agent IA : architecture, cycle de création et glossaire</title>
-<script>try{document.documentElement.dataset.colorMode=localStorage.getItem('sti_color_mode_v1')==='dark'?'dark':'light'}catch(e){document.documentElement.dataset.colorMode='light'}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Figtree:wght@400;500&display=swap">
 <style>
-:root{--bg:#F5F2E8;--card:#FFFDF6;--tx:#1F2A23;--mu:#656B5C;--bd:#E7E3D2;--ac:#14684A;--acbg:#EAF3EC;--am:#B4622A;--ambg:#F8EFD8;--hd:#F5F2E8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-html[data-color-mode="dark"]{color-scheme:dark;--bg:#171C20;--card:#1B1B1B;--tx:#CFE0F2;--mu:#ABB7C4;--bd:#30363D;--ac:#87E8C4;--acbg:#18211D;--am:#E8C387;--ambg:#211E18;--hd:#171C20}
+:root{--bg:#f2f5f1;--card:#fff;--tx:#1c2a23;--mu:#55655c;--bd:#d5dcd4;--ac:#2d6a4b;--acbg:#e0efe6;--am:#7a5200;--ambg:#fbeecb;--hd:#f2f5f1;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a17;--card:#1c2420;--tx:#e8eee9;--mu:#9fb0a6;--bd:#2f3b35;--ac:#6fcf9f;--acbg:#1f3a2e;--am:#f0c35a;--ambg:#3a2f12;--hd:#141a17}}
+:root[data-theme="dark"]{--bg:#141a17;--card:#1c2420;--tx:#e8eee9;--mu:#9fb0a6;--bd:#2f3b35;--ac:#6fcf9f;--acbg:#1f3a2e;--am:#f0c35a;--ambg:#3a2f12;--hd:#141a17}
 html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 56px);scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--tx);font:400 16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
-.back-to-top{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:max(18px,env(safe-area-inset-bottom,0px));z-index:20;display:grid;place-items:center;width:48px;height:48px;padding:0;border:2px solid var(--am);border-radius:50%;background:var(--ac);color:var(--bg);box-shadow:0 8px 24px #0c201a40;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
-.back-to-top[hidden]{display:none!important}.back-to-top:hover{transform:translateY(-3px);box-shadow:0 12px 28px #0c201a55}.back-to-top:focus-visible{outline:3px solid var(--am);outline-offset:3px}.back-to-top svg{width:22px;height:22px;stroke:currentColor}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.back-to-top{transition:none}}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 16px/1.6 Figtree,system-ui,sans-serif}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--hd);z-index:10}
-h1,h2,h3{font-family:Georgia,"Times New Roman",serif;line-height:1.15;margin:0}
+h1,h2,h3{font-family:"Bricolage Grotesque",Georgia,serif;line-height:1.15;margin:0}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--hd);border-bottom:1px solid var(--bd);display:flex;gap:4px;overflow-x:auto;padding:8px 16px}
 nav a{color:var(--tx);text-decoration:none;padding:6px 12px;border-radius:20px;white-space:nowrap;font-weight:500;font-size:15px}
 nav a:hover,nav a:focus-visible{background:var(--acbg);outline:none}
 .w{max-width:980px;margin:0 auto;padding:0 20px}
-.hero{background:linear-gradient(125deg,#10402f,#1d6246);color:#f5f1e2;padding:30px 0 40px}
+.hero{background:#22302a;color:#f1efe6;padding:48px 0 40px}
 .hero h1{font-size:clamp(30px,6vw,48px);max-width:16ch}
-.hero p{max-width:56ch;color:#e0e8dd;margin:14px 0 0}
-.back{display:inline-flex;align-items:center;gap:8px;margin-bottom:26px;padding:8px 13px;border:1px solid #ffffff55;border-radius:999px;color:#f5f1e2;text-decoration:none;font-size:14px;font-weight:600;transition:background .18s ease}
-.back:hover{background:#ffffff18}.back:focus-visible{outline:2px solid #e3b653;outline-offset:3px}
+.hero p{max-width:56ch;color:#c9d3cc;margin:14px 0 0}
 .menu{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
 .menu a{border:1px dashed #8fa398;color:#f1efe6;text-decoration:none;padding:6px 14px;border-radius:6px;font-size:15px}
 .menu a:hover{background:#2f4239}
@@ -61,13 +57,16 @@ details ul{margin:10px 0 0 4px;padding-left:20px;font-size:15px}
 .bar button.on{background:var(--ac);color:var(--card);border-color:var(--ac)}
 .gl{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
 .gl .card b{font-size:17px}.gl .ch{background:var(--acbg);color:var(--ac);float:right}
+.cols+h3,#in h3{margin:30px 0 12px;font-size:21px}#in details{margin-bottom:10px}#in .ch{margin:0 6px 6px 0}
+.tl{margin:0 0 8px}.tl .s{display:flex;gap:12px}.tl .n{display:flex;flex-direction:column;align-items:center}.tl .o{width:30px;height:30px;border-radius:50%;color:var(--card);display:flex;align-items:center;justify-content:center;font-weight:500;flex:none}.tl .v{width:2px;flex:1;background:var(--bd);min-height:8px}.tl .x{padding-bottom:14px}.tl small{color:var(--mu);font-size:13px}
+pre{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0 0}
+.tb{border-collapse:collapse;width:100%;font-size:14px;margin-top:10px}.tb th,.tb td{border:1px solid var(--bd);padding:6px 10px;text-align:left;vertical-align:top}.tb th{background:var(--acbg)}
 footer{padding:40px 0;color:var(--mu);font-size:14px}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 @media (max-width:560px){ol.fl li{flex-direction:column;gap:2px}ol.fl b{min-width:0}}
 </style></head><body>
-<nav aria-label="Sections"><a href="#archi">Composants</a><a href="#flux">Flux d’une requête</a><a href="#cycle">Cycle de création</a><a href="#agent">Mon agent</a><a href="#glossaire">Glossaire</a></nav>
+<nav aria-label="Sections"><a href="#archi">Composants</a><a href="#flux">Flux d’une requête</a><a href="#cycle">Cycle de création</a><a href="#agent">Mon agent</a><a href="#infra">Infrastructure</a><a href="#glossaire">Glossaire</a></nav>
 <header class="hero"><div class="w">
-<a class="back" href="../index.html"><span aria-hidden="true">←</span> Retour à l’espace pédagogique</a>
 <h1>Construire un agent IA, comme ouvrir un restaurant</h1>
 <p>Les composants, le parcours d’une requête, les 9 étapes de création, ton Agent Vie Scolaire et un glossaire illustré par des analogies de la vie courante.</p>
 <div class="menu"><a href="#archi">Les composants</a><a href="#flux">Le flux</a><a href="#cycle">Le cycle</a><a href="#agent">Mon agent</a><a href="#glossaire">Le glossaire</a></div>
@@ -79,11 +78,11 @@ footer{padding:40px 0;color:var(--mu);font-size:14px}
 <div class="k"><span><i style="background:var(--ac)"></i>Construire (étapes 1 à 5)</span><span><i style="background:var(--am)"></i>Boucle d’amélioration (étapes 6 à 9)</span></div>
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))" id="cy"></div></section>
 <section id="agent"><h2>Mon Agent Vie Scolaire</h2><p class="lead">C’est un workflow (chemin fixe) : le bon choix pour ce besoin. Le professeur valide toujours avant l’export.</p><div class="cols" id="ag"></div></section>
+<section id="infra"><h2>L’infrastructure de l’agent « Séries d’exercices »</h2><p class="lead">Les 4 couches, les 8 étapes d’une génération avec leurs notions et leurs détails, puis les réponses aux questions fréquentes : jeton, Edge Function, serveur, Supabase.</p><div id="in"></div></section>
 <section id="glossaire"><h2>Le glossaire</h2><p class="lead">Cherche un mot ou filtre par catégorie.</p>
 <div class="bar"><input id="q" type="search" placeholder="Chercher un terme (RAG, MCP, API…)" aria-label="Chercher un terme"><span id="cats" style="display:contents"></span></div>
 <div class="gl" id="gl"></div></section>
 </main>
-<button class="back-to-top" id="back-to-top" type="button" aria-label="Remonter en haut de la page" title="Remonter en haut de la page" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 <footer><div class="w">Page de révision sur l’architecture et la création d’un agent IA.</div></footer>
 <script>
 var C=[["📜","System prompt","Définit l’identité, les règles, le ton et les limites.","La fiche de poste du chef"],
@@ -114,15 +113,138 @@ $("cy").innerHTML=Y.map(function(y,i){var x=y[4]?'<ul>'+y[4].map(function(t){ret
 return '<div class="'+(i<5?"build":"loop")+'"><details><summary><span class="em">'+y[0]+'</span><span class="t">'+(i+1)+'. '+y[1]+'<small>'+y[2]+'</small></span></summary><p style="margin:10px 0 0">'+y[3]+'</p>'+x+'</details></div>'}).join("");
 function li(a,s){return a.map(function(r){return '<li><span>'+r[0]+'<small>'+r[1]+'</small></span><span class="ch '+s[0]+'">'+s[1]+'</span></li>'}).join("")}
 $("ag").innerHTML='<div><h3>Workflow actuel</h3><ol>'+li(A,["ok","Fait"])+'</ol></div><div><h3>Améliorations possibles</h3><ol>'+li(B,["td","À faire"])+'</ol></div>';
+var L=[["Interface","Page HTML/CSS/JS (GitHub Pages)","Formulaire, aperçu, relecture, export Word/PDF","La salle du restaurant"],["Backend","Supabase Auth + Edge Function","Identifier l’enseignant, contrôler le quota, orchestrer l’appel","Le portier et le maître d’hôtel"],["Données","Supabase PostgreSQL","Comptes, historique, séries validées, quotas","Le cahier de commandes et la réserve"],["Modèle","API DeepSeek","Rédiger les exercices et les corrigés","Le chef invité"]];
+var S=[["n","0. Connexion","Navigateur + Supabase Auth",["Auth","jeton JWT","jeton de rafraîchissement"],"Le bracelet de festival remis après contrôle d’identité.",["C’est la seule étape où le mot de passe circule : Supabase le compare au mot de passe haché.","Il renvoie un jeton d’accès (1 heure par défaut) et un jeton de rafraîchissement ; supabase-js renouvelle le premier automatiquement.","Le JWT contient ton identifiant, ton email et l’expiration, avec une signature : lisible mais infalsifiable, donc jamais de secret dedans.","La clé publique peut être dans la page ; la clé de service, jamais.","Bonnes pratiques : désactiver l’inscription libre, mot de passe solide, bouton de déconnexion."]],
+["n","1. La demande","Navigateur",["formulaire","paramètres","jeton"],"Le client passe sa commande en montrant son bracelet.",["La page envoie matière, chapitre, niveau, nombre d’exercices, difficulté et type avec sb.functions.invoke.","Le jeton part dans l’en-tête Authorization: Bearer, ajouté automatiquement."]],
+["s","2. Contrôle d’accès","Edge Function",["vérification du jeton","quota","access limiter"],"Le gardien vérifie le bracelet et le nombre de commandes déjà passées.",["Jeton absent, falsifié ou expiré : erreur 401. Quota du jour atteint : erreur 429.","Aucun coût tant que ce contrôle n’est pas passé ; l’identité de l’enseignant est connue ici."]],
+["s","3. Construction du prompt","Edge Function",["system prompt","règle PHP","demande"],"On remet au chef sa fiche de poste et la commande.",["System prompt fixe : rôle de professeur de 4ème SI, sortie JSON, règle PHP procédural avec mysqli, sans POO ni PDO.","S’y ajoute la demande du formulaire ; plus tard, des extraits de tes cours (RAG)."]],
+["d","4. Génération","DeepSeek",["API","clé secrète","JSON"],"Le chef invité cuisine ; la clé reste dans le coffre.",["Appel HTTPS à l’API DeepSeek avec la clé secrète du serveur, jamais visible du navigateur.","Sortie JSON imposée et longueur limitée, car la durée d’exécution de la fonction est limitée."]],
+["s","5. Validation","Edge Function",["JSON contrôlé","relance"],"Le maître d’hôtel contrôle le plat avant de le servir.",["Vérification des champs et des types : titre, exercices, énoncé, consignes, corrigé, barème.","Si le JSON est invalide : une relance automatique, puis une erreur claire."]],
+["s","6. Enregistrement","Base Supabase",["generations","usage","RLS"],"Le cahier de commandes : chacun ne voit que les siennes.",["generations : demande, JSON, date, statut (ton journal de bord).","usage : compteur par enseignant et par jour (quota).","RLS : chaque enseignant ne voit que ses propres lignes."]],
+["n","7. Relecture et export","Navigateur",["aperçu","validation","table series","Word ou PDF"],"L’enseignant goûte avant de servir : rien n’est publié sans lui.",["Aperçu : modifier, supprimer ou régénérer un exercice.","À la validation, la série passe dans la table series.","Export Word ou PDF dans le navigateur, avec « Page x/nombre total de pages » en pied de page."]]];
+var Q=[["Pourquoi un jeton de connexion ?","Le bracelet de festival",["Le web n’a pas de mémoire : chaque requête arrive seule. Renvoyer le mot de passe à chaque fois est dangereux ; ne rien vérifier laisse tout le monde utiliser ton quota.","Le jeton prouve qui tu es sans réutiliser le mot de passe, expire vite et ne donne que les droits de ton compte.","Il permet de vérifier la signature, d’identifier l’enseignant, d’appliquer son quota et la RLS."]],
+["Pourquoi une Edge Function ?","Le gardien-secrétaire",["Sans elle : la clé DeepSeek serait dans la page, les appels en boucle seraient possibles, les contrôles seraient contournables dans le navigateur, et il n’y aurait nulle part où valider et enregistrer.","Avec elle : la clé est un secret serveur, le quota et le jeton sont vérifiés avant tout appel payant, et tout passe par un point unique.","Principe à retenir : tout contrôle de sécurité s’exécute côté serveur."]],
+["Quel serveur ?","Un bâtiment sécurisé loué",["Un serveur de Supabase, pas le tien : ton code y est déployé et exécuté à la demande (serverless), dans un environnement Deno.","Ce n’est ni ton ordinateur, ni GitHub Pages (fichiers statiques seulement), ni ton hébergement PHP.","La région et les limites (durée, nombre d’appels) dépendent de ton plan : à vérifier dans le tableau de bord."]],
+["Pourquoi Supabase ?","Tout au même endroit",["Auth, PostgreSQL avec RLS, Edge Functions et Secrets, Storage et pgvector (RAG plus tard).","Rien à administrer, déjà utilisé par l’Agent Vie Scolaire, et c’est du SQL standard que tu enseignes déjà."]],
+["Alternatives et limites","Supabase n’est pas obligatoire",["Scripts PHP sur ton hébergement : tu maîtrises PHP, mais authentification et sécurité sont à écrire.","Firebase : proche, mais base non relationnelle. Cloudflare Workers ou Vercel : il faut ajouter une base et une authentification.","Limites : fonctions en TypeScript/JavaScript (Deno), durée d’exécution limitée, dépendance à un service tiers (plan gratuit à vérifier)."]]];
+var Z={n:"var(--ac)",s:"var(--mu)",d:"var(--am)"};
+var TL='<div class="tl">'+S.map(function(s,i){return '<div class="s"><div class="n"><span class="o" style="background:'+Z[s[0]]+'">'+i+'</span>'+(i<7?'<span class="v"></span>':'')+'</div><div class="x"><b>'+s[1].replace(/^\d+\. /,"")+'</b> <small>('+s[2]+')</small><div>'+s[3].map(function(c){return '<span class="ch ok">'+c+'</span>'}).join(" ")+'</div><small>Dans le restaurant : '+s[4]+'</small></div></div>'}).join("")+'</div>';
+function cb(t,c){return '<details style="border-left:4px solid var(--ac)"><summary><span class="t">'+t+'</span></summary><pre><code>'+c+'</code></pre></details>'}
+function tb(t,h,r){return '<details style="border-left:4px solid var(--ac)"><summary><span class="t">'+t+'</span></summary><div style="overflow-x:auto"><table class="tb"><tr>'+h.map(function(x){return '<th>'+x+'</th>'}).join("")+'</tr>'+r.map(function(y){return '<tr>'+y.map(function(x){return '<td>'+x+'</td>'}).join("")+'</tr>'}).join("")+'</table></div></details>'}
+var CODE=cb("Étapes 0 et 1 : connexion et appel (code de la page)",`const sb = supabase.createClient(URL_PROJET, CLE_PUBLIQUE);
+
+// Étape 0 : connexion (une seule fois)
+const { data, error } = await sb.auth.signInWithPassword({ email, password });
+if (error) { /* afficher « Email ou mot de passe incorrect » */ }
+
+// Étape 1 : appel de l’Edge Function, jeton ajouté automatiquement
+const { data: serie } = await sb.functions.invoke("assistant-exercices", {
+  body: { matiere: "SQL", chapitre: "Jointures" }
+});
+
+// Déconnexion (ordinateur partagé)
+await sb.auth.signOut();`)+cb("Étape 1 : exemple de demande envoyée",`{ "matiere": "SQL", "chapitre": "Jointures", "niveau": "4ème SI",
+  "nb_exercices": 5, "difficulte": "intermédiaire", "type": "TP" }`)+cb("Étape 5 : format JSON attendu du modèle",`{ "titre": "TP Jointures",
+  "exercices": [ { "enonce": "...", "consignes": ["..."],
+                   "corrige": "...", "bareme": 4 } ] }`);
+var EDGE=cb("Edge Function assistant-exercices (étapes 2 à 6)",`import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const CORS = {
+  'Access-Control-Allow-Origin': 'https://TON-SITE.github.io',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
+};
+const QUOTA_PAR_JOUR = 20;
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const json = (corps, statut = 200) => new Response(JSON.stringify(corps),
+    { status: statut, headers: { ...CORS, 'Content-Type': 'application/json' } });
+
+  // Étape 2 : jeton et quota
+  const jeton = (req.headers.get('Authorization') ?? '').replace('Bearer ', '');
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const { data: { user } } = await sb.auth.getUser(jeton);
+  if (!user) return json({ erreur: 'Non connecté' }, 401);
+
+  const jour = new Date().toISOString().slice(0, 10);
+  const { data: u } = await sb.from('usage').select('nb')
+    .eq('user_id', user.id).eq('jour', jour).maybeSingle();
+  if ((u?.nb ?? 0) >= QUOTA_PAR_JOUR) return json({ erreur: 'Limite du jour atteinte' }, 429);
+
+  // Étape 3 : construction du prompt
+  const d = await req.json();
+  const system = 'Tu es professeur de 4ème SI. Réponds uniquement en JSON : '
+    + '{titre, exercices:[{enonce, consignes, corrige, bareme}]}. '
+    + 'PHP : style procédural, mysqli uniquement, sans POO ni PDO.';
+  const demande = 'Matière : ' + d.matiere + '. Chapitre : ' + d.chapitre + '. Niveau : ' + d.niveau
+    + '. Nombre d exercices : ' + d.nb_exercices + '. Difficulté : ' + d.difficulte + '. Type : ' + d.type;
+
+  // Étape 4 : appel DeepSeek (clé secrète côté serveur)
+  async function appeler() {
+    const r = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json',
+                 Authorization: 'Bearer ' + Deno.env.get('DEEPSEEK_API_KEY') },
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 3000,
+        response_format: { type: 'json_object' },
+        messages: [{ role: 'system', content: system }, { role: 'user', content: demande }] }),
+    });
+    const j = await r.json();
+    return JSON.parse(j.choices[0].message.content);
+  }
+
+  // Étape 5 : validation, avec une relance
+  const valide = (s) => s && Array.isArray(s.exercices) && s.exercices.every((e) => e.enonce && e.corrige);
+  let serie = null;
+  for (const essai of [1, 2]) {
+    try { serie = await appeler(); } catch (_) { serie = null; }
+    if (valide(serie)) break;
+  }
+  if (!valide(serie)) return json({ erreur: 'Réponse invalide, réessaie' }, 502);
+
+  // Étape 6 : enregistrement et quota (non débité en cas d erreur)
+  await sb.from('generations').insert({ user_id: user.id, demande: d, resultat: serie });
+  await sb.from('usage').upsert({ user_id: user.id, jour: jour, nb: (u?.nb ?? 0) + 1 });
+
+  return json(serie); // Étape 7 : la page affiche l aperçu
+});`)+dt("Déployer et utiliser la fonction","",0,0,["Créer la fonction : supabase functions new assistant-exercices, puis coller le code dans index.ts.","Enregistrer la clé : supabase secrets set DEEPSEEK_API_KEY=... (SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont fournis automatiquement).","Déployer : supabase functions deploy assistant-exercices.","La table usage doit avoir une contrainte unique sur (user_id, jour) pour que l’upsert fonctionne.","La clé de service contourne la RLS : c’est pourquoi le code filtre toujours par user.id.","Le nom du modèle et l’adresse de l’API DeepSeek sont à vérifier dans leur documentation, car ils évoluent."],"var(--ac)");
+var PLUS=tb("Où s’insèrent ces briques dans les 8 étapes",["Brique","Étape","Rôle"],[["RAG","3 (construction du prompt)","Ajoute des extraits de tes cours au prompt"],["Tools (API, MCP)","4 (génération)","Le modèle demande une action, la fonction l’exécute après contrôle"],["Langtrace ou traces maison","2 à 6","Enregistre durée, tokens, coût, erreurs et relances"]])
++dt("Tools : API et MCP","Les ustensiles du chef et la prise universelle",["tool","API","MCP"],"Le chef demande un ustensile ; c’est le commis (ton code) qui le sort et l’utilise.",["Un tool est une action que le modèle peut demander. Il ne l’exécute jamais lui-même : c’est ton code qui le fait.","API : porte d’entrée standard vers un service. Un tool est souvent un appel d’API enveloppé dans une fonction.","MCP : standard ouvert pour exposer des outils à n’importe quel modèle ; chaque serveur MCP doit avoir son propre contrôle d’accès.","La version 1 n’en a pas besoin (c’est un workflow). Utiles plus tard : tester une requête SQL sur une base exemple, lire le programme officiel, enregistrer la série.","Sécurité : lecture seule par défaut, paramètres validés côté serveur, permissions revérifiées à chaque appel."],"var(--ac)")
++cb("Exemple de définition d’un tool (function calling)",`const tools = [{ type: 'function', function: {
+  name: 'tester_requete_sql',
+  description: 'Exécute un SELECT sur la base exemple et renvoie les lignes',
+  parameters: { type: 'object',
+    properties: { requete: { type: 'string' } }, required: ['requete'] } } }];
+
+// Le modèle demande l outil ; l Edge Function l exécute seulement après avoir vérifié :
+// SELECT uniquement, base exemple en lecture seule, nombre de lignes limité.
+// Compatibilité du function calling à vérifier dans la documentation DeepSeek.`)
++dt("RAG : tes cours comme source","Le livre de recettes ouvert",["RAG","embedding","pgvector"],"Le chef consulte le livre de recettes avant de cuisiner.",["Principe : avant de générer, on retrouve les passages de tes cours les plus proches de la demande et on les ajoute au prompt, pour garder ton style et ton vocabulaire.","Préparation (une fois) : découper tes cours en morceaux, calculer leur embedding (les coordonnées du sens) et les stocker avec pgvector.","À chaque demande : embedding de la demande, recherche des 3 à 5 morceaux les plus proches, ajout au prompt à l’étape 3.","Le modèle d’embedding est à choisir ; sa dimension (384, 1536...) fixe la taille de la colonne vector.","Pièges : morceaux trop longs ou trop courts, cours obsolètes à réindexer, prompt qui grossit donc coûte plus.","Pour commencer sans RAG : mettre un résumé de ton programme directement dans le system prompt."],"var(--ac)")
++cb("Exemple SQL pour le RAG (pgvector)",`create extension if not exists vector;
+
+create table cours_morceaux (
+  id bigserial primary key,
+  chapitre text,
+  contenu text,
+  embedding vector(1536)  -- dimension selon le modèle d embedding
+);
+
+-- Les 4 morceaux les plus proches de la demande ($1 = embedding de la demande)
+select contenu from cours_morceaux
+order by embedding &lt;=&gt; $1 limit 4;`)
++dt("Traces : Langtrace","Les caméras et le cahier de cuisine",["Langtrace","trace","span","observabilité"],"Les caméras enregistrent chaque geste du chef, pour comprendre une erreur après coup.",["Une trace est le parcours complet d’une demande ; chaque étape (appel du modèle, outil, recherche RAG) est un span avec durée, tokens, coût et erreur éventuelle.","Dès la version 1, ta table generations joue déjà ce rôle. Langtrace ajoute un tableau de bord prêt à l’emploi : latence, coût, erreurs, prompts.","Langtrace est un outil open source de suivi des appels aux modèles, avec des SDK Python et TypeScript. Vérifie sa compatibilité avec l’environnement Deno des Edge Functions avant de l’adopter.","Sinon, version maison : ajouter quelques colonnes à generations (voir l’exemple SQL).","À tracer : prompt envoyé, réponse brute, durée, tokens, résultat de la validation, nombre de relances.","Ne trace pas de données personnelles d’élèves."],"var(--ac)")
++cb("Traces maison : colonnes à ajouter à generations",`alter table generations
+  add column duree_ms int,
+  add column tokens int,
+  add column relances int,
+  add column valide boolean;`);
+var COMP=tb("Les deux jetons de l’étape 0",["Jeton","Rôle","Durée"],[["Jeton d’accès (JWT)","Envoyé à chaque requête pour prouver qui tu es","Courte (1 heure par défaut, réglable)"],["Jeton de rafraîchissement","Obtient un nouveau jeton d’accès sans retaper le mot de passe","Longue"]])+dt("Les 3 parties d’un JWT","",0,0,["L’en-tête : l’algorithme de signature.","Le contenu : identifiant, email, date d’expiration (lisible par tous).","La signature : prouve que Supabase l’a émis ; modifier le contenu l’invalide."],"var(--ac)")+tb("Les trois clés à ne pas confondre",["Clé","Où","Visible dans la page ?"],[["Clé publique (anon ou publishable)","Code de la page","Oui : elle n’ouvre rien sans la RLS et le jeton"],["Clé de service (service role)","Jamais dans la page","Non, jamais : elle contourne toutes les protections"],["Clé DeepSeek","Secret de l’Edge Function","Non, jamais"]])+tb("Ce qui peut mal tourner",["Problème","Réponse prévue"],[["Jeton invalide ou expiré","Erreur 401, la page redemande la connexion"],["Quota atteint","Erreur 429, message « Limite du jour atteinte »"],["DeepSeek lent ou en panne","Délai maximal, message d’erreur sans débiter le quota"],["JSON invalide","Une relance automatique, puis erreur"],["Contenu douteux","Jamais publié sans ta validation"]])+tb("Les tables de la base (version 1)",["Table","Contenu"],[["generations","Demande, JSON reçu, date, tokens, statut (journal)"],["series","Séries relues et validées, avec leur chapitre"],["usage","Compteur de requêtes par enseignant et par jour (quota)"]])+dt("Versions suivantes","",0,0,["RAG : tes cours et anciennes séries dans Storage, indexés avec pgvector, pour garder ton style.","Traces : d’abord la table generations, puis Langtrace pour un tableau de bord.","Cache : réutiliser une génération identique (même chapitre, même difficulté)."],"var(--ac)")+dt("Points de vigilance","",0,0,["Durée d’exécution limitée : peu de contenu à la fois, un exercice à la fois si besoin.","JSON invalide : valider, relancer une fois, puis afficher une erreur claire.","CORS : l’Edge Function doit autoriser le domaine de ta page.","Export : il se fait dans le navigateur, sans passer par le serveur."],"var(--ac)")+dt("À retenir","",0,0,["Deux contrôles (étapes 2 et 5), un seul point d’appel au modèle (étape 4), un humain qui valide à la fin (étape 7).","Les étapes 2 et 6 forment l’access limiter ; la table generations sert de traces dès la version 1."],"var(--ac)");
+function dt(t,sub,chips,ana,bl,col){return '<details style="border-left:4px solid '+col+'"><summary><span class="t">'+t+'<small>'+sub+'</small></span></summary>'+(chips?'<div style="margin:10px 0 0">'+chips.map(function(c){return '<span class="ch ok">'+c+'</span>'}).join("")+'</div>':"")+(ana?'<p class="ana">Dans le restaurant : '+ana+'</p>':"")+'<ul>'+bl.map(function(b){return '<li>'+b+'</li>'}).join("")+'</ul></details>'}
+$("in").innerHTML='<h3>Les 4 couches</h3><div class="grid">'+L.map(function(l){return '<div class="card"><h3 style="margin:0 0 4px;font-size:18px">'+l[0]+'</h3><p><b>'+l[1]+'</b></p><p>'+l[2]+'</p><div class="ana">Analogie : '+l[3]+'</div></div>'}).join("")+'</div><h3>Le schéma des 8 étapes</h3>'+TL+'<h3>Les 8 étapes en détail</h3><div class="k"><span><i style="background:var(--ac)"></i>Navigateur</span><span><i style="background:var(--mu)"></i>Supabase</span><span><i style="background:var(--am)"></i>DeepSeek</span></div>'+S.map(function(s){return dt(s[1],s[2],s[3],s[4],s[5],Z[s[0]])}).join("")+'<h3>Questions fréquentes</h3>'+Q.map(function(q){return dt(q[0],q[1],0,0,q[2],"var(--ac)")}).join("")+'<h3>Code et exemples</h3>'+CODE+EDGE+'<h3>Pour aller plus loin : tools, RAG et traces</h3>'+PLUS+'<h3>Compléments : jetons, clés, erreurs, base de données</h3>'+COMP;
 var cat="Tous",cs=["Tous"].concat(G.map(function(g){return g[1]}).filter(function(v,i,a){return a.indexOf(v)==i}));
 function gl(){var q=$("q").value.toLowerCase();
 $("gl").innerHTML=G.filter(function(g){return(cat=="Tous"||g[1]==cat)&&g.join(" ").toLowerCase().indexOf(q)>-1}).map(function(g){return '<div class="card"><span class="ch">'+g[1]+'</span><b>'+g[0]+'</b><p>'+g[2]+'</p><div class="ana">Dans la vie : '+g[3]+'</div></div>'}).join("")||'<p class="mu">Aucun terme trouvé. Essaie un autre mot ou choisis « Tous ».</p>'}
 function bt(){$("cats").innerHTML=cs.map(function(c){return '<button type="button" class="'+(c==cat?"on":"")+'" data-c="'+c+'">'+c+'</button>'}).join("")}
 $("cats").addEventListener("click",function(e){if(e.target.dataset.c){cat=e.target.dataset.c;bt();gl()}});
 $("q").addEventListener("input",gl);bt();gl();
-var topButton=$("back-to-top");
-function updateTopButton(){topButton.hidden=window.scrollY<360;}
-window.addEventListener("scroll",updateTopButton,{passive:true});
-topButton.addEventListener("click",function(){window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});});
-updateTopButton();
 </script></body></html>
