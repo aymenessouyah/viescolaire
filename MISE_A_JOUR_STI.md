@@ -1,8 +1,8 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-## Version de la plateforme — `v1.34.1` (mise à jour 2026-11-07, GMT+1)
+## Guide autonome — boutons restaurés — `v1.34.2` (mise à jour 2026-11-07, GMT+1)
 
-La version visible et le cache hors ligne sont synchronisés. La date de mise à jour GMT+1 apparaît dans le pied de page. Pour chaque prochaine modification publiée, avancer `APP_VER`, synchroniser la version attendue de `index.html` et le cache de `sw.js`, puis mettre à jour `APP_UPDATED_AT`.
+Le guide « Mon cours Ai » retrouve un lien explicite de retour à la plateforme et un bouton accessible pour remonter en haut, avec respect de la préférence de réduction des animations et du thème clair/sombre du site. La page n’importe plus de police distante. Version de l’application, version attendue et cache hors ligne sont synchronisés.
 
 ## Atelier d’épreuve pratique et relevé de correction — `v1.34.0`
 
