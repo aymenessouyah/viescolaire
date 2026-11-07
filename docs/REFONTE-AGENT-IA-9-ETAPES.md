@@ -59,6 +59,43 @@ Faire évoluer l’agent par étapes vérifiables, en conservant les données lo
 - Écriture sans confirmation, notation autonome, décision disciplinaire ou certification de conformité au programme.
 - Introduction d’un nouveau modèle, d’un cache, d’un routeur ou de traces contenant du contenu utilisateur.
 
+## Étape 2 — Modèle, prompts et contrats de sortie
+
+### État de référence constaté dans le code
+
+| Élément | Fonctionnement actuel |
+| --- | --- |
+| **Fournisseur et modèle** | Appel serveur à l’API DeepSeek Responses. Le modèle vient du secret `DEEPSEEK_MODEL`, avec `deepseek-flash` comme valeur de repli. `DEEPSEEK_API_KEY` reste côté serveur. |
+| **Consignes** | Un socle `COMMON_RULES`, un prompt `TASK_PROMPTS[task]`, puis zéro à cinq prompts partagés approuvés et limités à la tâche. Le serveur vérifie que chaque prompt choisi est toujours publié. |
+| **Tâches serveur** | Huit contrats : `fiche`, `exercices`, `correction`, `transcription`, `bareme`, `cahier`, `repartition` et `document`. Les deux tâches intermédiaires `transcription` et `bareme` servent le parcours correction; la bibliothèque elle-même n’est pas une tâche de génération. |
+| **Format** | Chaque tâche possède un schéma JSON strict dans `quality.mjs` (`additionalProperties: false`). Les réponses sont ensuite passées par `validateResult` et `requestConsistencyError`; le schéma seul ne suffit donc pas à accepter une réponse. |
+| **Paramètres d’appel** | Réponse non diffusée en continu, effort de raisonnement `none`; délai serveur 90 s. Le plafond par défaut est de 5 000 tokens, 7 000 pour une répartition trimestrielle ou 12 000 pour un document/une répartition annuelle; le secret de configuration est borné entre 1 000 et 12 000. Température actuelle : 0,1 pour correction, transcription et cahier; 0,35 pour les autres tâches. |
+| **Métadonnées** | Le résultat retourne fournisseur, modèle, protocole, identifiant de requête et nombre d’images. Les versions du prompt et du schéma ne sont pas encore explicites dans le contrat de réponse. Le texte du prompt n’est pas renvoyé comme métadonnée. |
+
+### Décisions de cadrage pour cette étape
+
+1. **Conserver DeepSeek dans la première itération.** Aucun changement de fournisseur ou de modèle n’est justifié sans jeu d’évaluation, comparaison de qualité, de latence et de coût à l’étape 6.
+2. **Rendre les changements reproductibles.** Associer à chaque génération une version de prompt commun, une version de prompt de tâche et une version de schéma, en plus du modèle et du protocole. Les identifiants doivent être stables; une modification de contenu crée une nouvelle version, au lieu de réécrire silencieusement l’ancienne.
+3. **Préserver la hiérarchie des consignes.** Les prompts partagés restent des compléments facultatifs subordonnés aux règles communes, à la tâche, au schéma, à la confidentialité et aux limites de vérité. Ils ne peuvent ni élargir les permissions ni supprimer une validation humaine.
+4. **Ne pas tracer le contenu pour assurer la reproductibilité.** Enregistrer éventuellement des identifiants de versions et une empreinte de configuration non réversible, jamais le prompt composé, la copie, les images, les pièces jointes ni les données personnelles.
+5. **Garder le schéma et les contrôles déterministes comme barrière.** Une réponse refusée par le schéma, les validateurs ou les contrôles de cohérence ne devient pas un résultat affichable ou applicable.
+
+### Contrat de versionnement proposé — à implémenter après validation
+
+- Manifeste côté serveur par tâche : `prompt_set_version`, `task_prompt_version` et `schema_version`.
+- Métadonnées de génération : `provider`, `model`, ces trois identifiants, `protocol` et un `request_id` aléatoire; aucune valeur du prompt ou des champs de saisie.
+- Prompts partagés : conserver l’identifiant publié existant et ajouter une version immuable ou une empreinte de contenu. Toute correction administrative publie une nouvelle version et conserve l’ancienne pour l’audit; l’enseignant voit toujours le titre et la provenance avant sélection.
+- Changement incompatible de champs, de types ou de règles : nouvelle version de schéma et incrément explicite de protocole; le client refuse les réponses dont le protocole ne correspond pas.
+- Le nombre/nommage exact des versions est à stabiliser dans les tests avant de modifier la fonction Edge. Cette section est une proposition de conception, pas un changement déjà déployé.
+
+### Critères de sortie de l’étape 2
+
+- Un manifeste relie chaque tâche à son prompt, son schéma et au protocole, sans consigne dupliquée ni version ambiguë.
+- Des tests vérifient les huit tâches, les champs obligatoires, l’interdiction des propriétés supplémentaires et les contrôles déterministes de cohérence.
+- Un changement de prompt ou de modèle produit des identifiants distincts et peut être comparé à l’ancien sans exposer de données réelles.
+- Les prompts partagés ne peuvent être sélectionnés que s’ils sont publiés, autorisés pour la tâche et toujours subordonnés aux règles communes.
+- Les critères pédagogiques qualitatifs restent à évaluer sur le jeu synthétique de l’étape 6; aucun modèle n’est promu sur la seule base d’une démonstration.
+
 ## Phases de réalisation et critères de passage
 
 1. **Besoin (étape 1)** — approuver la fiche de besoin et les critères de réussite pour chaque parcours actif ; fixer les limites et les décisions réservées à l’enseignant.

@@ -1,5 +1,9 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Cadrage de l’Agent IA — étape 2 — `v1.34.3` (mise à jour 2026-11-07, GMT+1)
+
+Documente le fournisseur et modèle actuels, l’assemblage des prompts, les schémas et validations, les plafonds de génération, ainsi qu’une proposition de versionnement des prompts, schémas et protocoles. Aucun changement d’exécution de l’agent n’est inclus; les choix restent à valider avant implémentation. Version de l’application, version attendue et cache hors ligne sont synchronisés.
+
 ## Guide autonome — boutons restaurés — `v1.34.2` (mise à jour 2026-11-07, GMT+1)
 
 Le guide « Mon cours Ai » retrouve un lien explicite de retour à la plateforme et un bouton accessible pour remonter en haut, avec respect de la préférence de réduction des animations et du thème clair/sombre du site. La page n’importe plus de police distante. Version de l’application, version attendue et cache hors ligne sont synchronisés.
