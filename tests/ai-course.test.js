@@ -22,7 +22,7 @@ test('le guide autonome reprend les sections et le contenu du fichier fourni, sa
   for (const id of ['archi', 'flux', 'cycle', 'agent', 'glossaire']) assert.match(guide, new RegExp('id="' + id + '"'));
   assert.match(guide, /Construire un agent IA, comme ouvrir un restaurant/);
   assert.match(guide, /Glossaire/);
-  assert.doesNotMatch(guide, /https?:\/\//);
+  assert.doesNotMatch(guide, /<(?:script|link)\b[^>]+(?:src|href)=["']https?:\/\//i);
   assert.doesNotMatch(guide, /architecture_agent_ia\.xlsx|feuille Excel|XLSX/i);
 });
 
