@@ -109,9 +109,11 @@ visibles après leur validation et leur fusion dans `main`, puis le déploiement
 des données, ne remplacez pas tout le dépôt par glisser-déposer ; gardez l’arborescence et les fichiers déjà
 présents.
 
-À chaque mise à jour de l’interface, incrémenter `VERSION` dans `sw.js`. Les appareils installés reçoivent
-alors le nouveau cache et affichent un bandeau **Mettre à jour** ; les données enregistrées dans le
-navigateur sont conservées.
+À chaque modification publiée de la plateforme, avancer la version de l’application dans `assets/app.js`
+(`APP_VER`), synchroniser la version attendue dans `index.html` et le cache dans `sw.js`, puis inscrire la
+date de mise à jour au fuseau **GMT+1** dans `APP_UPDATED_AT` et dans le pied de page. Ne pas réutiliser
+une version déjà publiée. Les appareils installés reçoivent alors le nouveau cache et affichent un bandeau
+**Mettre à jour** ; les données enregistrées dans le navigateur sont conservées.
 
 ## 4. Installer l'application sur mobile et depuis la barre d'adresse (PWA)
 

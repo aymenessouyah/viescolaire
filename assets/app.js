@@ -12,7 +12,8 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.0-epreuve-pratique";
+const APP_VER = "v1.34.1";
+const APP_UPDATED_AT = "2026-11-07 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
 const DATA = window.STI_DATA || {};
@@ -226,6 +227,8 @@ function renderAll(silent){
     '</button>' + (t.id==="v-agent" ? '<a class="tab vs-course-ai" href="./Cours%20Ai/agent-ia-guide.html" title="Ouvrir le cours sur l’architecture des agents IA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8M8 14h5"/></svg><span>Mon cours Ai</span></a>' : '')).join("");
   document.getElementById("tb-today").innerHTML = "Nous sommes le <strong>"+fmtLong(todayISO())+"</strong>";
   document.getElementById("ft-year").textContent = "Mise à jour : " + (typeof store.saved === "string" ? fmtShort(store.saved.slice(0,10)) + " " + store.saved.slice(11,16) : "session en cours");
+  const release = document.getElementById("app-release");
+  if (release) release.textContent = "Plateforme " + APP_VER + " · mise à jour " + APP_UPDATED_AT;
   renderDash();
   renderEDT();
   renderCal();
@@ -1953,6 +1956,7 @@ function cloudRepair(silent){
 }
 window.cloudRepair = cloudRepair;
 window.APP_VER = APP_VER;
+window.APP_UPDATED_AT = APP_UPDATED_AT;
 cloudRepair(true);   /* téléphone / tablette : aligne le réglage local sur le fichier publié */
 function cloudReady(){ const c = cloudCfg(); return !!(c.url && c.key); }
 async function cloudHeaders(){
@@ -2021,7 +2025,7 @@ document.addEventListener("click", e => {
 
 function renderVerChip(){
   const e = document.getElementById("ver-chip");
-  if (e){ e.textContent = APP_VER; e.title = "Version réellement chargée dans ce navigateur : " + APP_VER; }
+  if (e){ e.textContent = APP_VER; e.title = "Version réellement chargée dans ce navigateur : " + APP_VER + " · Mise à jour " + APP_UPDATED_AT; }
 }
 function renderLoginInvite(){
   const b = document.getElementById("login-invite");
