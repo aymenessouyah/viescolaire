@@ -119,6 +119,7 @@
           'Vérifiez les objectifs, les notions associées et les annexes proposées.',
           'Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.',
           'Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.',
+          'Dans la liste des fiches, les boutons E, R et C sous chaque devoir ouvrent respectivement l’énoncé, les ressources et la correction. Un bouton plein et souligné indique qu’au moins un fichier est joint ; un contour pointillé signale que son état est en cours de vérification ou indisponible.',
           'Pour chaque séance, la section « Documents de la séance » permet de joindre plusieurs ressources et de les télécharger. Pour un devoir, la section « Documents du devoir » permet aussi de joindre séparément l’énoncé et la correction. Seuls les énoncés de devoir au format PDF sont affichés dans le cahier de textes à la même séance ; les autres fichiers restent accessibles dans la fiche. Un fichier de même nom dans une catégorie remplace le précédent.'
         ],
         astuces: ['Les fiches fournies dans le dépôt sont des bases de travail : adaptez-les à votre progression réelle.',
