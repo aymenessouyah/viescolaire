@@ -967,3 +967,13 @@ body.vs-fusion #v-carte .site-card-meta a{text-decoration:underline;text-underli
 /* Référentiel : rappel de l’édition à côté des pourcentages. */
 .ref-edition-note{margin-top:12px!important;padding:8px 11px;line-height:1.65;border-left:3px solid #C9A227;border-radius:6px;background:#FFFBF0}
 @media print{.ref-edition-note{background:none;border-left-color:#999}}
+
+/* Pièces jointes des séances d'évaluation, hors impression. */
+.devoir-docs { margin: 20px 0; padding: 16px; border: 1px solid #ded9c8; border-radius: 10px; background: #faf8ef; }
+.devoir-docs h3 { margin: 0 0 8px; }
+.devoir-docs-group { padding: 10px 0; border-top: 1px solid #e7e3d5; }
+.devoir-docs-file { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.devoir-docs-file span { overflow-wrap: anywhere; flex: 1 1 160px; }
+.devoir-docs-add { display: block; font-size: 12px; font-weight: 600; margin-top: 8px; }
+.devoir-docs-add input { display: block; max-width: 100%; margin-top: 4px; font-weight: normal; }
+@media print { .devoir-docs { display: none !important; } }
