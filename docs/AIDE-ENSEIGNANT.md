@@ -179,7 +179,7 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 2. Vérifiez les objectifs, les notions associées et les annexes proposées.
 3. Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.
 4. Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.
-5. Pour une séance de devoir de contrôle ou de synthèse, la section « Documents du devoir » permet de joindre puis télécharger l’énoncé, les ressources et la correction séparément. Ajouter un nouvel énoncé ou une nouvelle correction remplace le précédent ; les ressources portant le même nom sont remplacées.
+5. Pour une séance de devoir de contrôle ou de synthèse, la section « Documents du devoir » permet de joindre puis télécharger l’énoncé, les ressources et la correction séparément. Chaque catégorie accepte plusieurs fichiers ; un fichier portant le même nom dans la même catégorie remplace le précédent.
 
 **À savoir**
 

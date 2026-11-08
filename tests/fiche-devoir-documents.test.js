@@ -51,12 +51,36 @@ test('ajout, téléchargement, remplacement, suppression et isolation par séanc
   await t.upload(h, 'correction', [t.file('corrige.pdf')]);
   assert.match(h.innerHTML, /sujet.pdf/); assert.match(h.innerHTML, /fichier.zip/); assert.match(h.innerHTML, /corrige.pdf/);
   await t.click(h, 'download', 'enonce', 0); assert.deepEqual(t.downloaded, ['sujet.pdf']);
-  await t.upload(h, 'enonce', [t.file('nouveau.pdf')]); assert.doesNotMatch(h.innerHTML, /sujet.pdf/);
+  await t.upload(h, 'enonce', [t.file('nouveau.pdf')]); assert.match(h.innerHTML, /sujet.pdf/); assert.match(h.innerHTML, /nouveau.pdf/);
   await t.click(h, 'remove', 'ressources', 0); assert.doesNotMatch(h.innerHTML, /fichier.zip/); assert.match(h.innerHTML, /image.png/);
   const other = t.host(); t.api.mount(other, {...session, n: 13}); await flush(); assert.doesNotMatch(other.innerHTML, /nouveau.pdf/);
   t.setProfile({prof_id: 'prof-b'}); const otherOwner = t.host(); t.api.mount(otherOwner, session); await flush(); assert.doesNotMatch(otherOwner.innerHTML, /nouveau.pdf/);
   t.setProfile({prof_id: 'prof-a'}); const reload = t.host(); t.api.mount(reload, session, {classMode: true}); await flush();
   assert.match(reload.innerHTML, /nouveau.pdf/); assert.doesNotMatch(reload.innerHTML, /corrige.pdf|Correction/);
+});
+
+
+test('plusieurs fichiers par catégorie sont conservés, téléchargeables et remplaçables par nom', async () => {
+  const t = setup(), session = {cls: '4SI2', n: 48, blk: {k: 'ds'}}, h = t.host();
+  t.api.mount(h, session); await flush();
+  for (const type of ['enonce', 'ressources', 'correction']) {
+    assert.match(h.innerHTML, new RegExp(`data-upload="${type}" multiple`));
+    await t.upload(h, type, [t.file(`${type}-1.pdf`), t.file(`${type}-2.pdf`)]);
+    await t.upload(h, type, [t.file(`${type}-3.pdf`)]);
+    for (const n of [1, 2, 3]) assert.match(h.innerHTML, new RegExp(`${type}-${n}\\.pdf`));
+    await t.click(h, 'download', type, 0);
+    await t.click(h, 'download', type, 1);
+    await t.click(h, 'download', type, 2);
+    await t.upload(h, type, [t.file(`${type}-1.pdf`)]);
+    assert.equal((h.innerHTML.match(new RegExp(`aria-label="Télécharger ${type}-1\\.pdf"`, 'g')) || []).length, 1);
+  }
+  assert.deepEqual(t.downloaded, ['enonce-1.pdf', 'enonce-2.pdf', 'enonce-3.pdf', 'ressources-1.pdf', 'ressources-2.pdf', 'ressources-3.pdf', 'correction-1.pdf', 'correction-2.pdf', 'correction-3.pdf']);
+  const reload = t.host(); t.api.mount(reload, session); await flush();
+  for (const type of ['enonce', 'ressources', 'correction']) for (const n of [1, 2, 3]) assert.match(reload.innerHTML, new RegExp(`${type}-${n}\\.pdf`));
+  await t.click(reload, 'remove', 'correction', 0);
+  assert.doesNotMatch(reload.innerHTML, /correction-2\.pdf/);
+  assert.match(reload.innerHTML, /correction-1\.pdf/);
+  assert.match(reload.innerHTML, /correction-3\.pdf/);
 });
 
 test('refuse les fichiers vides ou trop volumineux sans remplacer les fichiers enregistrés', async () => {
