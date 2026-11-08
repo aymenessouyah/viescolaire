@@ -154,43 +154,93 @@ function mount(host, session, options = {}) {
   });
   draw(); if (who) refresh().finally(() => { working = false; draw(); });
 }
+function unmountCahier(host) {
+  if (host && typeof host.__cahDocumentsCleanup === 'function') host.__cahDocumentsCleanup();
+}
 function mountCahier(host, sessions) {
   if (!host) return;
+  unmountCahier(host);
   const who = owner();
   if (!who || !sessions.length) return;
-  const valid = new Set(sessions.map(s => s.cls + '|' + s.n));
+  const valid = new Set(sessions.filter(isDevoir).map(s => s.cls + '|' + s.n));
+  if (!valid.size) return;
   const nodes = Array.from(host.querySelectorAll('[data-cah-docs]'));
-  let records = {};
-  function stillCurrent() { return host.isConnected && owner() === who; }
-  host.addEventListener('click', async event => {
+  let records = {}, disposed = false;
+  const urls = new Set();
+  let observer = null;
+  function stillCurrent() { return !disposed && host.isConnected && owner() === who; }
+  function eligible(file) { return file && /\.pdf$/i.test(String(file.name || '')); }
+  host.__cahDocumentsCleanup = () => {
+    disposed = true;
+    if (observer) observer.disconnect();
+    urls.forEach(url => root.URL.revokeObjectURL(url));
+    urls.clear();
+    host.removeEventListener('click', onClick);
+    delete host.__cahDocumentsCleanup;
+  };
+  async function onClick(event) {
     const button = event.target.closest('[data-cah-download]');
     if (!button || !stillCurrent() || button.disabled) return;
     const session = button.dataset.cahSession, type = button.dataset.cahDownload;
-    if (!valid.has(session)) return;
-    const file = records[session]?.[type]?.[Number(button.dataset.index)];
-    if (!file) return;
+    if (!valid.has(session) || type !== 'enonce') return;
+    const file = records[session]?.enonce?.[Number(button.dataset.index)];
+    if (!eligible(file)) return;
     button.disabled = true;
     try { await download(file); } catch (e) { if (root.toast) root.toast(e.message || 'Téléchargement impossible.'); }
     finally { button.disabled = false; }
-  });
+  }
+  host.addEventListener('click', onClick);
+  async function preview(target) {
+    if (!stillCurrent() || target.dataset.started) return;
+    const key = target.dataset.cahSession, index = Number(target.dataset.index);
+    const file = valid.has(key) && records[key]?.enonce?.[index];
+    if (!eligible(file)) return;
+    target.dataset.started = '1';
+    try {
+      const raw = file.source === 'local' ? file.blob : await root.STI_FICHE_CLOUD.download(file);
+      if (!stillCurrent()) return;
+      // Les documents Cloud sont stockés en octet-stream : imposer le type PDF
+      // pour le lecteur intégré, sans faire confiance au nom pour exécuter du HTML.
+      const url = root.URL.createObjectURL(new Blob([raw], {type:'application/pdf'}));
+      urls.add(url);
+      target.textContent = '';
+      const frame = document.createElement('iframe');
+      frame.className = 'cah-pdf-frame'; frame.title = 'Énoncé : ' + file.name;
+      frame.setAttribute('sandbox', 'allow-scripts');
+      frame.src = url;
+      const link = document.createElement('a');
+      link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.className = 'cah-pdf-open'; link.textContent = 'Ouvrir le PDF dans un nouvel onglet';
+      target.append(frame, link);
+    } catch (e) {
+      if (stillCurrent()) target.textContent = 'Aperçu indisponible : ' + (e.message || 'erreur de lecture.') + ' Utilisez « Télécharger » pour réessayer.';
+    }
+  }
   load(who, Array.from(valid)).then(result => {
     if (!stillCurrent()) return;
     records = result.data;
     nodes.forEach(node => {
       const key = node.dataset.cahDocs;
       if (!valid.has(key)) return;
-      const files = records[key] || {};
-      const entries = Object.entries(TYPES).flatMap(([type, label]) => (files[type] || []).map((file, i) =>
-        `<li><span>${esc(label)} : ${esc(file.name)} (${file.source === 'local' ? 'local uniquement' : 'Cloud'})</span> <button type="button" class="btn btn-xs btn-line" data-cah-download="${type}" data-cah-session="${esc(key)}" data-index="${i}" aria-label="Télécharger ${esc(file.name)}">Télécharger</button></li>`));
-      if (entries.length) node.innerHTML = `<div class="cah-documents no-print"><strong>Documents joints à la séance</strong><ul>${entries.join('')}</ul></div>`;
+      const entries = (records[key]?.enonce || []).map((file, i) => eligible(file)
+        ? `<li><div class="cah-pdf-heading"><span>Énoncé : ${esc(file.name)} (${file.source === 'local' ? 'local uniquement' : 'Cloud'})</span> <button type="button" class="btn btn-xs btn-line" data-cah-download="enonce" data-cah-session="${esc(key)}" data-index="${i}" aria-label="Télécharger ${esc(file.name)}">Télécharger</button></div><div class="cah-pdf-preview" data-cah-preview data-cah-session="${esc(key)}" data-index="${i}">Chargement de l’énoncé PDF…</div></li>` : '').filter(Boolean);
+      if (entries.length) node.innerHTML = `<div class="cah-documents no-print"><strong>Énoncé(s) du devoir</strong><ul>${entries.join('')}</ul></div>`;
     });
+    const targets = Array.from(host.querySelectorAll('[data-cah-preview]'));
+    if (root.IntersectionObserver) {
+      observer = new root.IntersectionObserver(entries => entries.forEach(entry => {
+        if (entry.isIntersecting) { observer.unobserve(entry.target); preview(entry.target); }
+      }), {rootMargin:'400px'});
+      targets.forEach(target => observer.observe(target));
+    } else targets.forEach(preview);
     if (result.cloudError || result.localError) {
       const notice = document.createElement('p');
       notice.className = 'tiny no-print'; notice.setAttribute('role', 'alert');
-      notice.textContent = 'Documents du cahier : ' + [result.cloudError, result.localError].filter(Boolean).join(' ; ');
+      notice.textContent = 'Énoncés du cahier : ' + [result.cloudError, result.localError].filter(Boolean).join(' ; ');
       host.prepend(notice);
     }
   });
 }
-root.STI_FICHE_DEVOIR_DOCUMENTS = { isDevoir, mount, mountCahier };
+
+root.STI_FICHE_DEVOIR_DOCUMENTS = { isDevoir, mount, mountCahier, unmountCahier };
 })(typeof window !== 'undefined' ? window : globalThis);

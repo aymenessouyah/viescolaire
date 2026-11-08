@@ -119,7 +119,7 @@
           'Vérifiez les objectifs, les notions associées et les annexes proposées.',
           'Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.',
           'Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.',
-          'Pour chaque séance, la section « Documents de la séance » permet de joindre plusieurs ressources et de les télécharger. Pour un devoir, la section « Documents du devoir » permet aussi de joindre séparément l’énoncé et la correction. Ces fichiers sont accessibles dans le cahier de textes à la même séance. Un fichier de même nom dans une catégorie remplace le précédent.'
+          'Pour chaque séance, la section « Documents de la séance » permet de joindre plusieurs ressources et de les télécharger. Pour un devoir, la section « Documents du devoir » permet aussi de joindre séparément l’énoncé et la correction. Seuls les énoncés de devoir au format PDF sont affichés dans le cahier de textes à la même séance ; les autres fichiers restent accessibles dans la fiche. Un fichier de même nom dans une catégorie remplace le précédent.'
         ],
         astuces: ['Les fiches fournies dans le dépôt sont des bases de travail : adaptez-les à votre progression réelle.',
           'Les nouveaux documents sont enregistrés dans le Cloud privé du professeur et accessibles sur ses appareils connectés (Internet requis, 10 Mo par fichier). Les anciens fichiers « local uniquement » doivent être envoyés depuis leur appareil via le bouton prévu sur chaque séance ; ils restent aussi sur cet appareil. Les noms déjà présents dans le Cloud ne sont pas écrasés lors de ce transfert. La correction est masquée en mode classe ; les fichiers ne sont pas inclus dans les exports du cahier ou les sauvegardes Drive. Conservez vos originaux ailleurs et ne joignez pas de copies d’élèves.']
@@ -336,7 +336,7 @@
           'Choisissez la classe et la période.',
           'Vérifiez le contenu de chaque séance : titre, contenu, devoirs, observations.',
           'Ajoutez votre signature manuscrite depuis « Compte » → « Profil » (elle est répétée à la fin de chaque journée).',
-          'Retrouvez et téléchargez les documents joints à une fiche dans la séance correspondante, en ajustant au besoin les filtres de classe, trimestre et état.',
+          'Les énoncés PDF joints aux séances de devoir apparaissent dans le cahier et peuvent être téléchargés. Ajustez au besoin les filtres de classe, trimestre et état. Les ressources, corrections et fichiers non PDF restent dans la fiche.',
           'Utilisez le centre d’impression pour générer le cahier en PDF : les pièces jointes locales ne sont pas incluses.'
         ],
         astuces: ['Les séances non confirmées restent visibles mais signalées : parfait pour repérer un oubli.']

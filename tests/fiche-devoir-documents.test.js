@@ -28,7 +28,8 @@ function fakeIndexedDB() {
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
 function setup() {
   let profile = { prof_id: 'prof-a' }, downloaded = [], locked = false, cahierRenders = 0;
-  const document = { createElement() { return { click() { downloaded.push(this.download); }, remove() {} }; }, body: { appendChild() {} } };
+  const createdUrls = [], revokedUrls = [];
+  const document = { createElement(tag) { return {tag, setAttribute(name, value) { this[name] = value; }, click() { downloaded.push(this.download); }, remove() {} }; }, body: { appendChild() {} } };
   const records = new Map(); let cloudDown = false;
   const cloud = {
     async listMany(keys) {
@@ -50,13 +51,13 @@ function setup() {
     async download(file) { return file.blob; }
   };
   const idb = fakeIndexedDB();
-  const window = { indexedDB: idb, STI_FICHE_CLOUD: cloud, activeProfessorProfile: () => profile, seanceVerrouillee: () => locked, renderCahier: () => { cahierRenders++; }, confirm: () => true, URL: { createObjectURL: () => 'blob:test', revokeObjectURL() {} }, setTimeout };
-  vm.runInNewContext(fs.readFileSync('assets/fiche-devoir-documents.js', 'utf8'), { window, document, setTimeout, console });
+  const window = { indexedDB: idb, STI_FICHE_CLOUD: cloud, activeProfessorProfile: () => profile, seanceVerrouillee: () => locked, renderCahier: () => { cahierRenders++; }, confirm: () => true, URL: { createObjectURL: blob => { const url = 'blob:test-' + createdUrls.length; createdUrls.push({url, blob}); return url; }, revokeObjectURL: url => { revokedUrls.push(url); } }, setTimeout };
+  vm.runInNewContext(fs.readFileSync('assets/fiche-devoir-documents.js', 'utf8'), { window, document, setTimeout, console, Blob });
   const host = () => ({ isConnected: true, innerHTML: '', events: {}, addEventListener(name, fn) { this.events[name] = fn; } });
   const upload = (h, type, files) => h.events.change({ target: { dataset: { upload: type }, files, value: 'x' } });
   const click = (h, action, type, index) => h.events.click({ target: { closest: () => ({ dataset: { [action]: type, index: String(index) } }) } });
   const file = name => Object.assign(new Blob(['abc']), { name });
-  return { api: window.STI_FICHE_DEVOIR_DOCUMENTS, host, upload, click, file, downloaded, setProfile: p => { profile = p; }, setLocked: value => { locked = value; }, getRenders: () => cahierRenders, setCloudDown: value => { cloudDown = value; }, seed: value => idb.seed(value) };
+  return { api: window.STI_FICHE_DEVOIR_DOCUMENTS, host, upload, click, file, downloaded, setProfile: p => { profile = p; }, setLocked: value => { locked = value; }, getRenders: () => cahierRenders, setCloudDown: value => { cloudDown = value; }, seed: value => idb.seed(value), cloud, createdUrls, revokedUrls };
 }
 
 test('affiche uniquement les évaluations du planning', () => {
@@ -117,37 +118,54 @@ test('refuse les fichiers vides ou trop volumineux sans remplacer les fichiers e
   assert.match(h.innerHTML, /10 Mo/); assert.match(h.innerHTML, /original.pdf/);
 });
 
-test('les pièces de toute séance sont partagées avec le cahier et isolées par classe et professeur', async () => {
+test('le cahier affiche uniquement les énoncés PDF des devoirs, sans retirer les autres fichiers des fiches', async () => {
   const t = setup(), cours = {cls:'3SI1', n:5, tri:1, blk:{k:'cours'}}, examen = {cls:'3SI1', n:12, tri:1, blk:{k:'dc'}};
   const h = t.host(); t.api.mount(h, cours); await flush();
-  assert.match(h.innerHTML, /Documents de la séance/);
-  assert.match(h.innerHTML, /data-upload="ressources" multiple/);
-  assert.doesNotMatch(h.innerHTML, /data-upload="enonce"/);
-  await t.upload(h, 'ressources', [t.file('cours.pdf'), t.file('exercice.zip')]);
-  assert.equal(t.getRenders(), 1);
+  await t.upload(h, 'ressources', [t.file('cours.pdf')]);
+  t.seed({owner:'id:prof-a',session:'3SI1|5',type:'enonce',files:[{name:'ancien-cours.pdf',blob:t.file('ancien-cours.pdf')}]});
   const ex = t.host(); t.api.mount(ex, examen); await flush();
-  await t.upload(ex, 'enonce', [t.file('sujet.pdf')]);
+  await t.upload(ex, 'enonce', [t.file('texte.docx'), t.file('sujet.pdf'), t.file('suite.PDF')]);
+  await t.upload(ex, 'ressources', [t.file('annexe.pdf')]);
   await t.upload(ex, 'correction', [t.file('corrigé.pdf')]);
-  assert.equal(t.getRenders(), 3);
+  assert.match(ex.innerHTML, /texte.docx/); assert.match(ex.innerHTML, /annexe.pdf/); assert.match(ex.innerHTML, /corrigé.pdf/);
   function notebook() {
-    const nodes = ['3SI1|5', '3SI1|12', '4SI2|5'].map(key => ({ dataset: {cahDocs: key}, innerHTML: '' }));
-    return { isConnected:true, nodes, events:{}, querySelectorAll() { return nodes; }, addEventListener(name, fn) { this.events[name] = fn; } };
+    const nodes = ['3SI1|5', '3SI1|12', '4SI2|12'].map(key => ({ dataset: {cahDocs: key}, innerHTML: '' }));
+    const events = {}, previews = [];
+    return { isConnected:true, nodes, events, previews,
+      querySelectorAll(selector) {
+        if (selector === '[data-cah-docs]') return nodes;
+        if (selector === '[data-cah-preview]') {
+          for (const node of nodes) {
+            for (const match of node.innerHTML.matchAll(/data-cah-preview data-cah-session="([^"]+)" data-index="(\d+)"/g)) {
+              previews.push({dataset:{cahSession:match[1], index:match[2]}, textContent:'', append(...children){this.children=children;}});
+            }
+          }
+          return previews;
+        }
+        return [];
+      },
+      addEventListener(name, fn) { events[name] = fn; }, removeEventListener(name) { delete events[name]; }
+    };
   }
-  const sessions = [cours, examen, {...cours, cls:'4SI2'}], cahier = notebook();
+  const sessions = [cours, examen, {...examen, cls:'4SI2'}], cahier = notebook();
   t.api.mountCahier(cahier, sessions); await flush();
-  assert.match(cahier.nodes[0].innerHTML, /cours.pdf/); assert.match(cahier.nodes[0].innerHTML, /exercice.zip/);
-  assert.doesNotMatch(cahier.nodes[0].innerHTML, /sujet.pdf/);
-  assert.match(cahier.nodes[1].innerHTML, /sujet.pdf/); assert.match(cahier.nodes[1].innerHTML, /corrigé.pdf/);
-  assert.equal(cahier.nodes[2].innerHTML, '');
-  await cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|5', cahDownload:'ressources', index:'0'}}) } });
-  await cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|12', cahDownload:'correction', index:'0'}}) } });
-  assert.deepEqual(t.downloaded, ['cours.pdf', 'corrigé.pdf']);
-  await t.click(h, 'remove', 'ressources', 0); assert.equal(t.getRenders(), 4);
-  const after = notebook(); t.api.mountCahier(after, sessions); await flush();
-  assert.doesNotMatch(after.nodes[0].innerHTML, /cours.pdf/); assert.match(after.nodes[0].innerHTML, /exercice.zip/);
+  assert.equal(cahier.nodes[0].innerHTML, ''); assert.equal(cahier.nodes[2].innerHTML, '');
+  assert.match(cahier.nodes[1].innerHTML, /sujet.pdf/); assert.match(cahier.nodes[1].innerHTML, /suite.PDF/);
+  assert.doesNotMatch(cahier.nodes[1].innerHTML, /texte.docx|annexe.pdf|corrigé.pdf/);
+  assert.equal(cahier.previews.length, 2);
+  assert.equal(cahier.previews[0].children[0].tag, 'iframe');
+  assert.equal(cahier.previews[0].children[0].sandbox, 'allow-scripts');
+  assert.equal(t.createdUrls[0].blob.type, 'application/pdf');
+  await cahier.events.click({target:{closest:()=>({dataset:{cahSession:'3SI1|12', cahDownload:'enonce', index:'1'}})}});
+  assert.deepEqual(t.downloaded, ['sujet.pdf']);
+  await cahier.events.click({target:{closest:()=>({dataset:{cahSession:'3SI1|12', cahDownload:'correction', index:'0'}})}});
+  await cahier.events.click({target:{closest:()=>({dataset:{cahSession:'3SI1|12', cahDownload:'enonce', index:'0'}})}});
+  assert.deepEqual(t.downloaded, ['sujet.pdf']);
   t.setProfile({prof_id:'prof-b'});
-  await cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|5', cahDownload:'ressources', index:'0'}}) } });
-  assert.deepEqual(t.downloaded, ['cours.pdf', 'corrigé.pdf']);
+  await cahier.events.click({target:{closest:()=>({dataset:{cahSession:'3SI1|12', cahDownload:'enonce', index:'1'}})}});
+  assert.deepEqual(t.downloaded, ['sujet.pdf']);
+  t.api.unmountCahier(cahier);
+  assert.deepEqual(t.revokedUrls, t.createdUrls.slice(0,2).map(item=>item.url));
   const other = notebook(); t.api.mountCahier(other, sessions); await flush();
   assert.ok(other.nodes.every(node => node.innerHTML === ''));
 });
@@ -196,4 +214,29 @@ test('une panne Cloud est signalée et ne fait pas disparaître les fichiers loc
   assert.match(h.innerHTML, /Cloud inaccessible/); assert.match(h.innerHTML, /ancien.pdf/);
   assert.match(h.innerHTML, /data-upload="ressources" multiple disabled/);
   await t.click(h,'download','ressources',0); assert.deepEqual(t.downloaded,['ancien.pdf']);
+});
+
+test('un énoncé PDF local est affiché ; une fermeture pendant le chargement Cloud ne crée pas de lien périmé', async () => {
+  const t = setup(), session = {cls:'4SI2', n:9, tri:1, blk:{k:'ds'}};
+  t.seed({owner:'id:prof-a',session:'4SI2|9',type:'enonce',files:[{name:'local.PDF',blob:t.file('local.PDF')}]});
+  const fiche = t.host(); t.api.mount(fiche, session); await flush();
+  await t.upload(fiche, 'enonce', [t.file('cloud.pdf')]);
+  let resolveDownload;
+  t.cloud.download = () => new Promise(resolve => { resolveDownload = resolve; });
+  const node = {dataset:{cahDocs:'4SI2|9'},innerHTML:''}, targets = [];
+  const cahier = {isConnected:true, events:{},
+    querySelectorAll(selector) {
+      if (selector === '[data-cah-docs]') return [node];
+      for (const m of node.innerHTML.matchAll(/data-cah-preview data-cah-session="([^"]+)" data-index="(\d+)"/g))
+        targets.push({dataset:{cahSession:m[1],index:m[2]},textContent:'',append(...items){this.children=items;}});
+      return targets;
+    }, addEventListener(name,fn){this.events[name]=fn;}, removeEventListener(name){delete this.events[name];}
+  };
+  t.api.mountCahier(cahier,[session]); await flush();
+  assert.match(node.innerHTML, /local.PDF/); assert.match(node.innerHTML, /local uniquement/);
+  assert.match(node.innerHTML, /cloud.pdf/); assert.equal(t.createdUrls.length,1);
+  assert.equal(targets[1].children[0].tag,'iframe');
+  t.api.unmountCahier(cahier);
+  resolveDownload(t.file('cloud.pdf')); await flush();
+  assert.equal(t.createdUrls.length,1); assert.deepEqual(t.revokedUrls,[t.createdUrls[0].url]);
 });
