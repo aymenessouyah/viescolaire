@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.7";
+const APP_VER = "v1.34.8";
 const APP_UPDATED_AT = "2026-11-08 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -1211,6 +1211,7 @@ function lundiDe(iso){
 }
 function renderCahier(){
   const cahierBox=document.getElementById("v-cahier");
+  if (cahierBox) window.STI_FICHE_DEVOIR_DOCUMENTS?.unmountCahier?.(cahierBox.querySelector("#cah-semaines"));
   if(!isProfessorConnected()){if(cahierBox)cahierBox.innerHTML="";return;}
   const t = todayISO();
   const currentTri = window.STI_CAHIER_DEFAULTS.currentTrimester(SESSIONS, t, CAHIER_PLANS);
