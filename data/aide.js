@@ -119,10 +119,10 @@
           'Vérifiez les objectifs, les notions associées et les annexes proposées.',
           'Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.',
           'Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.',
-          'Pour une séance de devoir de contrôle ou de synthèse, la section « Documents du devoir » permet de joindre puis télécharger l’énoncé, les ressources et la correction séparément. Chaque catégorie accepte plusieurs fichiers ; un fichier portant le même nom dans la même catégorie remplace le précédent.'
+          'Pour chaque séance, la section « Documents de la séance » permet de joindre plusieurs ressources et de les télécharger. Pour un devoir, la section « Documents du devoir » permet aussi de joindre séparément l’énoncé et la correction. Ces fichiers sont accessibles dans le cahier de textes à la même séance. Un fichier de même nom dans une catégorie remplace le précédent.'
         ],
         astuces: ['Les fiches fournies dans le dépôt sont des bases de travail : adaptez-les à votre progression réelle.',
-          'Les documents du devoir sont propres au compte et à la séance, stockés uniquement dans ce navigateur, sans chiffrement (10 Mo par fichier), sans synchronisation ni sauvegarde Cloud/Drive. Conservez les originaux ailleurs et ne joignez pas de copies d’élèves. La correction est masquée en mode classe.']
+          'Les documents joints sont propres au compte et à la séance, stockés uniquement dans ce navigateur, sans chiffrement (10 Mo par fichier), sans synchronisation ni sauvegarde Cloud/Drive. Conservez les originaux ailleurs et ne joignez pas de copies d’élèves. La correction est masquée en mode classe ; les pièces jointes ne sont pas incluses dans les exports ou impressions du cahier.']
       },
       {
         id: 'avancement', categorie: 'enseigner', titre: 'Avancement des cours', vue: 'v-avancement', icone: 'target',
@@ -336,7 +336,8 @@
           'Choisissez la classe et la période.',
           'Vérifiez le contenu de chaque séance : titre, contenu, devoirs, observations.',
           'Ajoutez votre signature manuscrite depuis « Compte » → « Profil » (elle est répétée à la fin de chaque journée).',
-          'Utilisez le centre d’impression pour générer le cahier en PDF.'
+          'Retrouvez et téléchargez les documents joints à une fiche dans la séance correspondante, en ajustant au besoin les filtres de classe, trimestre et état.',
+          'Utilisez le centre d’impression pour générer le cahier en PDF : les pièces jointes locales ne sont pas incluses.'
         ],
         astuces: ['Les séances non confirmées restent visibles mais signalées : parfait pour repérer un oubli.']
       },

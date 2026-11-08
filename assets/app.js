@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.5";
+const APP_VER = "v1.34.6";
 const APP_UPDATED_AT = "2026-11-08 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -1300,7 +1300,7 @@ function renderCahier(){
           <div class="cah-work-body"><div class="cah-work-detail"><strong>Réalisé :</strong> ${o.contenu?escapeHtml(o.contenu):'<span class="muted">Contenu réalisé non renseigné.</span>'}</div>
           ${!o.contenu&&s.blk?.det?`<div class="cah-work-detail cah-work-planned"><strong>Prévu :</strong> ${escapeHtml(s.blk.det)}</div>`:""}
           ${o.devoirs?`<div class="cah-work-detail cah-work-homework"><strong>À faire :</strong> ${escapeHtml(o.devoirs)}</div>`:""}
-          ${o.obs?`<div class="cah-work-detail"><strong>Observation :</strong> ${escapeHtml(o.obs)}</div>`:""}${report}</div>
+          ${o.obs?`<div class="cah-work-detail"><strong>Observation :</strong> ${escapeHtml(o.obs)}</div>`:""}${report}<div data-cah-docs="${escapeHtml(s.cls+"|"+s.n)}"></div></div>
         </td>
         <td class="cah-signature-cell">${signatureCell}</td>
       </tr>`;
@@ -1309,6 +1309,7 @@ function renderCahier(){
       </section>`;
     }).join("")||`<div class="cah-empty-state"><span class="cah-empty-icon">${ic("calendar")}</span><strong>Aucune séance dans cette sélection</strong><span>${cahStatus==="pending"?"Aucune séance passée à confirmer. Les séances assurées ou reportées restent accessibles avec le filtre d’état.":"Modifiez les filtres pour afficher des séances."}</span></div>`}</div>
   </div></div>`;
+  if(window.STI_FICHE_DEVOIR_DOCUMENTS) window.STI_FICHE_DEVOIR_DOCUMENTS.mountCahier(box.querySelector('#cah-semaines'),list);
   box.querySelector('#cah-class').onchange=e=>{if(["both","3SI1","4SI2"].includes(e.target.value)){cahCls=e.target.value;renderCahier();}};
   box.querySelector('#cah-term').onchange=e=>{const v=Number(e.target.value);if([0,1,2,3].includes(v)){cahTri=v;renderCahier();}};
   box.querySelector('#cah-status').onchange=e=>{if(Object.hasOwn(labels,e.target.value)){cahStatus=e.target.value;renderCahier();}};

@@ -486,6 +486,10 @@ function ensureFormBox() {
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
         </div>
       </div>
+      <details class="fiche-documents-details no-print">
+        <summary>Documents joints à la séance</summary>
+        <div id="ffm-documents-wrapper"></div>
+      </details>
       <iframe id="ffm-frame" title="Formulaire de fiche pédagogique"
               style="flex:1 1 auto;width:100%;border:0;background:#fff"></iframe>
     </div>`;
@@ -588,6 +592,12 @@ function openForm(n, classe) {
   const m = document.getElementById('fiche-form-modal');
   m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  const docsWrapper = document.getElementById('ffm-documents-wrapper');
+  if (docsWrapper && root.STI_FICHE_DEVOIR_DOCUMENTS) {
+    docsWrapper.innerHTML = '<div id="ffm-documents"></div>';
+    const session = ((root.SESSIONS && root.SESSIONS[ficCls]) || []).find(s => s.n === Number(n));
+    if (session) root.STI_FICHE_DEVOIR_DOCUMENTS.mount(document.getElementById('ffm-documents'), session, {classMode: !!root.STI_INTERFACE?.isClassMode?.()});
+  }
   const fr = document.getElementById('ffm-frame');
   formHTML().then(function (h) {
     if (fr.getAttribute('srcdoc') !== h) fr.srcdoc = h;   // le « load » remplit la fiche
@@ -736,6 +746,7 @@ function ensureBox() {
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.close()">Fermer</button>
         </div>
       </div>
+      <details class="fiche-documents-details no-print"><summary>Documents joints à la séance</summary><div id="fm-documents-wrapper"></div></details>
       <div class="box-b" id="fm-body"></div>
       <div class="box-f no-print">
         <span class="tiny muted" id="fm-hint">Tous les champs sont modifiables : cliquez dans le texte pour le corriger.</span>
@@ -757,6 +768,12 @@ function open(n) {
   ctxN = n;
   document.getElementById('fm-title').innerHTML = 'Aperçu du document — séance ' + n + ' · ' + esc(fmtShort(f.date));
   document.getElementById('fm-body').innerHTML = ficheHTML(f, true);
+  const docsWrapper = document.getElementById('fm-documents-wrapper');
+  if (docsWrapper && root.STI_FICHE_DEVOIR_DOCUMENTS) {
+    docsWrapper.innerHTML = '<div id="fm-documents"></div>';
+    const session = ((root.SESSIONS && root.SESSIONS[ficCls]) || []).find(s => s.n === Number(n));
+    if (session) root.STI_FICHE_DEVOIR_DOCUMENTS.mount(document.getElementById('fm-documents'), session, {classMode: !!root.STI_INTERFACE?.isClassMode?.()});
+  }
   document.getElementById('fm-hint').innerHTML = isEdited(n)
     ? '<span class="badge b-amber">fiche modifiée</span> vos corrections sont conservées dans votre espace.'
     : 'Tous les champs sont modifiables : cliquez dans le texte pour le corriger.';
