@@ -23,19 +23,40 @@ function fakeIndexedDB() {
       return tx;
     }
   };
-  return { open() { const req = {}; setImmediate(() => { req.result = db; if (!initialized) { initialized = true; req.onupgradeneeded(); } req.onsuccess(); }); return req; } };
+  return { seed(value) { records.set(JSON.stringify([value.owner, value.session, value.type]), value); }, open() { const req = {}; setImmediate(() => { req.result = db; if (!initialized) { initialized = true; req.onupgradeneeded(); } req.onsuccess(); }); return req; } };
 }
 const flush = () => new Promise(resolve => setTimeout(resolve, 20));
 function setup() {
   let profile = { prof_id: 'prof-a' }, downloaded = [], locked = false, cahierRenders = 0;
   const document = { createElement() { return { click() { downloaded.push(this.download); }, remove() {} }; }, body: { appendChild() {} } };
-  const window = { indexedDB: fakeIndexedDB(), activeProfessorProfile: () => profile, seanceVerrouillee: () => locked, renderCahier: () => { cahierRenders++; }, confirm: () => true, URL: { createObjectURL: () => 'blob:test', revokeObjectURL() {} }, setTimeout };
+  const records = new Map(); let cloudDown = false;
+  const cloud = {
+    async listMany(keys) {
+      if (cloudDown) throw new Error('Cloud inaccessible');
+      const result = Object.fromEntries(keys.map(key => [key, {}]));
+      for (const [key, value] of records) {
+        const [owner, session, type] = JSON.parse(key);
+        if (owner === profile.prof_id && result[session]) result[session][type] = value.slice();
+      }
+      return result;
+    },
+    async upload(session, type, file, previous) {
+      if (cloudDown) throw new Error('Cloud inaccessible');
+      const key = JSON.stringify([profile.prof_id,session,type]), files = records.get(key) || [];
+      const next = {name:file.name, blob:file.blob || file, source:'cloud', id:'doc-'+Math.random(), path:profile.prof_id+'/'+Math.random()};
+      records.set(key, files.filter(f => f.id !== previous?.id).concat(next)); return next;
+    },
+    async remove(file) { for (const [key, files] of records) records.set(key, files.filter(f => f.id !== file.id)); },
+    async download(file) { return file.blob; }
+  };
+  const idb = fakeIndexedDB();
+  const window = { indexedDB: idb, STI_FICHE_CLOUD: cloud, activeProfessorProfile: () => profile, seanceVerrouillee: () => locked, renderCahier: () => { cahierRenders++; }, confirm: () => true, URL: { createObjectURL: () => 'blob:test', revokeObjectURL() {} }, setTimeout };
   vm.runInNewContext(fs.readFileSync('assets/fiche-devoir-documents.js', 'utf8'), { window, document, setTimeout, console });
   const host = () => ({ isConnected: true, innerHTML: '', events: {}, addEventListener(name, fn) { this.events[name] = fn; } });
   const upload = (h, type, files) => h.events.change({ target: { dataset: { upload: type }, files, value: 'x' } });
   const click = (h, action, type, index) => h.events.click({ target: { closest: () => ({ dataset: { [action]: type, index: String(index) } }) } });
   const file = name => Object.assign(new Blob(['abc']), { name });
-  return { api: window.STI_FICHE_DEVOIR_DOCUMENTS, host, upload, click, file, downloaded, setProfile: p => { profile = p; }, setLocked: value => { locked = value; }, getRenders: () => cahierRenders };
+  return { api: window.STI_FICHE_DEVOIR_DOCUMENTS, host, upload, click, file, downloaded, setProfile: p => { profile = p; }, setLocked: value => { locked = value; }, getRenders: () => cahierRenders, setCloudDown: value => { cloudDown = value; }, seed: value => idb.seed(value) };
 }
 
 test('affiche uniquement les évaluations du planning', () => {
@@ -118,14 +139,14 @@ test('les pièces de toute séance sont partagées avec le cahier et isolées pa
   assert.doesNotMatch(cahier.nodes[0].innerHTML, /sujet.pdf/);
   assert.match(cahier.nodes[1].innerHTML, /sujet.pdf/); assert.match(cahier.nodes[1].innerHTML, /corrigé.pdf/);
   assert.equal(cahier.nodes[2].innerHTML, '');
-  cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|5', cahDownload:'ressources', index:'0'}}) } });
-  cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|12', cahDownload:'correction', index:'0'}}) } });
+  await cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|5', cahDownload:'ressources', index:'0'}}) } });
+  await cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|12', cahDownload:'correction', index:'0'}}) } });
   assert.deepEqual(t.downloaded, ['cours.pdf', 'corrigé.pdf']);
   await t.click(h, 'remove', 'ressources', 0); assert.equal(t.getRenders(), 4);
   const after = notebook(); t.api.mountCahier(after, sessions); await flush();
   assert.doesNotMatch(after.nodes[0].innerHTML, /cours.pdf/); assert.match(after.nodes[0].innerHTML, /exercice.zip/);
   t.setProfile({prof_id:'prof-b'});
-  cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|5', cahDownload:'ressources', index:'0'}}) } });
+  await cahier.events.click({ target: { closest: () => ({dataset:{cahSession:'3SI1|5', cahDownload:'ressources', index:'0'}}) } });
   assert.deepEqual(t.downloaded, ['cours.pdf', 'corrigé.pdf']);
   const other = notebook(); t.api.mountCahier(other, sessions); await flush();
   assert.ok(other.nodes.every(node => node.innerHTML === ''));
@@ -153,4 +174,26 @@ test('les fiches et le cahier utilisent la même séance et les mêmes documents
   assert.match(form, /STI_FICHE_DEVOIR_DOCUMENTS.mount\(document.getElementById\('ffm-documents'\), session/);
   assert.match(app, /data-cah-docs=/);
   assert.match(app, /STI_FICHE_DEVOIR_DOCUMENTS.mountCahier\(box.querySelector\('#cah-semaines'\),list\)/);
+});
+
+test('les anciens fichiers locaux restent téléchargeables et peuvent être transférés sans écraser le Cloud', async () => {
+  const t = setup(), session = {cls:'3SI1', n:5, tri:1, blk:{k:'cours'}};
+  t.seed({owner:'id:prof-a', session:'3SI1|5', type:'ressources', files:[{name:'ancien.pdf',blob:t.file('ancien.pdf')},{name:'doublon.pdf',blob:t.file('doublon.pdf')}]});
+  const h = t.host(); t.api.mount(h, session); await flush();
+  await t.upload(h, 'ressources', [t.file('doublon.pdf')]);
+  assert.match(h.innerHTML, /ancien.pdf/); assert.match(h.innerHTML, /local uniquement/);
+  await h.events.click({target:{closest:()=>({hasAttribute: name => name === 'data-migrate', dataset:{}})}});
+  assert.match(h.innerHTML, /1 fichier\(s\) envoyé\(s\)/); assert.match(h.innerHTML, /1 ignoré/);
+  assert.equal((h.innerHTML.match(/aria-label="Télécharger ancien.pdf"/g) || []).length, 2);
+  const reload = t.host(); t.api.mount(reload, session); await flush();
+  assert.match(reload.innerHTML, /ancien.pdf/); assert.match(reload.innerHTML, /local uniquement/);
+});
+
+test('une panne Cloud est signalée et ne fait pas disparaître les fichiers locaux', async () => {
+  const t = setup(), h = t.host();
+  t.seed({owner:'id:prof-a',session:'3SI1|5',type:'ressources',files:[{name:'ancien.pdf',blob:t.file('ancien.pdf')}]});
+  t.setCloudDown(true); t.api.mount(h,{cls:'3SI1',n:5,blk:{k:'cours'}}); await flush();
+  assert.match(h.innerHTML, /Cloud inaccessible/); assert.match(h.innerHTML, /ancien.pdf/);
+  assert.match(h.innerHTML, /data-upload="ressources" multiple disabled/);
+  await t.click(h,'download','ressources',0); assert.deepEqual(t.downloaded,['ancien.pdf']);
 });

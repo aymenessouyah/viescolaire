@@ -184,7 +184,7 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 **À savoir**
 
 - Les fiches fournies dans le dépôt sont des bases de travail : adaptez-les à votre progression réelle.
-- Les documents joints sont propres au compte et à la séance, stockés uniquement dans ce navigateur, sans chiffrement (10 Mo par fichier), sans synchronisation ni sauvegarde Cloud/Drive. Conservez les originaux ailleurs et ne joignez pas de copies d’élèves. La correction est masquée en mode classe ; les pièces jointes ne sont pas incluses dans les exports ou impressions du cahier.
+- Les nouveaux documents sont enregistrés dans le Cloud privé du professeur et accessibles sur ses appareils connectés (Internet requis, 10 Mo par fichier). Les anciens fichiers « local uniquement » doivent être envoyés depuis leur appareil via le bouton prévu sur chaque séance ; ils restent aussi sur cet appareil. Les noms déjà présents dans le Cloud ne sont pas écrasés lors de ce transfert. La correction est masquée en mode classe ; les fichiers ne sont pas inclus dans les exports du cahier ou les sauvegardes Drive. Conservez vos originaux ailleurs et ne joignez pas de copies d’élèves.
 
 ### Avancement des cours
 
