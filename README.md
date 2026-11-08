@@ -14,6 +14,14 @@ fiches de séances, annexes) et une sauvegarde des données.
 
 ---
 
+## Documents des séances sur plusieurs appareils
+
+Les nouveaux fichiers joints aux fiches sont stockés dans le bucket privé Supabase `documents-seances` ; leurs métadonnées sont enregistrées dans `documents_seance` et protégées par RLS pour le compte professeur. Ils sont consultables depuis la fiche et le cahier de textes, sur PC ou mobile connecté au même compte. Une connexion Internet est nécessaire pour les ajouter, les consulter ou les supprimer ; aucun envoi hors ligne n'est mis en file. Limite : 10 Mo par fichier. Les pièces jointes ne sont pas incluses dans les sauvegardes Drive ni dans les exports du cahier : conservez les originaux ailleurs.
+
+**Installation nécessaire :** après validation de l'administrateur, appliquer `supabase/migrations/20261108_documents_seance.sql` au projet Supabase utilisé par l'application. Sans cette migration, le site signale que le stockage Cloud est indisponible et ne prétend pas avoir transféré les documents. Ne pas utiliser la clé `service_role` dans le navigateur.
+
+Les fichiers joints avant cette mise à jour restent uniquement sur leur appareil d'origine. Pour chaque séance concernée, ouvrir sa fiche sur cet appareil et choisir « Envoyer les fichiers locaux de cette séance vers le Cloud ». Les originaux locaux sont conservés ; si un fichier du même nom existe déjà dans la même catégorie sur le Cloud, il est ignoré pour éviter l'écrasement. Vérifier le résultat avant toute suppression locale. Les fichiers locaux restent visibles dans le cahier avec la mention « local uniquement ».
+
 ## 1. Ce que contient le site
 
 | Onglet | Contenu |
