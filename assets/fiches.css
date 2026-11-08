@@ -189,3 +189,7 @@
   border: 0; background: #fff; color: #4A5A69; cursor: pointer; }
 #v-fiches .seg-wrap .seg-btn + .seg-btn { border-left: 1px solid var(--line, #dbe3ea); }
 #v-fiches .seg-wrap .seg-btn.active { background: linear-gradient(160deg, #175C41, #10402F); color: #F5F1E2; }
+
+/* Documents partagés avec le cahier dans le formulaire de séance. */
+.fiche-documents-details { flex: 0 0 auto; padding: 8px 14px; background: #faf8ef; border-bottom: 1px solid #e5ded7; max-height: 38vh; overflow: auto; }
+.fiche-documents-details summary { cursor: pointer; font-weight: 600; }
