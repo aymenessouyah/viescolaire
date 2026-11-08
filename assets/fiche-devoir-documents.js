@@ -71,16 +71,26 @@ async function download(file) {
   a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
   root.setTimeout(() => root.URL.revokeObjectURL(url), 2000);
 }
+async function statusForSessions(sessions) {
+  const who = owner();
+  if (!who) throw new Error('Connectez votre profil professeur pour vérifier les documents.');
+  const keys = sessions.map(s => s.cls + '|' + s.n);
+  if (!keys.length) return {data:{}, cloudError:'', localError:''};
+  const result = await load(who, keys);
+  if (owner() !== who) throw new Error('Compte changé : rechargez la liste.');
+  return result;
+}
 function mount(host, session, options = {}) {
   if (!host || !session || !session.cls || !session.n) return;
   const who = owner(), key = session.cls + '|' + session.n;
+  const onlyType = Object.hasOwn(TYPES, options.onlyType) ? options.onlyType : '';
   let data = {}, cloudError = '', localError = '', error = '', notice = '', working = !!who;
   function stillCurrent() { return host.isConnected && owner() === who; }
   function locked() { return typeof root.seanceVerrouillee === 'function' && !!root.seanceVerrouillee(session); }
   function draw() {
     if (!stillCurrent()) return;
-    const localCount = Object.values(data).reduce((n, files) => n + files.filter(f => f.source === 'local').length, 0);
-    host.innerHTML = `<section class="devoir-docs no-print" aria-label="Documents de la séance"><h3>${isDevoir(session) ? 'Documents du devoir' : 'Documents de la séance'}</h3><p class="mini-note">Les nouveaux fichiers sont enregistrés dans votre Cloud privé et accessibles sur vos appareils connectés. Connexion Internet requise, 10 Mo par fichier. Les pièces jointes ne sont pas incluses dans les exports du cahier ou les sauvegardes Drive. Ne joignez pas de copies d’élèves.</p>${!who ? '<p role="alert">Connectez votre profil professeur pour gérer les documents.</p>' : ''}${cloudError ? `<p role="alert">Cloud : ${esc(cloudError)} <button type="button" class="btn btn-xs btn-line" data-retry>Réessayer</button></p>` : ''}${localError ? `<p role="alert">Anciens fichiers locaux : ${esc(localError)}</p>` : ''}${error ? `<p role="alert">${esc(error)}</p>` : ''}${notice ? `<p role="status">${esc(notice)}</p>` : ''}${locked() ? '<p class="mini-note">Trimestre verrouillé : les documents sont en lecture seule.</p>' : ''}${localCount ? `<p class="mini-note">${localCount} ancien(s) fichier(s) restent sur cet appareil. Envoyez-les vers le Cloud depuis cet appareil ; les fichiers locaux sont conservés et les noms déjà présents dans le Cloud ne sont pas écrasés.</p><button type="button" class="btn btn-xs btn-line" data-migrate ${working || locked() || cloudError ? 'disabled' : ''}>Envoyer les fichiers locaux de cette séance vers le Cloud</button>` : ''}${Object.entries(TYPES).filter(([type]) => !(options.classMode && type === 'correction') && (isDevoir(session) || type === 'ressources' || (data[type] || []).length)).map(([type, label]) => `<div class="devoir-docs-group"><strong>${label}</strong>${(data[type] || []).length ? (data[type] || []).map((file, i) => `<div class="devoir-docs-file"><span>${esc(file.name)} <small>(${file.source === 'local' ? 'local uniquement' : 'Cloud'})</small></span><button type="button" class="btn btn-xs btn-line" data-download="${type}" data-index="${i}" aria-label="Télécharger ${esc(file.name)}" ${working ? 'disabled' : ''}>Télécharger ${label.toLowerCase()}</button><button type="button" class="btn btn-xs btn-line" data-remove="${type}" data-index="${i}" ${working || locked() || (cloudError && file.source !== 'local') ? 'disabled' : ''} aria-label="Retirer ${esc(file.name)}">Retirer</button></div>`).join('') : `<p class="mini-note">${cloudError ? 'Disponibilité Cloud inconnue.' : label + ' : aucun fichier disponible.'}</p>`}<label class="devoir-docs-add">Joindre des fichiers — ${label.toLowerCase()} <input type="file" data-upload="${type}" multiple ${!who || working || locked() || cloudError ? 'disabled' : ''}></label></div>`).join('')}</section>`;
+    const localCount = Object.entries(data).filter(([type]) => (!onlyType || type === onlyType) && !(options.classMode && type === 'correction')).reduce((n, [, files]) => n + files.filter(f => f.source === 'local').length, 0);
+    host.innerHTML = `<section class="devoir-docs no-print" aria-label="Documents de la séance"><h3>${options.forceDevoir || isDevoir(session) ? 'Documents du devoir' : 'Documents de la séance'}</h3><p class="mini-note">Les nouveaux fichiers sont enregistrés dans votre Cloud privé et accessibles sur vos appareils connectés. Connexion Internet requise, 10 Mo par fichier. Les pièces jointes ne sont pas incluses dans les exports du cahier ou les sauvegardes Drive. Ne joignez pas de copies d’élèves.</p>${!who ? '<p role="alert">Connectez votre profil professeur pour gérer les documents.</p>' : ''}${cloudError ? `<p role="alert">Cloud : ${esc(cloudError)} <button type="button" class="btn btn-xs btn-line" data-retry>Réessayer</button></p>` : ''}${localError ? `<p role="alert">Anciens fichiers locaux : ${esc(localError)}</p>` : ''}${error ? `<p role="alert">${esc(error)}</p>` : ''}${notice ? `<p role="status">${esc(notice)}</p>` : ''}${locked() ? '<p class="mini-note">Trimestre verrouillé : les documents sont en lecture seule.</p>' : ''}${localCount ? `<p class="mini-note">${localCount} ancien(s) fichier(s) restent sur cet appareil. Envoyez-les vers le Cloud depuis cet appareil ; les fichiers locaux sont conservés et les noms déjà présents dans le Cloud ne sont pas écrasés.</p><button type="button" class="btn btn-xs btn-line" data-migrate ${working || locked() || cloudError ? 'disabled' : ''}>Envoyer les fichiers locaux de cette séance vers le Cloud</button>` : ''}${Object.entries(TYPES).filter(([type]) => (!onlyType || onlyType === type) && !(options.classMode && type === 'correction') && (options.forceDevoir || isDevoir(session) || type === 'ressources' || (data[type] || []).length)).map(([type, label]) => `<div class="devoir-docs-group"><strong>${label}</strong>${(data[type] || []).length ? (data[type] || []).map((file, i) => `<div class="devoir-docs-file"><span>${esc(file.name)} <small>(${file.source === 'local' ? 'local uniquement' : 'Cloud'})</small></span><button type="button" class="btn btn-xs btn-line" data-download="${type}" data-index="${i}" aria-label="Télécharger ${esc(file.name)}" ${working ? 'disabled' : ''}>Télécharger ${label.toLowerCase()}</button><button type="button" class="btn btn-xs btn-line" data-remove="${type}" data-index="${i}" ${working || locked() || (cloudError && file.source !== 'local') ? 'disabled' : ''} aria-label="Retirer ${esc(file.name)}">Retirer</button></div>`).join('') : `<p class="mini-note">${cloudError ? 'Disponibilité Cloud inconnue.' : label + ' : aucun fichier disponible.'}</p>`}<label class="devoir-docs-add">Joindre des fichiers — ${label.toLowerCase()} <input type="file" data-upload="${type}" multiple ${!who || working || locked() || cloudError ? 'disabled' : ''}></label></div>`).join('')}</section>`;
   }
   async function refresh() {
     const result = await load(who, [key]);
@@ -93,7 +103,7 @@ function mount(host, session, options = {}) {
   }
   host.addEventListener('change', async event => {
     const input = event.target, type = input.dataset.upload;
-    if (!type || !who || !stillCurrent() || locked() || working || cloudError) return;
+    if (!type || !Object.hasOwn(TYPES, type) || (onlyType && onlyType !== type) || (options.classMode && type === 'correction') || !who || !stillCurrent() || locked() || working || cloudError) return;
     const files = Array.from(input.files || []); input.value = '';
     if (!files.length) return;
     if (files.some(file => !file.size || file.size > MAX_FILE || !file.name || file.name.length > 255)) { error = 'Chaque fichier doit être non vide, ne pas dépasser 10 Mo et avoir un nom de 255 caractères au maximum.'; draw(); return; }
@@ -109,7 +119,7 @@ function mount(host, session, options = {}) {
       notice = `${completed} fichier(s) enregistré(s) dans le Cloud.`;
     } catch (e) { error = `${completed} fichier(s) envoyé(s). ${e.message || 'Envoi impossible.'}`; }
     await refresh(); working = false; draw();
-    if (completed) { if (typeof root.renderCahier === 'function') root.renderCahier(); if (!error) root.STI_INTERFACE?.refreshFiche?.(); }
+    if (completed) { options.onChange?.(); if (typeof root.renderCahier === 'function') root.renderCahier(); if (!error) root.STI_INTERFACE?.refreshFiche?.(); }
   });
   host.addEventListener('click', async event => {
     const button = event.target.closest('button');
@@ -119,7 +129,7 @@ function mount(host, session, options = {}) {
       if (locked() || cloudError) return;
       working = true; error = ''; notice = ''; draw(); let sent = 0, skipped = 0;
       try {
-        for (const type of Object.keys(TYPES)) for (const file of (data[type] || []).filter(f => f.source === 'local')) {
+        for (const type of Object.keys(TYPES).filter(type => !onlyType || type === onlyType)) for (const file of (data[type] || []).filter(f => f.source === 'local')) {
           if (options.classMode && type === 'correction') { skipped++; continue; }
           if (!stillCurrent() || locked()) throw new Error('Séance indisponible ou trimestre verrouillé.');
           if ((data[type] || []).some(f => f.source === 'cloud' && f.name === file.name)) { skipped++; continue; }
@@ -128,10 +138,11 @@ function mount(host, session, options = {}) {
         notice = `${sent} fichier(s) envoyé(s) ; ${skipped} ignoré(s) (déjà présents ou masqués). Les originaux locaux sont conservés.`;
       } catch (e) { error = `${sent} fichier(s) envoyé(s). ${e.message || 'Transfert interrompu.'} Les fichiers locaux sont conservés.`; }
       await refresh(); working = false; draw();
-      if (sent && typeof root.renderCahier === 'function') root.renderCahier();
+      if (sent) { options.onChange?.(); if (typeof root.renderCahier === 'function') root.renderCahier(); }
       return;
     }
     const type = button.dataset.download || button.dataset.remove, index = Number(button.dataset.index);
+    if ((onlyType && onlyType !== type) || (options.classMode && type === 'correction')) return;
     const file = data[type]?.[index]; if (!file) return;
     if (button.dataset.download) {
       working = true; error = ''; draw();
@@ -149,7 +160,7 @@ function mount(host, session, options = {}) {
       });
       else await root.STI_FICHE_CLOUD.remove(file);
       notice = 'Fichier retiré.';
-      await refresh(); working = false; draw(); updateViews();
+      await refresh(); working = false; draw(); options.onChange?.(); updateViews();
     } catch (e) { error = e.message || 'Suppression impossible.'; await refresh(); working = false; draw(); }
   });
   draw(); if (who) refresh().finally(() => { working = false; draw(); });
@@ -242,5 +253,5 @@ function mountCahier(host, sessions) {
   });
 }
 
-root.STI_FICHE_DEVOIR_DOCUMENTS = { isDevoir, mount, mountCahier, unmountCahier };
+root.STI_FICHE_DEVOIR_DOCUMENTS = { isDevoir, mount, mountCahier, unmountCahier, statusForSessions };
 })(typeof window !== 'undefined' ? window : globalThis);

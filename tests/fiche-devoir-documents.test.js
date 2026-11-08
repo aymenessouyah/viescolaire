@@ -240,3 +240,32 @@ test('un énoncé PDF local est affiché ; une fermeture pendant le chargement C
   resolveDownload(t.file('cloud.pdf')); await flush();
   assert.equal(t.createdUrls.length,1); assert.deepEqual(t.revokedUrls,[t.createdUrls[0].url]);
 });
+
+test('l’ouverture ciblée gère seulement la catégorie choisie et notifie les changements', async () => {
+  const t = setup(), session = {cls:'4SI2', n:16, tri:1, blk:{k:'dc'}}, h = t.host();
+  let changes = 0;
+  t.api.mount(h, session, {onlyType:'correction', onChange:()=>changes++}); await flush();
+  assert.match(h.innerHTML, /data-upload="correction"/);
+  assert.doesNotMatch(h.innerHTML, /data-upload="enonce"|data-upload="ressources"/);
+  await t.upload(h, 'enonce', [t.file('refus.pdf')]);
+  assert.equal(changes,0);
+  await t.upload(h, 'correction', [t.file('corrige.pdf')]);
+  assert.equal(changes,1); assert.match(h.innerHTML,/corrige.pdf/);
+  let status = await t.api.statusForSessions([session]);
+  assert.equal(status.data['4SI2|16'].correction.length,1);
+  assert.equal(status.data['4SI2|16'].enonce.length,0);
+  await t.click(h, 'remove','correction',0);
+  assert.equal(changes,2);
+  status = await t.api.statusForSessions([session]);
+  assert.equal(status.data['4SI2|16'].correction.length,0);
+});
+
+test('les statuts distinguent les fichiers locaux du Cloud indisponible', async () => {
+  const t = setup(), session = {cls:'4SI2',n:16,blk:{k:'dc'}};
+  t.seed({owner:'id:prof-a',session:'4SI2|16',type:'enonce',files:[{name:'local.pdf',blob:t.file('local.pdf')}]});
+  t.setCloudDown(true);
+  const status = await t.api.statusForSessions([session]);
+  assert.match(status.cloudError,/inaccessible/);
+  assert.equal(status.data['4SI2|16'].enonce[0].source,'local');
+  assert.equal(status.data['4SI2|16'].correction.length,0);
+});
