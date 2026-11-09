@@ -1,5 +1,9 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Retour à l’icône livre de la barre latérale — `v1.34.12` (mise à jour 2026-11-06, GMT+1)
+
+Restaure l’icône livre d’origine dans la marque « Cahier de Texte » de la barre latérale, à la place du logo du ministère. Le logo livre du bandeau supérieur reste inchangé. Retire l’image ministérielle devenue inutilisée du cache hors ligne et synchronise les versions de l’application.
+
 ## Logo du ministère dans la barre latérale — `v1.34.11` (mise à jour 2026-11-06, GMT+1)
 
 Place le logo fourni dans la marque persistante du menu latéral (celle de « Cahier de Texte »), conserve l’icône livre du bandeau de page et adapte l’affichage aux différentes largeurs. Le logo reste inclus dans le cache hors ligne; versions et date sont synchronisées.

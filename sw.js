@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.34.11';
+const VERSION='sti-espace-v1.34.12';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -8,7 +8,6 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/carte-visite-site.png",
   "./assets/carte-visite-site.svg",
   "./assets/carte-visite-site.pdf",
-  "./assets/logo-ministere-tunisie.png",
   "./manifest.webmanifest",
   "./assets/style.css",
   "./assets/password-recovery.js",
