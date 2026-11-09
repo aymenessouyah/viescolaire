@@ -281,6 +281,77 @@ function card(k, v, s) {
          '<div class="info-chip-label">' + k + (s ? ' — ' + s : '') + '</div></div>';
 }
 
+const DOC_TYPES = { enonce: ['E', 'Énoncé'], ressources: ['R', 'Ressources'], correction: ['C', 'Correction'] };
+let documentIndicatorRequest = 0;
+function isFicheDevoir(f) { return f && (f.nature === 'devoir de contrôle' || f.nature === 'devoir de synthèse'); }
+function documentButtons(f) {
+  if (!isFicheDevoir(f)) return '';
+  const classMode = !!root.STI_INTERFACE?.isClassMode?.();
+  return `<div class="fic-doc-buttons no-print" role="group" aria-label="Documents du devoir, séance ${Number(f.n)}">${Object.entries(DOC_TYPES).map(([type, info]) => {
+    const hidden = classMode && type === 'correction';
+    return `<button type="button" class="fic-doc-button" data-fic-doc-n="${Number(f.n)}" data-fic-doc-type="${type}" data-state="${hidden ? 'hidden' : 'loading'}" ${hidden ? 'disabled' : ''} aria-label="${info[1]} — ${hidden ? 'masquée en mode classe' : 'vérification des fichiers'}" title="${info[1]} — ${hidden ? 'masquée en mode classe' : 'vérification des fichiers'}" onclick="STI_FICHES.documents(${Number(f.n)},'${type}')">${info[0]}</button>`;
+  }).join('')}</div>`;
+}
+async function refreshDocumentIndicators() {
+  const request = ++documentIndicatorRequest, host = document.getElementById('v-fiches'), cls = ficCls;
+  if (!host || !active()) return;
+  const buttons = Array.from(host.querySelectorAll('[data-fic-doc-n]'));
+  const nums = Array.from(new Set(buttons.map(b => Number(b.dataset.ficDocN))));
+  if (!nums.length) return;
+  let result;
+  try {
+    if (!root.STI_FICHE_DEVOIR_DOCUMENTS?.statusForSessions) throw new Error('Statut indisponible');
+    result = await root.STI_FICHE_DEVOIR_DOCUMENTS.statusForSessions(nums.map(n => ({cls, n})));
+  } catch (_) { result = {data:{}, cloudError:'indisponible', localError:'indisponible'}; }
+  if (request !== documentIndicatorRequest || ficCls !== cls || !active()) return;
+  const classMode = !!root.STI_INTERFACE?.isClassMode?.();
+  buttons.forEach(button => {
+    if (!button.isConnected) return;
+    const type = button.dataset.ficDocType, label = DOC_TYPES[type]?.[1];
+    if (!label) return;
+    const hidden = classMode && type === 'correction';
+    button.disabled = hidden;
+    if (hidden) { button.dataset.state = 'hidden'; button.title = label + ' — masquée en mode classe'; }
+    else {
+      const files = result.data[cls + '|' + button.dataset.ficDocN]?.[type] || [];
+      const unknown = !!(result.cloudError || result.localError);
+      button.dataset.state = files.length ? 'attached' : unknown ? 'unknown' : 'empty';
+      button.title = label + ' — ' + (files.length ? `${files.length} fichier(s) joint(s)${unknown ? ' (vérification partielle)' : ''}` : unknown ? 'statut indisponible, ouvrir pour réessayer' : 'aucun fichier joint');
+    }
+    button.setAttribute('aria-label', button.title);
+  });
+}
+if (typeof window !== 'undefined') window.addEventListener('focus', refreshDocumentIndicators);
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', function () {
+  if (!document.hidden) refreshDocumentIndicators();
+});
+let documentDialogFocus = null;
+function openDocuments(n, type) {
+  const f = fiche(Number(n));
+  if (!isFicheDevoir(f) || !Object.hasOwn(DOC_TYPES, type)) return;
+  if (type === 'correction' && root.STI_INTERFACE?.isClassMode?.()) return;
+  const session = ((root.SESSIONS && root.SESSIONS[ficCls]) || []).find(s => s.n === Number(n));
+  if (!session || !root.STI_FICHE_DEVOIR_DOCUMENTS) { if (root.toast) root.toast('Documents indisponibles pour cette séance.'); return; }
+  let dialog = document.getElementById('fic-doc-dialog');
+  if (!dialog) {
+    dialog = document.createElement('dialog'); dialog.id = 'fic-doc-dialog'; dialog.className = 'fic-doc-dialog';
+    dialog.setAttribute('aria-labelledby', 'fic-doc-dialog-title');
+    document.body.appendChild(dialog);
+    dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+    dialog.addEventListener('close', () => {
+      dialog.innerHTML = '';
+      refreshDocumentIndicators();
+      if (documentDialogFocus?.isConnected) documentDialogFocus.focus();
+    });
+  }
+  documentDialogFocus = document.activeElement;
+  dialog.innerHTML = `<div class="fic-doc-dialog-head"><h2 id="fic-doc-dialog-title">${esc(DOC_TYPES[type][1])} — ${esc(f.titre)}</h2><button type="button" class="btn btn-xs btn-line" data-fic-doc-close>Fermer</button></div><div id="fic-doc-dialog-body"></div>`;
+  dialog.querySelector('[data-fic-doc-close]').onclick = () => dialog.close();
+  dialog.showModal();
+  root.STI_FICHE_DEVOIR_DOCUMENTS.mount(dialog.querySelector('#fic-doc-dialog-body'), session,
+    {onlyType:type, forceDevoir:true, classMode:!!root.STI_INTERFACE?.isClassMode?.(), onChange:refreshDocumentIndicators});
+}
+
 function render() {
   try { renderRepBlock(); } catch (e) {}
   const host = document.getElementById('v-fiches');
@@ -337,6 +408,7 @@ function render() {
       </div>
     </div>
     <div class="card-b">
+      <p class="fic-doc-legend no-print">E : énoncé · R : ressources · C : correction — cercle plein et souligné : fichier joint ; pointillé : état à vérifier.</p>
       <div class="tbl-wrap">
         <table class="tbl">
           <thead><tr><th style="width:48px">N°</th><th style="width:104px">Date</th>
@@ -347,7 +419,7 @@ function render() {
               <td class="n">${f.n}</td>
               <td style="white-space:nowrap">${fmtShort(f.date)}<div class="tiny muted">${JOURS[D(f.date).getDay()]}</div></td>
               <td><div class="tt">${esc(f.titre)}${isEdited(f.n) ? ' <span class="badge b-amber">modifiée</span>' : ''}</div>
-                  <div class="det">${esc(f.axes.join(' · '))}</div></td>
+                  ${documentButtons(f)}<div class="det">${esc(f.axes.join(' · '))}</div></td>
               <td class="hide-sm"><span class="badge b-grey">${esc(f.domaines)}</span></td>
               <td><span class="badge ${f.nature==='cours'?'b-blue':f.nature==='correction'?'b-grey':'b-navy'}">${NAT[f.nature]||f.nature}</span></td>
               <td class="no-print fic-actions">
@@ -364,6 +436,7 @@ function render() {
       </div>
     </div>
   </div>`;
+  refreshDocumentIndicators();
 }
 
 /* ------------------------------------------------------------ rendu d'une fiche */
@@ -486,6 +559,10 @@ function ensureFormBox() {
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.formClose()">Fermer</button>
         </div>
       </div>
+      <details class="fiche-documents-details no-print">
+        <summary>Documents joints à la séance</summary>
+        <div id="ffm-documents-wrapper"></div>
+      </details>
       <iframe id="ffm-frame" title="Formulaire de fiche pédagogique"
               style="flex:1 1 auto;width:100%;border:0;background:#fff"></iframe>
     </div>`;
@@ -588,6 +665,12 @@ function openForm(n, classe) {
   const m = document.getElementById('fiche-form-modal');
   m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
+  const docsWrapper = document.getElementById('ffm-documents-wrapper');
+  if (docsWrapper && root.STI_FICHE_DEVOIR_DOCUMENTS) {
+    docsWrapper.innerHTML = '<div id="ffm-documents"></div>';
+    const session = ((root.SESSIONS && root.SESSIONS[ficCls]) || []).find(s => s.n === Number(n));
+    if (session) root.STI_FICHE_DEVOIR_DOCUMENTS.mount(document.getElementById('ffm-documents'), session, {classMode: !!root.STI_INTERFACE?.isClassMode?.()});
+  }
   const fr = document.getElementById('ffm-frame');
   formHTML().then(function (h) {
     if (fr.getAttribute('srcdoc') !== h) fr.srcdoc = h;   // le « load » remplit la fiche
@@ -736,6 +819,7 @@ function ensureBox() {
           <button class="btn btn-xs btn-line" onclick="STI_FICHES.close()">Fermer</button>
         </div>
       </div>
+      <details class="fiche-documents-details no-print"><summary>Documents joints à la séance</summary><div id="fm-documents-wrapper"></div></details>
       <div class="box-b" id="fm-body"></div>
       <div class="box-f no-print">
         <span class="tiny muted" id="fm-hint">Tous les champs sont modifiables : cliquez dans le texte pour le corriger.</span>
@@ -757,6 +841,12 @@ function open(n) {
   ctxN = n;
   document.getElementById('fm-title').innerHTML = 'Aperçu du document — séance ' + n + ' · ' + esc(fmtShort(f.date));
   document.getElementById('fm-body').innerHTML = ficheHTML(f, true);
+  const docsWrapper = document.getElementById('fm-documents-wrapper');
+  if (docsWrapper && root.STI_FICHE_DEVOIR_DOCUMENTS) {
+    docsWrapper.innerHTML = '<div id="fm-documents"></div>';
+    const session = ((root.SESSIONS && root.SESSIONS[ficCls]) || []).find(s => s.n === Number(n));
+    if (session) root.STI_FICHE_DEVOIR_DOCUMENTS.mount(document.getElementById('fm-documents'), session, {classMode: !!root.STI_INTERFACE?.isClassMode?.()});
+  }
   document.getElementById('fm-hint').innerHTML = isEdited(n)
     ? '<span class="badge b-amber">fiche modifiée</span> vos corrections sont conservées dans votre espace.'
     : 'Tous les champs sont modifiables : cliquez dans le texte pour le corriger.';
@@ -1738,7 +1828,7 @@ function install() {
 
 root.STI_FICHES = {
   install, render, show, filter: (k, v) => { filtre[k] = v; render(); },
-  open, close, save, reset, openClassic, printMenu, closePrintMenu, printFiche, printAll, printRepartition, printCahier, exportCahierPDF: options => printCahier(Object.assign({}, options || {}, { output: 'pdf' })), selectCahierPrintSessions,
+  open, close, save, reset, openClassic, documents: openDocuments, printMenu, closePrintMenu, printFiche, printAll, printRepartition, printCahier, exportCahierPDF: options => printCahier(Object.assign({}, options || {}, { output: 'pdf' })), selectCahierPrintSessions,
   cls: c => { ficCls = FICHES_CLS[c] ? c : '4SI2'; filtre.tri = 0; if (active()) render(); try { syncTab(); } catch (e) {} },
   openCls: (c, n) => { if (FICHES_CLS[c]) ficCls = c; open(n); },
   clsCourante: () => ficCls,

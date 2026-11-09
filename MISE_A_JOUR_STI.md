@@ -1,8 +1,8 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
-## Logo du Ministère de l’Éducation — `v1.34.4` (mise à jour 2026-11-06, GMT+1)
+## Logo du Ministère de l’Éducation — `v1.34.10` (mise à jour 2026-11-06, GMT+1)
 
-Remplace l’icône livre en haut à gauche par le logo fourni du ministère, avec cadrage adapté au conteneur et inclusion dans le cache hors ligne. Version de l’application, version attendue et cache sont synchronisés.
+Remplace l’icône livre en haut à gauche par le logo fourni du ministère, avec cadrage adapté au conteneur et inclusion dans le cache hors ligne. Version de l’application, version attendue et cache sont synchronisés. Cette révision est basée sur la version `v1.34.9` de `main`.
 
 ## Cadrage de l’Agent IA — étape 2 — `v1.34.3` (mise à jour 2026-11-07, GMT+1)
 

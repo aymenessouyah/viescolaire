@@ -391,3 +391,12 @@ tr.acc-4si2 td:first-child{box-shadow:inset 4px 0 0 var(--c-4si2)}
 #install-banner .t{font-weight:700;font-size:14px;line-height:1.2}
 #install-banner .s{font-size:12px;opacity:.85;line-height:1.35}
 #install-banner.hidden{display:none}
+
+.cah-documents { margin-top: 10px; padding: 10px; border-radius: 8px; background: #f4f5ee; }
+.cah-documents ul { list-style: none; padding: 0; margin: 6px 0 0; }
+.cah-documents li { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 5px; overflow-wrap: anywhere; }
+.cah-documents li { display: block; }
+.cah-pdf-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.cah-pdf-frame { width: 100%; height: 480px; border: 1px solid #ded9c8; border-radius: 6px; background: #fff; }
+.cah-pdf-open { display: inline-block; margin-top: 5px; font-size: 12px; }
+@media (max-width: 600px) { .cah-pdf-frame { height: 320px; } }

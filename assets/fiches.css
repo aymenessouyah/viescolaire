@@ -189,3 +189,21 @@
   border: 0; background: #fff; color: #4A5A69; cursor: pointer; }
 #v-fiches .seg-wrap .seg-btn + .seg-btn { border-left: 1px solid var(--line, #dbe3ea); }
 #v-fiches .seg-wrap .seg-btn.active { background: linear-gradient(160deg, #175C41, #10402F); color: #F5F1E2; }
+
+/* Documents partagés avec le cahier dans le formulaire de séance. */
+.fiche-documents-details { flex: 0 0 auto; padding: 8px 14px; background: #faf8ef; border-bottom: 1px solid #e5ded7; max-height: 38vh; overflow: auto; }
+.fiche-documents-details summary { cursor: pointer; font-weight: 600; }
+
+/* Accès rapides aux documents de chaque devoir. Un cercle plein indique une pièce jointe. */
+.fic-doc-buttons { display: flex; gap: 6px; margin: 5px 0; align-items: center; }
+.fic-doc-button { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid #15533c; border-radius: 50%; background: transparent; color: #15533c; font-size: 12px; font-weight: 750; line-height: 1; cursor: pointer; }
+.fic-doc-button[data-state="attached"] { background: #15533c; color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+.fic-doc-button[data-state="loading"], .fic-doc-button[data-state="unknown"] { border-style: dashed; color: #656b5c; border-color: #8c9687; }
+.fic-doc-button:focus-visible { outline: 3px solid #d8a83c; outline-offset: 2px; }
+.fic-doc-button:disabled { opacity: .45; cursor: not-allowed; }
+.fic-doc-dialog { width: min(680px, 94vw); max-height: 85vh; overflow: auto; border: 1px solid #ded9c8; border-radius: 14px; padding: 18px; background: #fffdf6; color: #12324d; box-shadow: 0 18px 60px #0005; }
+.fic-doc-dialog::backdrop { background: #0c141c99; }
+.fic-doc-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fic-doc-dialog-head h2 { margin: 0; font-size: 17px; }
+.fic-doc-legend { margin: 0 0 10px; color: #656b5c; font-size: 11px; line-height: 1.5; }
+@media (pointer: coarse) { .fic-doc-button { width: 38px; height: 38px; } }
