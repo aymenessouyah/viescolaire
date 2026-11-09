@@ -1,8 +1,12 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Logo du ministère dans la barre latérale — `v1.34.11` (mise à jour 2026-11-06, GMT+1)
+
+Place le logo fourni dans la marque persistante du menu latéral (celle de « Cahier de Texte »), conserve l’icône livre du bandeau de page et adapte l’affichage aux différentes largeurs. Le logo reste inclus dans le cache hors ligne; versions et date sont synchronisées.
+
 ## Logo du Ministère de l’Éducation — `v1.34.10` (mise à jour 2026-11-06, GMT+1)
 
-Remplace l’icône livre en haut à gauche par le logo fourni du ministère, avec cadrage adapté au conteneur et inclusion dans le cache hors ligne. Version de l’application, version attendue et cache sont synchronisés. Cette révision est basée sur la version `v1.34.9` de `main`.
+Ajoute le fichier officiel du logo du ministère au dépôt et au cache hors ligne. Son emplacement dans la marque persistante du menu latéral est précisé en `v1.34.11`. Cette révision était basée sur `v1.34.9` de `main`.
 
 ## Cadrage de l’Agent IA — étape 2 — `v1.34.3` (mise à jour 2026-11-07, GMT+1)
 

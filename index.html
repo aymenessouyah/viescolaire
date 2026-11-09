@@ -95,7 +95,7 @@
 <div class="wrap">
 <div class="ident">
 <div class="logo">
-<img src="./assets/logo-ministere-tunisie.png" alt="Ministère de l’Éducation de Tunisie">
+<svg fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5Z"></path><path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5"></path></svg>
 </div>
 <div>
 <h1><span id="hero-prof" onclick="openProfil()" style="cursor:pointer" title="Votre profil (nom, matière) — cliquer pour modifier">Professeur</span></h1>
@@ -125,7 +125,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.34.10";
+  var ATTENDU = "v1.34.11";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -166,7 +166,7 @@
 
 <!-- ===================== ONGLETS ===================== -->
 <aside id="vs-sidebar" class="vs-sidebar no-print" aria-label="Espace pédagogique et navigation">
- <a class="vs-brand" href="#v-dash" onclick="go('v-dash');return false"><span class="vs-brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5c-3-2-7-2-10-1v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/><path d="M12 5v15"/></svg></span><span><strong>Cahier de Texte</strong><small>STI · LYCÉE RAFÈHA ARIANA</small></span></a>
+ <a class="vs-brand" href="#v-dash" onclick="go('v-dash');return false"><span class="vs-brand-icon"><img src="./assets/logo-ministere-tunisie.png" alt="Ministère de l’Éducation de Tunisie"></span><span><strong>Cahier de Texte</strong><small>STI · LYCÉE RAFÈHA ARIANA</small></span></a>
 
  <p class="vs-navlabel">PILOTAGE</p>
  <nav class="tabbar no-print" aria-label="Navigation principale"><div class="wrap" id="tabs"></div></nav>
@@ -243,7 +243,7 @@
     </div>
     <div>
       Année scolaire 2026-2027 &bull; Données locales + sauvegarde distante Supabase &bull; <span id="ft-year"></span>
-      &bull; <span id="app-release">Plateforme v1.34.10 · mise à jour 2026-11-06 (GMT+1)</span>
+      &bull; <span id="app-release">Plateforme v1.34.11 · mise à jour 2026-11-06 (GMT+1)</span>
       &bull; <a href="politique-confidentialite.html">Politique de confidentialité</a>
     </div>
   </div>
