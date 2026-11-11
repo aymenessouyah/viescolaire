@@ -1,5 +1,15 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Titre de la fiche pédagogique modifiable — `v1.34.12` (mise à jour 2026-11-11, GMT+1)
+
+La fenêtre de formulaire de la fiche pédagogique n’offrait aucun champ pour le titre : une fiche marquée « (modifiée) » continuait donc d’afficher « CSS3 — pseudo-classes, pseudo-éléments et sélecteurs d’attributs » alors que la séance avait changé de contenu.
+
+- `assets/fiche-formulaire.html` : nouveau champ **Titre de la séance** (pleine largeur, au-dessus des modules), version du formulaire `v1.6.6`.
+- `assets/fiches.js` : le champ est prérempli avec le titre de la fiche, relu à l’enregistrement, enregistré dans la fiche et reporté sur le document imprimé, la liste, la recherche et les sélecteurs d’impression (`list()` rend désormais les fiches effectives).
+- La fiche suit le titre saisi dans la fiche de séance du cahier de textes ; la synchronisation automatique ne remplace plus un titre renommé (`titleFromFiche` n’est vrai que pour un titre encore automatique). Une fiche « modifiée » dont le titre n’a pas bougé reprend donc le nouveau titre de la séance.
+- Guide du professeur (`docs/AIDE-ENSEIGNANT.md`) et test `tests/fiche-titre.test.js` ajoutés.
+- Version de l’application, version attendue et cache hors ligne synchronisés.
+
 ## Logo du ministère dans la barre latérale — `v1.34.11` (mise à jour 2026-11-06, GMT+1)
 
 Place le logo fourni dans la marque persistante du menu latéral (celle de « Cahier de Texte »), conserve l’icône livre du bandeau de page et adapte l’affichage aux différentes largeurs. Le logo reste inclus dans le cache hors ligne; versions et date sont synchronisées.

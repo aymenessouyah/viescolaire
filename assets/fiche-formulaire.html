@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" data-form-build="v1.6.5">
+<html lang="fr" data-form-build="v1.6.6">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -28,6 +28,9 @@ input[type=text]:focus{outline:2px solid var(--c4);outline-offset:0;border-color
 .step h3{margin:0 0 6px;font-size:15px}
 .num{font-size:28px;font-weight:700}
 .meta{margin-top:12px}
+.titre{margin-top:12px}
+.titre input{font-weight:700}
+.titre-note{font-weight:400;letter-spacing:0;text-transform:none;color:var(--mut)}
 .moy{margin-top:12px}
 .bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
 /* ---- avancement : fonctions et propriétés des annexes ---- */
@@ -156,6 +159,7 @@ button.sec{background:var(--mut)}
   <div class="box c"><label for="duree">Durée totale</label><input type="text" id="duree" value="120 min"></div>
   <div class="box d"><label for="projet">Projet</label><input type="text" id="projet" value="Fleurs Rafèha"></div>
 </div>
+<div class="box a titre"><label for="titre">Titre de la séance <span class="titre-note">— ce titre s’imprime sur la fiche et remplace celui de la répartition</span></label><input type="text" id="titre" value=""></div>
 <div class="box c meta"><label for="modules">Modules</label><input type="text" id="modules" value="SQL, HTML5, CSS, JavaScript, PHP"></div>
 
 <h2>Suivi de la séance</h2>

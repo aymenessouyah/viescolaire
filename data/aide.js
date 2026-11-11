@@ -117,6 +117,7 @@
         etapes: [
           'Choisissez la classe et le bloc ou la séance.',
           'Vérifiez les objectifs, les notions associées et les annexes proposées.',
+          'Pour renommer la séance, ouvrez « Modifier dans le formulaire » et corrigez le champ **Titre de la séance** : ce titre remplace celui de la répartition sur la fiche, dans la liste, à l’impression et dans le cahier de textes. Un titre saisi directement dans la fiche de séance du cahier de textes est également repris par la fiche pédagogique.',
           'Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.',
           'Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.',
           'Dans la liste des fiches, les boutons E, R et C sous chaque devoir ouvrent respectivement l’énoncé, les ressources et la correction. Un bouton plein et souligné indique qu’au moins un fichier est joint ; un contour pointillé signale que son état est en cours de vérification ou indisponible.',
