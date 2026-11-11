@@ -39,7 +39,10 @@ let classic = null;          // référence à l'ancienne modale (cahier de text
 
 /* ------------------------------------------------------------ utilitaires */
 function base(c) { return (root.STI_DATA && root.STI_DATA[FICHES_CLS[c || ficCls].cle]) || {}; }
-function list() { return Object.values(base()).sort((a, b) => a.n - b.n); }
+/* la liste rend les fiches EFFECTIVES : titre saisi, modules, etc. Sans cela, la
+   liste, les sélecteurs d'impression et la recherche réaffichaient le titre de la
+   répartition alors que la fiche avait été renommée. */
+function list() { return Object.values(base()).map(b => fiche(b.n)).sort((a, b) => a.n - b.n); }
 function D(iso) { return new Date(iso + 'T00:00:00'); }
 function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -59,7 +62,34 @@ function fiche(n) {
   const e = edits[ficCls + '|' + n];
   if (e) Object.assign(f, e);
   if (!f.modules) f.modules = CF().modules;
+  /* Titre : une fiche renommée garde son titre. Sinon — fiche vierge, ou fiche
+     modifiée dont le titre est resté celui de la répartition — la fiche suit le
+     titre saisi à la main dans le cahier de textes, au lieu de réafficher
+     indéfiniment « CSS3 — pseudo-classes… » alors que la séance a changé. */
+  const dansFiche = String((e && e.titre) || '').trim();
+  const defaut = String(b.titre || '').trim();
+  if (!dansFiche || dansFiche === defaut) {
+    const saisi = titreSaisi(n, ficCls);
+    if (saisi && saisi !== defaut) f.titre = saisi;
+  }
   return f;
+}
+/* titre écrit par le professeur dans la séance (cahier de textes), s'il existe
+   et s'il ne vient pas d'un simple report automatique de la fiche */
+function titreSaisi(n, c) {
+  const o = (root.store && root.store.seances && root.store.seances[c + '|' + n]) || {};
+  const t = String(o.title || '').trim();
+  if (!t || o.titleFromFiche === true) return '';
+  return t;
+}
+/* Un titre est « automatique » quand il correspond encore à celui prévu par la
+   répartition (ou au titre saisi dans le cahier de textes) : la synchro peut
+   alors le rafraîchir. S'il a été renommé, il est conservé tel quel. */
+function isAutoTitle(titre, n) {
+  const b = base()[String(n || formN || ctxN)];
+  if (!b) return true;
+  const t = String(titre || '').trim();
+  return t === String(b.titre || '').trim() || t === titreSaisi(n || formN || ctxN, ficCls);
 }
 function isEdited(n) { return !!edits[ficCls + '|' + n]; }
 
@@ -122,8 +152,11 @@ function syncPreparations() {
     if (!cur.devoirs && f.maison) o.devoirs = plat(f.maison);
     const s = sess.find(x => x.n === f.n);
     const ref = s && s.blk ? s.blk.t : '';
+    /* le titre effectif (fiche modifiée ou titre saisi dans le cahier) ne doit
+       jamais être remplacé par celui de la répartition */
+    const eff = fiche(f.n).titre;
     if (!cur.title || cur.titleFromFiche === true || cur.title === ref) {
-      if (o.title !== f.titre) { o.title = f.titre; o.titleFromFiche = true; }
+      if (o.title !== eff) { o.title = eff; o.titleFromFiche = true; }
     }
     if (JSON.stringify(o) !== JSON.stringify(cur)) { st.seances[k] = o; changed++; }
   });
@@ -195,11 +228,13 @@ function fillPreparations(silent) {
       const kk = c + '|' + s.n;
       const o = root.store.seances[kk] || {};
       if (o.preparation && String(o.preparation).trim()) return;   // préservée
+      /* le titre déjà saisi par le professeur n'est pas écrasé par celui de la répartition */
+      const gardeTitre = o.title && o.titleFromFiche !== true && String(o.title).trim() !== String(f.titre).trim();
       root.store.seances[kk] = Object.assign({}, o, {
         preparation: prepText(f, c),
         devoirs: (o.devoirs && String(o.devoirs).trim()) ? o.devoirs : plat(f.maison),
-        title: f.titre,
-        prepFromFiche: true, titleFromFiche: true, ficheCls: c
+        title: gardeTitre ? o.title : (edits[c + '|' + s.n] && edits[c + '|' + s.n].titre) || f.titre,
+        prepFromFiche: true, titleFromFiche: !gardeTitre, ficheCls: c
       });
       changed++;
     });
@@ -513,7 +548,7 @@ let formHTMLPromise = null;
 /* Le service worker renvoie index.html pour toute navigation : on ne peut donc
    pas charger le formulaire par le src d'une iframe. On récupère le fichier par
    fetch() puis on l'injecte dans l'iframe par srcdoc. */
-const FORM_BUILD = 'v1.6.5';          /* version de assets/fiche-formulaire.html attendue */
+const FORM_BUILD = 'v1.6.6';          /* version de assets/fiche-formulaire.html attendue */
 function formHTML() {
   if (!formHTMLPromise) {
     formHTMLPromise = fetch('assets/fiche-formulaire.html?v=' + FORM_BUILD, { cache: 'no-cache' })
@@ -598,6 +633,10 @@ function fillForm(n) {
   set('duree', (f.duree || 120) + ' min');
   set('projet', f.projet || (ficCls === '3SI1' ? 'Site du club' : 'Fleurs Rafèha'));
   set('modules', f.modules || CF().modules);
+  /* le titre est le seul champ qui ne figurait pas dans le formulaire : il était
+     donc impossible de remplacer « CSS3 — pseudo-classes… » par le contenu réel
+     de la séance. Il est désormais saisi et enregistré comme les autres. */
+  set('titre', f.titre || '');
   w.resetAll = function () { fillForm(n); };          // « Rétablir » = valeurs de la fiche
   /* les boutons de la page (imprimer / rétablir) font doublon avec la barre de la
      boîte : on les masque pour ne pas imprimer le formulaire par erreur */
@@ -744,7 +783,7 @@ function readForm() {
   const moy = Array.prototype.map.call(doc.querySelectorAll('#moy input'), V).filter(Boolean);
   const h = function (id) { const el = doc.getElementById(id); return el ? String(el.value).trim() : ''; };
   return { obj: obj, mpc: mpc, steps: steps, moy: moy,
-           classe: h('classe'), seance: h('seance'), duree: h('duree'), projet: h('projet'), modules: h('modules') };
+           titre: h('titre'), classe: h('classe'), seance: h('seance'), duree: h('duree'), projet: h('projet'), modules: h('modules') };
 }
 
 /* enregistre la fiche : champs du formulaire → fiche → préparation → impression */
@@ -761,7 +800,7 @@ function commit(f) {
       const k = ficCls + '|' + f.n;
       root.store.seances[k] = Object.assign({}, root.store.seances[k] || {},
         { preparation: prepText(f, ficCls), devoirs: plat(f.maison) || (root.store.seances[k] || {}).devoirs,
-          title: f.titre });
+          title: f.titre, titleFromFiche: isAutoTitle(f.titre, f.n) });
       root.save(true);
     }
   } catch (e) {}
@@ -789,6 +828,8 @@ function applyForm(d) {
   f.modules = d.modules || f.modules;
   f.duree = Number(String(d.duree).replace(/[^0-9]/g, '')) || f.duree;
   f.projet = d.projet;
+  /* titre saisi dans le formulaire : il remplace celui de la répartition */
+  if (d.titre) f.titre = d.titre;
   return f;
 }
 
@@ -913,7 +954,7 @@ function save() {
       const prep = prepText(f);
       root.store.seances[k] = Object.assign({}, root.store.seances[k] || {},
         { preparation: prep, devoirs: plat(f.maison), title: f.titre,
-          prepFromFiche: false, titleFromFiche: false });
+          prepFromFiche: false, titleFromFiche: isAutoTitle(f.titre, ctxN) });
       root.save(true);
     }
   } catch (e) {}

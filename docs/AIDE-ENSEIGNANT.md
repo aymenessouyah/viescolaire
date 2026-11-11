@@ -177,10 +177,11 @@ Cet espace réunit la vie scolaire d’une année : séances et fiches, notions 
 
 1. Choisissez la classe et le bloc ou la séance.
 2. Vérifiez les objectifs, les notions associées et les annexes proposées.
-3. Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.
-4. Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.
-5. Dans la liste des fiches, les boutons E, R et C sous chaque devoir ouvrent respectivement l’énoncé, les ressources et la correction. Un bouton plein et souligné indique qu’au moins un fichier est joint ; un contour pointillé signale que son état est en cours de vérification ou indisponible.
-6. Pour chaque séance, la section « Documents de la séance » permet de joindre plusieurs ressources et de les télécharger. Pour un devoir, la section « Documents du devoir » permet aussi de joindre séparément l’énoncé et la correction. Seuls les énoncés de devoir au format PDF sont affichés dans le cahier de textes à la même séance ; les autres fichiers restent accessibles dans la fiche. Un fichier de même nom dans une catégorie remplace le précédent.
+3. Pour renommer la séance, ouvrez « Modifier dans le formulaire » et corrigez le champ **Titre de la séance** : ce titre remplace celui de la répartition sur la fiche, dans la liste, à l’impression et dans le cahier de textes. Un titre saisi directement dans la fiche de séance du cahier de textes est également repris par la fiche pédagogique.
+4. Utilisez « Imprimer » pour obtenir la fiche au format papier ou PDF.
+5. Le centre d’impression de l’en-tête permet d’imprimer plusieurs fiches d’un coup.
+6. Dans la liste des fiches, les boutons E, R et C sous chaque devoir ouvrent respectivement l’énoncé, les ressources et la correction. Un bouton plein et souligné indique qu’au moins un fichier est joint ; un contour pointillé signale que son état est en cours de vérification ou indisponible.
+7. Pour chaque séance, la section « Documents de la séance » permet de joindre plusieurs ressources et de les télécharger. Pour un devoir, la section « Documents du devoir » permet aussi de joindre séparément l’énoncé et la correction. Seuls les énoncés de devoir au format PDF sont affichés dans le cahier de textes à la même séance ; les autres fichiers restent accessibles dans la fiche. Un fichier de même nom dans une catégorie remplace le précédent.
 
 **À savoir**
 
