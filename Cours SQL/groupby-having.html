@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GROUP BY et HAVING — Mon cours SQL</title>
+<script>try{var mode=localStorage.getItem('sti_color_mode_v1');if(mode==='dark'||mode==='light')document.documentElement.setAttribute('data-color-mode',mode)}catch(e){}</script>
+<style>
+:root{--bg:#F5F2E8;--card:#fff;--tx:#1c2a23;--mu:#55655c;--bd:#d5dcd4;--ac:#10402f;--acbg:#e0efe6;--am:#7a5200;--ambg:#fbeecb;--hd:#F5F2E8;--code:#111915}
+@media (prefers-color-scheme:dark){:root:not([data-color-mode="light"]){--bg:#141a17;--card:#1c2420;--tx:#e8eee9;--mu:#9fb0a6;--bd:#2f3b35;--ac:#6fcf9f;--acbg:#1f3a2e;--am:#f0c35a;--ambg:#3a2f12;--hd:#141a17;--code:#0d1512}}
+html[data-color-mode="dark"]{color-scheme:dark;--bg:#141a17;--card:#1c2420;--tx:#e8eee9;--mu:#9fb0a6;--bd:#2f3b35;--ac:#6fcf9f;--acbg:#1f3a2e;--am:#f0c35a;--ambg:#3a2f12;--hd:#141a17;--code:#0d1512}
+html[data-color-mode="light"]{color-scheme:light;--bg:#F5F2E8;--card:#fff;--tx:#1c2a23;--mu:#55655c;--bd:#d5dcd4;--ac:#10402f;--acbg:#e0efe6;--am:#7a5200;--ambg:#fbeecb;--hd:#F5F2E8;--code:#111915}
+*{box-sizing:border-box}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 56px);scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font:400 16px/1.6 Figtree,system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque",Georgia,serif;line-height:1.15;margin:0}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--hd);border-bottom:1px solid var(--bd);display:flex;gap:4px;overflow-x:auto;padding:8px 16px}
+nav a{color:var(--tx);text-decoration:none;padding:6px 12px;border-radius:20px;white-space:nowrap;font-weight:500;font-size:15px}
+nav a:hover,nav a:focus-visible{background:var(--acbg);outline:none}
+.w{max-width:980px;margin:0 auto;padding:0 20px}
+.back{display:inline-flex;align-items:center;gap:8px;color:var(--ac);text-decoration:none;font-weight:700;border:1px solid var(--bd)!important}
+.back:hover{text-decoration:underline}
+.hero{background:#16211d;color:#f1efe6;padding:46px 0 40px}
+.hero .brand{font:700 15px/1 Figtree,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#7fd6a4}
+.hero h1{font-size:clamp(30px,6vw,50px);max-width:22ch;margin-top:10px}
+.hero p{max-width:62ch;color:#c7d3cc;margin:14px 0 0}
+.menu{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.menu a{border:1px dashed #8fa398;color:#f1efe6;text-decoration:none;padding:6px 14px;border-radius:6px;font-size:15px}
+.menu a:hover{background:#22302a}
+section{padding:40px 0 8px}
+h2{font-size:clamp(23px,4vw,31px);margin-bottom:6px}
+.lead{color:var(--mu);margin:0 0 18px;max-width:68ch}
+.vid{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.vid video{display:block;width:100%;aspect-ratio:16/9;border-radius:10px;background:#0d1512;outline:none}
+.vid video:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+.vidbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+.vidbar .badge{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--mu)}
+.vidbar .badge b{color:var(--ac)}
+.vidbar .acts{display:flex;flex-wrap:wrap;gap:8px}
+.vidbar .acts a,.vidbar .acts button{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:20px;padding:7px 14px;font:inherit;font-size:14px;font-weight:500;text-decoration:none;cursor:pointer}
+.vidbar .acts a:hover,.vidbar .acts button:hover{background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+.vidbar .acts button[aria-pressed="true"]{background:var(--ac);border-color:var(--ac);color:var(--card)}
+.chapters{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin-top:14px}
+.chapters button{display:flex;gap:10px;align-items:center;text-align:left;background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 12px;font:inherit;font-size:14px;color:var(--tx);cursor:pointer;line-height:1.3}
+.chapters button:hover,.chapters button:focus-visible{border-color:var(--ac);background:var(--acbg)}
+.chapters button .t{font-variant-numeric:tabular-nums;color:var(--ac);font-weight:700;flex:none}
+.chapters button .lv{color:var(--mu);font-size:12px;display:block;margin-top:2px}
+#ccbox{margin-top:12px;padding:12px 16px;border:1px solid var(--ac);border-radius:10px;background:var(--acbg);color:var(--tx);font-size:18px;line-height:1.7;text-align:center;min-height:60px}
+pre{background:var(--code);color:#e8eee9;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 14.5px/1.65 ui-monospace,Menlo,Consolas,monospace;margin:12px 0}
+pre .k{color:#7fd6a4}.pre-legend{font-size:13px;color:var(--mu);margin:-6px 0 12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px}
+.card h3{font-size:18px;margin:0 0 6px}
+.card p{margin:4px 0;font-size:15px;color:var(--mu)}
+.card.good{border-left:4px solid var(--ac)}
+.card.warn{border-left:4px solid var(--am)}
+table.tb{border-collapse:collapse;width:100%;font-size:14.5px;margin-top:8px}
+table.tb th,table.tb td{border:1px solid var(--bd);padding:7px 10px;text-align:left;vertical-align:top}
+table.tb th{background:var(--acbg);font-weight:600}
+table.tb td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mu{color:var(--mu)}
+details.script{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-top:12px}
+details.script[open]{border-color:var(--ac)}
+details.script summary{cursor:pointer;font-weight:600}
+.sp{margin-top:10px;font-size:15px;line-height:1.75}
+.sp p{margin:0 0 8px}
+.sp p b{color:var(--ac)}
+footer{padding:36px 0;color:var(--mu);font-size:14px}
+#back-to-top{position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));z-index:20;display:grid;place-items:center;width:48px;height:48px;border:1px solid var(--bd);border-radius:50%;background:var(--card);color:var(--ac);box-shadow:0 4px 18px rgba(0,0,0,.18);font:700 23px/1 system-ui,sans-serif;cursor:pointer}
+#back-to-top[hidden]{display:none}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@media (max-width:560px){.vid{padding:8px}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style></head><body>
+<nav aria-label="Sections"><a class="back" href="../index.html">← Retour à la plateforme</a><a href="#video">La vidéo</a><a href="#principe">Le principe</a><a href="#syntaxe">La syntaxe</a><a href="#having">HAVING</a><a href="#ordre">L’ordre logique</a><a href="#erreurs">Les erreurs</a></nav>
+
+<header class="hero"><div class="w">
+<span class="brand">STI V2.0 By A'e</span>
+<h1>Pour mieux comprendre GROUP BY et HAVING</h1>
+<p>Regrouper des lignes, calculer un total par groupe, puis filtrer ces groupes — sur la table des collaborateurs et la table des absences, avec des montants en dinars. Le cours est expliqué en alternant le français et la darija tunisienne.</p>
+<div class="menu"><a href="#video">La vidéo</a><a href="#principe">Le principe</a><a href="#syntaxe">La syntaxe</a><a href="#having">HAVING</a><a href="#erreurs">Les erreurs</a></div>
+</div></header>
+
+<section id="video"><div class="w">
+<h2>La vidéo du cours</h2>
+<p class="lead">Cinq minutes suffisent pour comprendre les deux commandes. Les phrases techniques sont en français, les explications en darija ; les chapitres et la transcription sont sous la vidéo.</p>
+<div class="vid">
+<video id="vid-sql" controls preload="metadata" playsinline poster="./video/poster-1280.jpg" width="1280" height="720" aria-label="Cours vidéo : GROUP BY et HAVING en SQL">
+<source src="./video/groupby-having.mp4" type="video/mp4">
+<p>Votre navigateur ne lit pas la vidéo intégrée. <a href="./video/groupby-having.mp4">Ouvrir le fichier MP4</a>.</p>
+</video>
+<div class="vidbar">
+<span class="badge"><b>Français + darija</b> · <span id="vid-dur">—</span> · 8 chapitres</span>
+<span class="acts">
+<button type="button" id="vid-cc" aria-pressed="false" title="Afficher ou masquer les sous-titres dans la page">Sous-titres</button>
+<button type="button" id="vid-speed" title="Changer la vitesse de lecture">Vitesse 1×</button>
+<a href="./video/groupby-having.mp4" download="groupby-having.mp4">Télécharger</a>
+</span>
+</div>
+<div class="chapters" id="vid-chapters"></div>
+<div id="ccbox" hidden aria-live="polite"></div>
+<details class="script"><summary>Transcription complète</summary><div class="sp" id="vid-script"></div></details>
+</div>
+</div></section>
+
+<section id="principe"><div class="w">
+<h2>Le principe : découper, puis résumer</h2>
+<p class="lead">On part d’une table de collaborateurs — un nom, un département, un salaire en dinars — et on veut le total des salaires <em>par département</em>.</p>
+<div class="grid2">
+<div class="card"><h3>1. Les groupes</h3><p>On prend les valeurs distinctes de la colonne : Finance, Informatique, RH, Achats, Ventes, Marketing. Chaque valeur donne un groupe.</p></div>
+<div class="card"><h3>2. Le résumé</h3><p>Dans chaque groupe, on applique un calcul : la somme des salaires. Une ligne par groupe, pas une ligne par personne.</p></div>
+</div>
+<pre><span class="k">SELECT</span> departement, <span class="k">SUM</span>(salaire) <span class="k">AS</span> total
+<span class="k">FROM</span> collaborateurs
+<span class="k">GROUP BY</span> departement;</pre>
+<p class="pre-legend">11 lignes détaillées ➜ 6 lignes de synthèse, avec un total en dinars par département.</p>
+<table class="tb">
+<thead><tr><th>departement</th><th>salaires regroupés</th><th>total (DT)</th></tr></thead>
+<tbody>
+<tr><td>Finance</td><td>5 990,76 + 2 006,13 + 4 125,13</td><td class="num">12 122,02</td></tr>
+<tr><td>Informatique</td><td>4 660,42 + 4 808,99</td><td class="num">9 469,41</td></tr>
+<tr><td>RH</td><td>2 236,75 + 2 005,97</td><td class="num">4 242,72</td></tr>
+<tr><td>Achats</td><td>3 642,88</td><td class="num">3 642,88</td></tr>
+<tr><td>Ventes</td><td>3 240,35 + 2 060,90</td><td class="num">5 301,25</td></tr>
+<tr><td>Marketing</td><td>2 700,78</td><td class="num">2 700,78</td></tr>
+</tbody></table>
+</div></section>
+
+<section id="syntaxe"><div class="w">
+<h2>La syntaxe de GROUP BY</h2>
+<p class="lead">Toujours quatre morceaux : la colonne de regroupement, la fonction d’agrégation, la table, puis le GROUP BY.</p>
+<pre><span class="k">SELECT</span>   colonne_de_regroupement,
+         fonction_agregation(colonne)
+<span class="k">FROM</span>     table
+<span class="k">GROUP BY</span> colonne_de_regroupement;</pre>
+<div class="grid2">
+<div class="card good"><h3>À retenir</h3><p>GROUP BY ne sert jamais seul : il s’accompagne toujours de SUM, COUNT, AVG, MIN ou MAX.</p><p>La colonne du GROUP BY doit figurer dans le SELECT.</p></div>
+<div class="card warn"><h3>Deuxième exemple</h3><p>Sur la table des absences : <code>GROUP BY type_absence</code> avec <code>SUM(duree_absence)</code> donne le total des heures par type (congé, retard, maladie, maternité…).</p><p>En remplaçant SUM par MAX, on obtient la plus longue absence de chaque type.</p></div>
+</div>
+</div></section>
+
+<section id="having"><div class="w">
+<h2>HAVING : filtrer les groupes</h2>
+<p class="lead">WHERE filtre les lignes <em>avant</em> le regroupement ; HAVING filtre les groupes <em>après</em>. C’est toute la différence.</p>
+<table class="tb">
+<thead><tr><th>Clause</th><th>Ce qu’elle filtre</th><th>Quand</th><th>Exemple</th></tr></thead>
+<tbody>
+<tr><td>WHERE</td><td>les lignes</td><td>avant le regroupement</td><td><code>WHERE salaire &gt; 2000</code></td></tr>
+<tr><td>HAVING</td><td>les groupes</td><td>après le regroupement</td><td><code>HAVING SUM(salaire) &gt; 5000</code></td></tr>
+</tbody></table>
+<pre><span class="k">SELECT</span>   departement, <span class="k">SUM</span>(salaire) <span class="k">AS</span> total
+<span class="k">FROM</span>     collaborateurs
+<span class="k">GROUP BY</span> departement
+<span class="k">HAVING</span>   <span class="k">SUM</span>(salaire) &gt; 5000;</pre>
+<p class="pre-legend">Seuls les départements dont le total dépasse 5 000 dinars apparaissent.</p>
+</div></section>
+
+<section id="ordre"><div class="w">
+<h2>L’ordre logique d’exécution</h2>
+<p class="lead">Le serveur ne lit pas la requête de haut en bas : il exécute dans cet ordre. C’est ce qui explique où chaque filtre a le droit de se placer.</p>
+<pre><span class="k">FROM</span> ➜ <span class="k">WHERE</span> ➜ <span class="k">GROUP BY</span> ➜ <span class="k">HAVING</span> ➜ <span class="k">SELECT</span> ➜ <span class="k">ORDER BY</span></pre>
+<div class="grid2">
+<div class="card"><h3>Conséquence 1</h3><p>HAVING ne peut pas être écrit avant GROUP BY : au moment où WHERE s’exécute, les groupes n’existent pas encore.</p></div>
+<div class="card"><h3>Conséquence 2</h3><p>Un alias défini dans le SELECT n’est pas encore connu du WHERE : on ne peut pas l’y utiliser.</p></div>
+</div>
+</div></section>
+
+<section id="erreurs"><div class="w">
+<h2>L’erreur à éviter</h2>
+<p class="lead">La faute la plus fréquente en devoir : mettre dans le SELECT une colonne qui n’est ni groupée, ni agrégée.</p>
+<pre><span class="k">SELECT</span> departement, nom, <span class="k">SUM</span>(salaire)
+<span class="k">FROM</span> collaborateurs
+<span class="k">GROUP BY</span> departement;</pre>
+<p class="pre-legend">Ici <code>nom</code> n’est ni groupé, ni agrégé : la requête est fausse.</p>
+<div class="card warn"><h3>Règle d’or</h3><p>Toute colonne non agrégée du SELECT doit figurer dans le GROUP BY.</p></div>
+<div class="grid2" style="margin-top:14px">
+<div class="card"><h3>Récapitulatif</h3><p><b>GROUP BY</b> découpe les lignes en groupes.</p><p><b>L’agrégat</b> résume chaque groupe.</p><p><b>HAVING</b> filtre les groupes ; <b>WHERE</b> filtre les lignes, avant.</p></div>
+<div class="card"><h3>Pour s’entraîner</h3><p>Séance 25 : « SQL — fonctions d’agrégat et regroupements », et les six requêtes d’agrégation sur la base du club.</p></div>
+</div>
+</div></section>
+
+<footer><div class="w">Mon cours SQL · GROUP BY et HAVING · STI V2.0 By A'e</div></footer>
+<script src="../tools/sql-video-data.js"></script>
+<button id="back-to-top" hidden aria-label="Revenir en haut de la page">↑</button>
+<script>
+/* ---- chapitres, sous-titres et transcription de la vidéo ---- */
+(function(){
+  var v=document.getElementById('vid-sql'); if(!v) return;
+  /* les temps sont recalés par tools (voir CHAPITRES) — sinon déduits du fichier */
+  var CHAP=[
+    [0,     "Introduction",            "Pourquoi GROUP BY"],
+    [0,     "GROUP BY",                "Découper puis résumer"],
+    [0,     "La syntaxe",              "SELECT … GROUP BY"],
+    [0,     "Résultat",                "6 lignes, en dinars"],
+    [0,     "Deuxième exemple",        "La table absence"],
+    [0,     "HAVING",                  "Filtrer les groupes"],
+    [0,     "L’ordre logique",         "FROM, WHERE, GROUP BY…"],
+    [0,     "L’erreur à éviter",       "Colonne non agrégée"]
+  ];
+  var CUES=[];
+  var box=document.getElementById('ccbox'), btn=document.getElementById('vid-cc');
+  var chapBox=document.getElementById('vid-chapters');
+  var on=false;
+
+  function hms(s){s=Math.max(0,Math.round(s));return (s/60|0)+':'+('0'+(s%60)).slice(-2);}
+  function renderChapters(){
+    chapBox.innerHTML=CHAP.map(function(c){
+      return '<button type="button" data-t="'+c[0]+'"><span class="t">'+hms(c[0])+'</span>'+
+             '<span>'+c[1]+'<span class="lv">'+c[2]+'</span></span></button>';
+    }).join('');
+    Array.prototype.forEach.call(chapBox.querySelectorAll('button'),function(b){
+      b.addEventListener('click',function(){
+        v.currentTime=parseFloat(b.getAttribute('data-t'))+0.2;
+        v.play().catch(function(){});
+        if(v.scrollIntoView)v.scrollIntoView({block:'center'});
+      });
+    });
+  }
+  function paint(){
+    if(!on){box.hidden=true;return;}
+    var t=v.currentTime||0, cur=null;
+    for(var i=0;i<CUES.length;i++){ if(t>=CUES[i][0]&&t<CUES[i][1]){cur=CUES[i];break;} }
+    box.hidden=false; box.textContent=cur?cur[2]:''; box.style.opacity=cur?1:.3;
+  }
+  btn.addEventListener('click',function(){
+    on=!on; btn.setAttribute('aria-pressed',String(on)); paint();
+    if(on&&box.scrollIntoView)box.scrollIntoView({block:'nearest'});
+  });
+  v.addEventListener('timeupdate',paint);
+  v.addEventListener('seeked',paint);
+
+  var speeds=[1,1.25,1.5,0.75], si=0, sb=document.getElementById('vid-speed');
+  sb.addEventListener('click',function(){
+    si=(si+1)%speeds.length; v.playbackRate=speeds[si];
+    sb.textContent='Vitesse '+String(speeds[si]).replace('.',',')+'×';
+  });
+
+  function ready(){
+    var d=v.duration;
+    if(isFinite(d)&&d>0){ document.getElementById('vid-dur').textContent=hms(d); }
+  }
+  v.addEventListener('loadedmetadata',ready);
+  v.addEventListener('durationchange',ready);
+
+  /* données injectées par tools/sql-video-data.js (chapitres + sous-titres + transcription) */
+  if(window.SQL_VIDEO_DATA){
+    CHAP=window.SQL_VIDEO_DATA.chapters; CUES=window.SQL_VIDEO_DATA.cues||[];
+    var sp=document.getElementById('vid-script');
+    if(sp) sp.innerHTML=window.SQL_VIDEO_DATA.script.map(function(p){
+      return '<p><b>'+p[0]+'</b> — '+p[1]+'</p>';
+    }).join('');
+  }
+  renderChapters(); paint();
+
+  var top=document.getElementById('back-to-top');
+  if(top){
+    top.addEventListener('click',function(){ window.scrollTo({top:0,behavior:'smooth'}); });
+    var onScroll=function(){ top.hidden = window.scrollY < 400; };
+    window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  }
+})();
+</script>
+</body></html>

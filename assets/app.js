@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.16";
+const APP_VER = "v1.34.17";
 const APP_UPDATED_AT = "2026-11-11 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -224,7 +224,7 @@ function renderAll(silent){
   document.getElementById("tabs").innerHTML = visibleTabs.map(t =>
     '<button class="tab '+(currentTab===t.id?"on":"")+'" onclick="go(\''+t.id+'\')">'+ic(t.ico)+t.t+
     (connected&&t.id==="v-rep" ? '<span class="cnt">'+ (SESSIONS["3SI1"].concat(SESSIONS["4SI2"]).filter(s => s.iso >= todayISO()).length) +'</span>' : '') +
-    '</button>' + (t.id==="v-agent" ? '<a class="tab vs-course-ai" href="./Cours%20Ai/agent-ia-guide.html" title="Ouvrir le cours sur l’architecture des agents IA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8M8 14h5"/></svg><span>Mon cours Ai</span></a>' : '')).join("");
+    '</button>' + (t.id==="v-agent" ? '<a class="tab vs-course-ai" href="./Cours%20Ai/agent-ia-guide.html" title="Ouvrir le cours sur l’architecture des agents IA"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8M8 14h5"/></svg><span>Mon cours Ai</span></a><a class=\"tab vs-course-ai\" href=\"./Cours%20SQL/groupby-having.html\" title=\"Ouvrir le cours SQL : GROUP BY et HAVING\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><ellipse cx=\"12\" cy=\"5.5\" rx=\"8\" ry=\"3\"/><path d=\"M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13\"/><path d=\"M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3\"/></svg><span>Mon cours SQL</span></a>' : '')).join("");
   document.getElementById("tb-today").innerHTML = "Nous sommes le <strong>"+fmtLong(todayISO())+"</strong>";
   document.getElementById("ft-year").textContent = "Mise à jour : " + (typeof store.saved === "string" ? fmtShort(store.saved.slice(0,10)) + " " + store.saved.slice(11,16) : "session en cours");
   const release = document.getElementById("app-release");
