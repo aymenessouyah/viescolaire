@@ -1,5 +1,17 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## « يْكُولّي » / « أنتي » / « الرانديفو » — `v1.34.16` (mise à jour 2026-11-11, GMT+1)
+
+Trois retouches de prononciation signalées à l’écoute :
+
+- **« يا يْكُولّي ما نعرفش »** au lieu de « يقولي » (le ج se prononce « y » dans ce verbe) : scène des limites du LLM, et « يْكُولك صباح النور » dans la scène du LLM.
+- **« أنتي »** partout, jamais « أنت » : reformulations dans les scènes 3, 4, 5, 6, 7 et 8, et dans les textes des plans correspondants.
+- **« وقتاش الرانديفو الجاي مع محمد؟ »** au lieu de « الموعد الجاي » : la question du plan d’exemple, avec la réponse « يا يْكُولّي ما نعرفش ».
+
+Conséquence : les scènes 3 à 8 ont été réenregistrées et le film remonté à **6 min 12** ; les 27 plans visuels restent identiques, les coupes et la barre de progression sont recalculées, et les 40 sous-titres sont recalés sur la nouvelle timeline (contrôle : aucun chevauchement, aucun débordement de scène).
+
+Version de l’application, version attendue, cache hors ligne et journal synchronisés.
+
 ## « هوني الحكاية » — `v1.34.15` (mise à jour 2026-11-11, GMT+1)
 
 Dans la scène du workflow, la voix disait « **هنا** الحكاية » à l’arabe standard (*houna al-hikaya*). La phrase est passée en tunisien : « **هوني الحكاية تولّي مفيدة** » (*houni l-ħkēya*), et la scène a été réenregistrée.
