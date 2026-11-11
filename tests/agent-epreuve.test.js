@@ -307,9 +307,9 @@ test('rouvrir une copie du relevé restaure la proposition et sa revalidation', 
 test('le module est publié avec la version de l’application et mis en cache', () => {
   assert.match(indexHtml, /assets\/agent-epreuve\.js[\s\S]*assets\/agent-sti\.js/);
   assert.match(workerSource, /\.\/assets\/agent-epreuve\.js/);
-  assert.match(workerSource, /v1\.34\.13/);
-  assert.match(indexHtml, /v1\.34\.13/);
-  assert.match(appSource, /APP_VER = "v1\.34\.13"/);
+  assert.match(workerSource, /v1\.34\.14/);
+  assert.match(indexHtml, /v1\.34\.14/);
+  assert.match(appSource, /APP_VER = "v1\.34\.14"/);
 });
 
 test('parcours complet : dossier importé → file → copie rouverte → note validée → relevé', async () => {

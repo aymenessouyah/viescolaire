@@ -100,14 +100,14 @@ footer{padding:40px 0;color:var(--mu);font-size:14px}
 </div></header>
 <main class="w">
 <section id="video"><h2>La vidéo : les agents IA en darija</h2>
-<p class="lead">La même progression que ce cours, en 5 min 57, racontée en tunisien : les trois niveaux, du LLM au workflow puis à l’agent, avec des exemples de tous les jours et de la classe. Les chapitres et la transcription sont sous la vidéo.</p>
+<p class="lead">La même progression que ce cours, en 6 min 15, racontée en tunisien : les trois niveaux, du LLM au workflow puis à l’agent, avec des exemples de tous les jours et de la classe. Les chapitres et la transcription sont sous la vidéo.</p>
 <div class="vid">
 <video id="vid-ai" controls preload="metadata" playsinline poster="./video/poster-1280.jpg" width="1280" height="720" aria-label="Vidéo : les agents IA expliqués en darija tunisienne">
 <source src="./video/agent-ia-darija.mp4" type="video/mp4">
 <p>Votre navigateur ne lit pas la vidéo intégrée. <a href="./video/agent-ia-darija.mp4">Ouvrir le fichier MP4</a>.</p>
 </video>
 <div class="vidbar">
-<span class="badge"><b>Narration en tunisien</b> · 5:57 · 9 chapitres · sous-titres dans la page</span>
+<span class="badge"><b>Narration en tunisien</b> · 6:15 · 9 chapitres · sous-titres dans la page</span>
 <span class="acts">
 <button type="button" id="vid-cc" aria-pressed="false" title="Afficher ou masquer les sous-titres dans la page">Sous-titres</button>
 <button type="button" id="vid-speed" title="Changer la vitesse de lecture">Vitesse 1×</button>
@@ -116,14 +116,14 @@ footer{padding:40px 0;color:var(--mu);font-size:14px}
 </div>
 <div class="chapters" id="vid-chapters">
 <button type="button" data-t="0:00"><span class="t">0:00</span><span>Introduction : les trois niveaux<span class="lv">Introduction</span></span></button>
-<button type="button" data-t="0:36"><span class="t">0:36</span><span>Niveau 1 — Qu’est-ce qu’un LLM ?<span class="lv">Niveau 1 · LLM</span></span></button>
-<button type="button" data-t="1:21"><span class="t">1:21</span><span>Niveau 1 — Les limites du LLM seul<span class="lv">Niveau 1 · LLM</span></span></button>
-<button type="button" data-t="1:58"><span class="t">1:58</span><span>Niveau 2 — Le workflow : l’ordre, c’est vous<span class="lv">Niveau 2 · Workflow</span></span></button>
-<button type="button" data-t="2:40"><span class="t">2:40</span><span>Niveau 2 — Le RAG et l’exemple de l’école<span class="lv">Niveau 2 · Workflow</span></span></button>
-<button type="button" data-t="3:24"><span class="t">3:24</span><span>Niveau 3 — L’agent : but, outils, boucle<span class="lv">Niveau 3 · Agent</span></span></button>
-<button type="button" data-t="4:11"><span class="t">4:11</span><span>Niveau 3 — Pourquoi l’agent coûte plus cher<span class="lv">Niveau 3 · Agent</span></span></button>
-<button type="button" data-t="4:53"><span class="t">4:53</span><span>Récapitulatif : lequel choisir ?<span class="lv">Synthèse</span></span></button>
-<button type="button" data-t="5:35"><span class="t">5:35</span><span>Conclusion : l’agent n’est pas magique<span class="lv">Clôture</span></span></button>
+<button type="button" data-t="0:38"><span class="t">0:38</span><span>Niveau 1 — Qu’est-ce qu’un LLM ?<span class="lv">Niveau 1 · LLM</span></span></button>
+<button type="button" data-t="1:27"><span class="t">1:27</span><span>Niveau 1 — Les limites du LLM seul<span class="lv">Niveau 1 · LLM</span></span></button>
+<button type="button" data-t="2:06"><span class="t">2:06</span><span>Niveau 2 — Le workflow : l’ordre, c’est vous<span class="lv">Niveau 2 · Workflow</span></span></button>
+<button type="button" data-t="2:50"><span class="t">2:50</span><span>Niveau 2 — Le RAG et l’exemple de l’école<span class="lv">Niveau 2 · Workflow</span></span></button>
+<button type="button" data-t="3:36"><span class="t">3:36</span><span>Niveau 3 — L’agent : but, outils, boucle<span class="lv">Niveau 3 · Agent</span></span></button>
+<button type="button" data-t="4:25"><span class="t">4:25</span><span>Niveau 3 — Pourquoi l’agent coûte plus cher<span class="lv">Niveau 3 · Agent</span></span></button>
+<button type="button" data-t="5:08"><span class="t">5:08</span><span>Récapitulatif : lequel choisir ?<span class="lv">Synthèse</span></span></button>
+<button type="button" data-t="5:51"><span class="t">5:51</span><span>Conclusion : l’agent n’est pas magique<span class="lv">Clôture</span></span></button>
 </div>
 <div id="vid-ccbox" hidden aria-live="polite" style="margin-top:12px;padding:12px 16px;border:1px solid var(--ac);border-radius:10px;background:var(--acbg);color:var(--tx);font-size:19px;line-height:1.8;direction:rtl;text-align:center;min-height:64px"></div>
 <details class="script"><summary>Transcription complète (darija)</summary><div class="sp" id="vid-script"></div></details>
@@ -321,46 +321,46 @@ $("q").addEventListener("input",gl);bt();gl();
 (function(){
   var v=document.getElementById('vid-ai'); if(!v) return;
   var CUES=[
-    [0,6.5,"ثَلاثة مُستويات، خُطوة خُطوة، بالدارجة التونسية."],
-    [6.5,16,"اللي يحكي على الـ Agent، بَرْشة مَرّات يخلّط بينو وبين الـ ChatGPT."],
-    [16,25,"المُستوى الأوّل: الـ LLM. الثاني: الـ AI Workflow. الثالث: الـ AI Agent."],
-    [25,35.2,"وبأمثلة من الحياة اليومية، ومن المدرسة متاعنا. يلّا نبداو."],
-    [36,44,"المُستوى الأوّل: الـ LLM، الموديل الكبير للغة."],
-    [44,52,"ChatGPT و Gemini و Claude: برامج مبنية فوقو."],
-    [52,60,"تدرّب على كمّية هائلة من النصوص، وتعلّم كيفاش تتبع الكلام."],
-    [60,68,"هو ما يعرفش الحقيقة، يعرف الكلمة اللي تجي بعد الكلمة."],
-    [68,74,"كلام يدخل، وكلام يخرج. وبسّ."],
-    [74,81,"وحدو ما عندوش أدوات، ولا دخلة للعالم الحقيقي."],
-    [81,90,"وقتاش الموعد الجاي مع محمد؟ الـ LLM ما عندوش دخلة للتقويم."],
-    [90,98,"ما يعرفش شكون غايب، ما يبعثش رسالة، ما يسجّلش نقطة."],
-    [98,106,"هو يجاوب برك، وأنت اللي تخدم كل شيء بيديك."],
-    [106,117,"المُستوى الأوّل: سؤال وجواب، جامد، يستنّى فيك."],
-    [118,127,"المُستوى الثاني: الـ Workflow. سلسلة خطوات ثابتة، أنت اللي تكتبها."],
-    [127,137,"أوّلاً هذا، وبعد هذا: الترتيب عندك، والموديل ينفّذ."],
-    [137,146,"كل ثلاثة أيام: يقرا الآراء، يلخّص، يكتب إعلان، ويبعث."],
-    [146,152,"كل هذا بلا ما تحرّك إصبعك."],
-    [152,159,"الموديل ما يقرّرش وين يمشي: هو ينفّذ اللي طلبت منّو."],
-    [160,170,"حتى الـ RAG، اللي الكل يحكي عليه، هو Workflow موش Agent."],
-    [170,180,"وثائق، أجزاء، أرقام، تشابه، وجواب. خطوات ترسمها أنت."],
-    [180,190,"كل يوم أحد: يقرا الغيابات، يلخّص، ويحضّر تقرير القسم."],
-    [190,199,"فايدة: رخيص، ثابت، وتتأكّد منّو بسهولة."],
-    [199,204,"عيب: كان صار شيء جديد، ما ينجّمش يتصرّف."],
-    [204,214,"المُستوى الثالث: الـ Agent. هنا الموديل ياخذ بلاصة اللي يقرّر."],
-    [214,224,"هدف، أدوات، وحلقة: يفكّر، يعمل، يشوف النتيجة، ويعاود."],
-    [224,233,"قولّو: حضّرلي اجتماع الأولياء. ما تقوللوش منين يبدا."],
-    [233,242,"يقرا الغيابات، يشوف التقويم، يكتب مسودّة، ويجي يقولك: راجع ووافق."],
-    [242,250,"هذاكة التفكير والفعل، حتى يوصل للهدف."],
-    [251,262,"الفرق: في الـ Workflow أنت تكتب الخطوات، في الـ Agent الموديل يختار."],
-    [262,272,"Agent = موديل + أدوات + حلقة. بلا حلقة، ما ثمّاش agent."],
-    [272,282,"أما أغلى، وأبطأ، وأصعب في المراقبة."],
-    [282,292,"وكل خطوة زايدة معناها خطر زايد."],
-    [293,302,"نلخّصو: LLM سؤال وجواب، Workflow خطوات ثابتة، Agent مرن."],
-    [302,312,"تنجم تكتب الخطوات؟ اعمل Workflow. ما تنجمش تتوقّعها؟ فكّر في Agent."],
-    [312,322,"وبرشة حوايج مسمّينها agent، وفي الحقيقة هي workflow."],
-    [322,334,"الاسم ما يبدّلش الحقيقة."],
-    [335,344,"الـ Agent موش سحر: موديل، أدوات، حلقة، وتحكّم من عندك."],
-    [344,352,"بلا تحكّم، يغلط برشة وبسرعة."],
-    [352,360,"كمّل التفصيل في Mon cours Ai. بالتوفيق، وبسلامة."]
+    [0,7,"ثَلاثة مُستويات، خُطوة خُطوة، بالدارجة التونسية."],
+    [7,17,"اللي يحكي على الـ Agent، بَرْشة مَرّات يخلّط بينو وبين الـ ChatGPT."],
+    [17,26,"المُستوى الأوّل: الـ LLM. الثاني: الـ AI Workflow. الثالث: الـ AI Agent."],
+    [26,38,"وبأمثلة من الحياة اليومية، ومن المدرسة متاعنا. يلّا نبداو."],
+    [39,47,"المُستوى الأوّل: الـ LLM، الموديل الكبير للغة."],
+    [47,55,"ChatGPT و Gemini و Claude: برامج مبنية فوقو."],
+    [55,63,"تدرّب على كمّية هائلة من النصوص، وتعلّم كيفاش تتبع الكلام."],
+    [63,71,"هو ما يعرفش الحقيقة، يعرف الكلمة اللي تجي بعد الكلمة."],
+    [71,78,"كلام يدخل، وكلام يخرج. وكهو."],
+    [78,88,"وحدو ما عندوش أدوات، ولا دخلة للعالم الحقيقي."],
+    [88,97,"وقتاش الموعد الجاي مع محمد؟ الـ LLM ما عندوش دخلة للتقويم."],
+    [97,105,"ما يعرفش شكون غايب، ما يبعثش رسالة، ما يسجّلش نقطة."],
+    [105,113,"هو يجاوب برك، وأنت اللي تخدم كل شيء بيديك."],
+    [113,127,"المُستوى الأوّل: سؤال وجواب، جامد، يستنّى فيك."],
+    [128,137,"المُستوى الثاني: الـ Workflow. سلسلة خطوات ثابتة، أنت اللي تكتبها."],
+    [137,147,"أوّلاً هذا، وبعد هذا: الترتيب عندك، والموديل ينفّذ."],
+    [147,157,"كل ثلاثة أيام: يقرا الآراء، يلخّص، يكتب إعلان، ويبعث."],
+    [157,163,"كل هذا بلا ما تحرّك إصبعك."],
+    [163,171,"الموديل ما يقرّرش وين يمشي: هو ينفّذ اللي طلبت منّو."],
+    [172,181,"حتى الـ RAG، اللي الكل يحكي عليه، هو Workflow موش Agent."],
+    [181,192,"وثائق، أجزاء، أرقام، تشابه، وجواب. خطوات ترسمها أنت."],
+    [192,202,"كل يوم أحد: يقرا الغيابات، يلخّص، ويحضّر تقرير القسم."],
+    [202,211,"فايدة: رخيص، ثابت، وتتأكّد منّو بسهولة."],
+    [211,218,"عيب: كان صار شيء جديد، ما ينجّمش يتصرّف."],
+    [218,228,"المُستوى الثالث: الـ Agent. هنا الموديل ياخذ بلاصة اللي يقرّر."],
+    [228,238,"هدف، أدوات، وحلقة: يفكّر، يعمل، يشوف النتيجة، ويعاود."],
+    [238,247,"قولّو: حضّرلي اجتماع الأولياء. ما تقوللوش منين يبدا."],
+    [247,257,"يقرا الغيابات، يشوف التقويم، يكتب مسودّة، ويجي يقولك: راجع ووافق."],
+    [257,267,"هذاكة التفكير والفعل، حتى يوصل للهدف."],
+    [267,278,"الفرق: في الـ Workflow أنت تكتب الخطوات، في الـ Agent الموديل يختار."],
+    [278,288,"Agent = موديل + أدوات + حلقة. بلا حلقة، ما ثمّاش agent."],
+    [288,298,"أما أغلى، وأبطأ، وأصعب في المراقبة."],
+    [298,307,"وكل خطوة زايدة معناها خطر زايد."],
+    [308,320,"نلخّصو: LLM سؤال وجواب، Workflow خطوات ثابتة، Agent مرن."],
+    [320,333,"تنجّم تكتب الخطوات؟ اعمل Workflow. ما تنجّمش تتوقّعها؟ فكّر في Agent."],
+    [333,342,"وبرشة حوايج مسمّينها agent، وفي الحقيقة هي workflow."],
+    [342,351,"الاسم ما يبدّلش الحقيقة."],
+    [352,361,"الـ Agent موش سحر: موديل، أدوات، حلقة، وتحكّم من عندك."],
+    [361,368,"بلا تحكّم، يغلط برشة وبسرعة."],
+    [368,376,"كمّل التفصيل في Mon cours Ai. بالتوفيق، وبسلامة."]
   ];
   var box=document.getElementById('vid-ccbox'), btn=document.getElementById('vid-cc');
   var on=false, last=-1;

@@ -1,5 +1,14 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Narration tunisienne retravaillée — `v1.34.14` (mise à jour 2026-11-11, GMT+1)
+
+La vidéo du cours était lue par une voix égyptienne : le **ج** y sonne « g » dur (*ynaguim*), alors qu’en tunisien il sonne « j » (*ynajjim*). La narration a été **entièrement réenregistrée avec une voix qui prononce le ج « j »**, et le film remonté.
+
+- `Cours Ai/video/agent-ia-darija.mp4` : nouvelle narration, **6 min 15** (contre 5 min 57). Les **27 plans sont conservés à l’identique** ; les coupes ont été recalées sur les silences de la nouvelle voix et la barre de progression redessinée plan par plan.
+- Texte : « وبسّ » (tournure égyptienne) remplacé par « **وكهو** ».
+- `Cours Ai/agent-ia-guide.html` : horodatages des 9 chapitres et sous-titres recollés sur la nouvelle voix ; durée affichée mise à jour.
+- Version de l’application, version attendue et cache hors ligne synchronisés.
+
 ## Vidéo « Les agents IA en darija » dans Mon cours Ai — `v1.34.13` (mise à jour 2026-11-11, GMT+1)
 
 La page « Mon cours Ai » explique l’architecture d’un agent IA en français ; elle s’ouvre maintenant par une **vidéo de 5 min 57 entièrement narrée en tunisien**. Elle reprend la progression du cours, en trois niveaux, avec des exemples de la classe.
