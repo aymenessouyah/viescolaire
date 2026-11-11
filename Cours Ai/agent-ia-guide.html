@@ -67,18 +67,67 @@ details ul{margin:10px 0 0 4px;padding-left:20px;font-size:15px}
 .tl{margin:0 0 8px}.tl .s{display:flex;gap:12px}.tl .n{display:flex;flex-direction:column;align-items:center}.tl .o{width:30px;height:30px;border-radius:50%;color:var(--card);display:flex;align-items:center;justify-content:center;font-weight:500;flex:none}.tl .v{width:2px;flex:1;background:var(--bd);min-height:8px}.tl .x{padding-bottom:14px}.tl small{color:var(--mu);font-size:13px}
 pre{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px;line-height:1.5;margin:10px 0 0}
 .tb{border-collapse:collapse;width:100%;font-size:14px;margin-top:10px}.tb th,.tb td{border:1px solid var(--bd);padding:6px 10px;text-align:left;vertical-align:top}.tb th{background:var(--acbg)}
+.vid{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.10)}
+.vid video{display:block;width:100%;aspect-ratio:16/9;border-radius:10px;background:#101613;outline:none}
+.vid video:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+.vidbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-top:12px}
+.vidbar .badge{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--mu)}
+.vidbar .badge b{color:var(--ac)}
+.vidbar .acts{display:flex;flex-wrap:wrap;gap:8px}
+.vidbar .acts a,.vidbar .acts button{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:20px;padding:7px 14px;font:inherit;font-size:14px;font-weight:500;text-decoration:none;cursor:pointer}
+.vidbar .acts a:hover,.vidbar .acts button:hover{background:var(--acbg);border-color:var(--ac);color:var(--ac)}
+.vidbar .acts button[aria-pressed="true"]{background:var(--ac);border-color:var(--ac);color:var(--card)}
+.chapters{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin-top:14px}
+.chapters button{display:flex;gap:10px;align-items:center;text-align:right;background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:9px 12px;font:inherit;font-size:14px;color:var(--tx);cursor:pointer;line-height:1.3}
+.chapters button:hover,.chapters button:focus-visible{border-color:var(--ac);background:var(--acbg)}
+.chapters button .t{font-variant-numeric:tabular-nums;color:var(--ac);font-weight:700;flex:none}
+.chapters button .lv{color:var(--mu);font-size:12px;display:block;margin-top:2px}
+.script{margin-top:12px}
+.script summary{font-weight:500;font-size:15px}
+.script .sp{white-space:pre-line;direction:rtl;text-align:right;font-size:15px;line-height:2;margin-top:10px;padding:14px 16px;background:var(--bg);border:1px dashed var(--bd);border-radius:10px;font-family:system-ui,"Segoe UI",Tahoma,sans-serif}
+.script .sp b{color:var(--ac);font-weight:600;display:block;margin-top:10px;direction:rtl}
+@media (max-width:560px){.vid{padding:8px}.vidbar .acts a,.vidbar .acts button{font-size:13px;padding:6px 11px}}
 footer{padding:40px 0;color:var(--mu);font-size:14px}
 :focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 @media (max-width:560px){ol.fl li{flex-direction:column;gap:2px}ol.fl b{min-width:0}}
 @media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}#back-to-top{transition:none}}
 </style></head><body>
-<nav aria-label="Sections"><a class="back" href="../index.html">← Retour à la plateforme</a><a href="#archi">Composants</a><a href="#flux">Flux d’une requête</a><a href="#cycle">Cycle de création</a><a href="#agent">Mon agent</a><a href="#infra">Infrastructure</a><a href="#glossaire">Glossaire</a></nav>
+<nav aria-label="Sections"><a class="back" href="../index.html">← Retour à la plateforme</a><a href="#video">Vidéo en darija</a><a href="#archi">Composants</a><a href="#flux">Flux d’une requête</a><a href="#cycle">Cycle de création</a><a href="#agent">Mon agent</a><a href="#infra">Infrastructure</a><a href="#glossaire">Glossaire</a></nav>
 <header class="hero"><div class="w">
 <h1>Construire un agent IA, comme ouvrir un restaurant</h1>
 <p>Les composants, le parcours d’une requête, les 9 étapes de création, ton Agent Vie Scolaire et un glossaire illustré par des analogies de la vie courante.</p>
-<div class="menu"><a href="#archi">Les composants</a><a href="#flux">Le flux</a><a href="#cycle">Le cycle</a><a href="#agent">Mon agent</a><a href="#glossaire">Le glossaire</a></div>
+<div class="menu"><a href="#video">La vidéo en darija</a><a href="#archi">Les composants</a><a href="#flux">Le flux</a><a href="#cycle">Le cycle</a><a href="#agent">Mon agent</a><a href="#glossaire">Le glossaire</a></div>
 </div></header>
 <main class="w">
+<section id="video"><h2>La vidéo : les agents IA en darija</h2>
+<p class="lead">La même progression que ce cours, en 5 min 57, racontée en tunisien : les trois niveaux, du LLM au workflow puis à l’agent, avec des exemples de tous les jours et de la classe. Les chapitres et la transcription sont sous la vidéo.</p>
+<div class="vid">
+<video id="vid-ai" controls preload="metadata" playsinline poster="./video/poster-1280.jpg" width="1280" height="720" aria-label="Vidéo : les agents IA expliqués en darija tunisienne">
+<source src="./video/agent-ia-darija.mp4" type="video/mp4">
+<p>Votre navigateur ne lit pas la vidéo intégrée. <a href="./video/agent-ia-darija.mp4">Ouvrir le fichier MP4</a>.</p>
+</video>
+<div class="vidbar">
+<span class="badge"><b>Narration en tunisien</b> · 5:57 · 9 chapitres · sous-titres dans la page</span>
+<span class="acts">
+<button type="button" id="vid-cc" aria-pressed="false" title="Afficher ou masquer les sous-titres dans la page">Sous-titres</button>
+<button type="button" id="vid-speed" title="Changer la vitesse de lecture">Vitesse 1×</button>
+<a href="./video/agent-ia-darija.mp4" download="agents-ia-darija.mp4">Télécharger</a>
+</span>
+</div>
+<div class="chapters" id="vid-chapters">
+<button type="button" data-t="0:00"><span class="t">0:00</span><span>Introduction : les trois niveaux<span class="lv">Introduction</span></span></button>
+<button type="button" data-t="0:36"><span class="t">0:36</span><span>Niveau 1 — Qu’est-ce qu’un LLM ?<span class="lv">Niveau 1 · LLM</span></span></button>
+<button type="button" data-t="1:21"><span class="t">1:21</span><span>Niveau 1 — Les limites du LLM seul<span class="lv">Niveau 1 · LLM</span></span></button>
+<button type="button" data-t="1:58"><span class="t">1:58</span><span>Niveau 2 — Le workflow : l’ordre, c’est vous<span class="lv">Niveau 2 · Workflow</span></span></button>
+<button type="button" data-t="2:40"><span class="t">2:40</span><span>Niveau 2 — Le RAG et l’exemple de l’école<span class="lv">Niveau 2 · Workflow</span></span></button>
+<button type="button" data-t="3:24"><span class="t">3:24</span><span>Niveau 3 — L’agent : but, outils, boucle<span class="lv">Niveau 3 · Agent</span></span></button>
+<button type="button" data-t="4:11"><span class="t">4:11</span><span>Niveau 3 — Pourquoi l’agent coûte plus cher<span class="lv">Niveau 3 · Agent</span></span></button>
+<button type="button" data-t="4:53"><span class="t">4:53</span><span>Récapitulatif : lequel choisir ?<span class="lv">Synthèse</span></span></button>
+<button type="button" data-t="5:35"><span class="t">5:35</span><span>Conclusion : l’agent n’est pas magique<span class="lv">Clôture</span></span></button>
+</div>
+<div id="vid-ccbox" hidden aria-live="polite" style="margin-top:12px;padding:12px 16px;border:1px solid var(--ac);border-radius:10px;background:var(--acbg);color:var(--tx);font-size:19px;line-height:1.8;direction:rtl;text-align:center;min-height:64px"></div>
+<details class="script"><summary>Transcription complète (darija)</summary><div class="sp" id="vid-script"></div></details>
+</div></section>
 <section id="archi"><h2>Les composants d’un agent IA</h2><p class="lead">Huit briques, chacune avec son rôle, un exemple et son équivalent dans un restaurant.</p><div class="grid" id="comp"></div></section>
 <section id="flux"><h2>Le flux d’une requête</h2><p class="lead">Ce qui se passe à chaque fois qu’un utilisateur pose une question.</p><ol class="fl" id="fl"></ol></section>
 <section id="cycle"><h2>Le cycle de création en 9 étapes</h2><p class="lead">Ouvre chaque étape pour lire l’analogie. Après l’étape 9, on retourne à l’étape 6 : un agent s’améliore en continu.</p>
@@ -267,4 +316,94 @@ $("q").addEventListener("input",gl);bt();gl();
   });
   update();
 })();
+
+/* ---- Vidéo « Les agents IA en darija » : chapitres et sous-titres ---- */
+(function(){
+  var v=document.getElementById('vid-ai'); if(!v) return;
+  var CUES=[
+    [0,6.5,"ثَلاثة مُستويات، خُطوة خُطوة، بالدارجة التونسية."],
+    [6.5,16,"اللي يحكي على الـ Agent، بَرْشة مَرّات يخلّط بينو وبين الـ ChatGPT."],
+    [16,25,"المُستوى الأوّل: الـ LLM. الثاني: الـ AI Workflow. الثالث: الـ AI Agent."],
+    [25,35.2,"وبأمثلة من الحياة اليومية، ومن المدرسة متاعنا. يلّا نبداو."],
+    [36,44,"المُستوى الأوّل: الـ LLM، الموديل الكبير للغة."],
+    [44,52,"ChatGPT و Gemini و Claude: برامج مبنية فوقو."],
+    [52,60,"تدرّب على كمّية هائلة من النصوص، وتعلّم كيفاش تتبع الكلام."],
+    [60,68,"هو ما يعرفش الحقيقة، يعرف الكلمة اللي تجي بعد الكلمة."],
+    [68,74,"كلام يدخل، وكلام يخرج. وبسّ."],
+    [74,81,"وحدو ما عندوش أدوات، ولا دخلة للعالم الحقيقي."],
+    [81,90,"وقتاش الموعد الجاي مع محمد؟ الـ LLM ما عندوش دخلة للتقويم."],
+    [90,98,"ما يعرفش شكون غايب، ما يبعثش رسالة، ما يسجّلش نقطة."],
+    [98,106,"هو يجاوب برك، وأنت اللي تخدم كل شيء بيديك."],
+    [106,117,"المُستوى الأوّل: سؤال وجواب، جامد، يستنّى فيك."],
+    [118,127,"المُستوى الثاني: الـ Workflow. سلسلة خطوات ثابتة، أنت اللي تكتبها."],
+    [127,137,"أوّلاً هذا، وبعد هذا: الترتيب عندك، والموديل ينفّذ."],
+    [137,146,"كل ثلاثة أيام: يقرا الآراء، يلخّص، يكتب إعلان، ويبعث."],
+    [146,152,"كل هذا بلا ما تحرّك إصبعك."],
+    [152,159,"الموديل ما يقرّرش وين يمشي: هو ينفّذ اللي طلبت منّو."],
+    [160,170,"حتى الـ RAG، اللي الكل يحكي عليه، هو Workflow موش Agent."],
+    [170,180,"وثائق، أجزاء، أرقام، تشابه، وجواب. خطوات ترسمها أنت."],
+    [180,190,"كل يوم أحد: يقرا الغيابات، يلخّص، ويحضّر تقرير القسم."],
+    [190,199,"فايدة: رخيص، ثابت، وتتأكّد منّو بسهولة."],
+    [199,204,"عيب: كان صار شيء جديد، ما ينجّمش يتصرّف."],
+    [204,214,"المُستوى الثالث: الـ Agent. هنا الموديل ياخذ بلاصة اللي يقرّر."],
+    [214,224,"هدف، أدوات، وحلقة: يفكّر، يعمل، يشوف النتيجة، ويعاود."],
+    [224,233,"قولّو: حضّرلي اجتماع الأولياء. ما تقوللوش منين يبدا."],
+    [233,242,"يقرا الغيابات، يشوف التقويم، يكتب مسودّة، ويجي يقولك: راجع ووافق."],
+    [242,250,"هذاكة التفكير والفعل، حتى يوصل للهدف."],
+    [251,262,"الفرق: في الـ Workflow أنت تكتب الخطوات، في الـ Agent الموديل يختار."],
+    [262,272,"Agent = موديل + أدوات + حلقة. بلا حلقة، ما ثمّاش agent."],
+    [272,282,"أما أغلى، وأبطأ، وأصعب في المراقبة."],
+    [282,292,"وكل خطوة زايدة معناها خطر زايد."],
+    [293,302,"نلخّصو: LLM سؤال وجواب، Workflow خطوات ثابتة، Agent مرن."],
+    [302,312,"تنجم تكتب الخطوات؟ اعمل Workflow. ما تنجمش تتوقّعها؟ فكّر في Agent."],
+    [312,322,"وبرشة حوايج مسمّينها agent، وفي الحقيقة هي workflow."],
+    [322,334,"الاسم ما يبدّلش الحقيقة."],
+    [335,344,"الـ Agent موش سحر: موديل، أدوات، حلقة، وتحكّم من عندك."],
+    [344,352,"بلا تحكّم، يغلط برشة وبسرعة."],
+    [352,360,"كمّل التفصيل في Mon cours Ai. بالتوفيق، وبسلامة."]
+  ];
+  var box=document.getElementById('vid-ccbox'), btn=document.getElementById('vid-cc');
+  var on=false, last=-1;
+  function cue(t){for(var i=0;i<CUES.length;i++){if(t>=CUES[i][0]&&t<CUES[i][1])return CUES[i];}return null;}
+  function paint(){
+    if(!on){box.hidden=true;return;}
+    var c=cue(v.currentTime||0);
+    box.hidden=false;
+    box.textContent=c?c[2]:'';
+    box.style.opacity=c?1:.35;
+  }
+  btn.addEventListener('click',function(){
+    on=!on; btn.setAttribute('aria-pressed',String(on)); paint();
+    if(on&&box.scrollIntoView) box.scrollIntoView({block:'nearest'});
+  });
+  v.addEventListener('timeupdate',paint);
+  v.addEventListener('seeked',paint);
+  function secs(t){var p=String(t).split(':');return p.length>1?(+p[0])*60+(+p[1]):+p;}
+  Array.prototype.forEach.call(document.querySelectorAll('#vid-chapters button'),function(b){
+    b.addEventListener('click',function(){
+      v.currentTime=secs(b.getAttribute('data-t'))+0.2;
+      v.play().catch(function(){});
+      if(v.scrollIntoView)v.scrollIntoView({block:'center'});
+    });
+  });
+  var speeds=[1,1.25,1.5,0.75], si=0, sb=document.getElementById('vid-speed');
+  sb.addEventListener('click',function(){
+    si=(si+1)%speeds.length; v.playbackRate=speeds[si];
+    sb.textContent='Vitesse '+String(speeds[si]).replace('.',',')+'×';
+  });
+  /* transcription : le texte de chaque chapitre, en darija */
+  var TXT=[["Introduction",CUES[0][2]+" "+CUES[1][2]+" "+CUES[2][2]+" "+CUES[3][2]],
+    ["Niveau 1 · LLM",CUES[4][2]+" "+CUES[5][2]+" "+CUES[6][2]+" "+CUES[7][2]+" "+CUES[8][2]+" "+CUES[9][2]],
+    ["Niveau 1 · Limites",CUES[10][2]+" "+CUES[11][2]+" "+CUES[12][2]+" "+CUES[13][2]],
+    ["Niveau 2 · Workflow",CUES[14][2]+" "+CUES[15][2]+" "+CUES[16][2]+" "+CUES[17][2]+" "+CUES[18][2]],
+    ["Niveau 2 · RAG et école",CUES[19][2]+" "+CUES[20][2]+" "+CUES[21][2]+" "+CUES[22][2]+" "+CUES[23][2]],
+    ["Niveau 3 · Agent",CUES[24][2]+" "+CUES[25][2]+" "+CUES[26][2]+" "+CUES[27][2]+" "+CUES[28][2]],
+    ["Niveau 3 · Limites",CUES[29][2]+" "+CUES[30][2]+" "+CUES[31][2]+" "+CUES[32][2]],
+    ["Synthèse",CUES[33][2]+" "+CUES[34][2]+" "+CUES[35][2]+" "+CUES[36][2]],
+    ["Clôture",CUES[37][2]+" "+CUES[38][2]+" "+CUES[39][2]]];
+  document.getElementById('vid-script').innerHTML=TXT.map(function(x){
+    return '<b>'+x[0]+'</b>'+x[1];
+  }).join('');
+})();
+
 </script></body></html>
