@@ -68,4 +68,6 @@ test('chapitres, sous-titres et transcription sont cohérents avec le montage', 
   assert.ok(arabic >= 5 && french >= 15, `mélange attendu : ${french} fr / ${arabic} ar`);
   // aucun « Vidéo 8 » dans le texte affiché
   assert.doesNotMatch(JSON.stringify(d), /[Vv]id[ée]o\s*8/);
+  // et plus de « تنجّم / تنجّمش », que la voix rendait « tnaguamch »
+  assert.doesNotMatch(JSON.stringify(d), /تنجم/);
 });

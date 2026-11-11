@@ -5,7 +5,8 @@
 Nouveau cours vidéo de SQL, sur le modèle du cours d’agent IA : une page dédiée, une vidéo courte, des chapitres et une transcription. Le carton-titre ne porte plus aucun numéro de vidéo.
 
 - `Cours SQL/groupby-having.html` (nouveau) : page « Mon cours SQL » — vidéo, chapitres cliquables, sous-titres dans la page, transcription, puis le cours écrit (principe, syntaxe, HAVING, ordre logique, erreurs).
-- `Cours SQL/video/groupby-having.mp4` + `poster-1280.jpg` : film 1920×1080, **narration alternant le français (explications techniques) et la darija tunisienne**, montants **en dinars**.
+- `Cours SQL/video/groupby-having.mp4` + `poster-1280.jpg` : film 1920×1080 de **5 min 08** (4 min 50 de parole), **narration alternant le français (explications techniques) et la darija tunisienne**, montants **en dinars**. Les 18 plans couvrent les 34 phrases et les coupes tombent sur les respirations (aucun silence de plus de 3 s).
+- Prononciation : la phrase contenant « تنجّمش » a été reformulée en « **ما تحطّش HAVING قبل GROUP BY** », qui dit la même chose sans le ج que la voix rendait *g*.
 - `tools/sql-video-data.js` (nouveau) : chapitres, sous-titres et transcription alignés sur le montage.
 - `assets/app.js` : entrée **Mon cours SQL** dans le menu, à côté de Mon cours Ai.
 - `sw.js` : page, données et médias du cours SQL en cache hors ligne (même règle « cache d’abord » que la vidéo du cours IA).
