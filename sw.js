@@ -1,9 +1,11 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.34.12';
+const VERSION='sti-espace-v1.34.13';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
   "./Cours%20Ai/agent-ia-guide.html",
+  "./Cours%20Ai/video/agent-ia-darija.mp4",
+  "./Cours%20Ai/video/poster-1280.jpg",
   "./politique-confidentialite.html",
   "./assets/carte-visite-site.png",
   "./assets/carte-visite-site.svg",
@@ -189,9 +191,19 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
     Seuls les fichiers indispensables au démarrage restent obligatoires. */
  const ESSENTIELS=/(^|\/)(index\.html|assets\/app\.js|assets\/style\.css|assets\/password-recovery\.js|assets\/signature-canvas\.js|assets\/cahier-defaults\.js|assets\/calendar-ics\.js|assets\/student-csv\.js|assets\/student-reports\.js|assets\/eleves\.js)$/;
  const manquants=[];
- await Promise.all(CORE_ASSETS.map(async p=>{
+ /* La vidéo (≈9 Mo) est mise en cache à part et sans bloquer : sur un réseau lent,
+    elle ne doit ni retarder l'installation ni la faire échouer. Elle se télécharge
+    à la première lecture, puis la règle « cache d'abord » la sert hors ligne. */
+ const VIDEO=/(^|\/)video\//;
+ const MEDIAS=CORE_ASSETS.filter(p=>VIDEO.test(p));
+ await Promise.all(CORE_ASSETS.filter(p=>!VIDEO.test(p)).map(async p=>{
    try{const r=await fetch(new Request(p,{cache:'reload'}));
        if(r.ok)await cache.put(p,r);else manquants.push(p);}catch(e){manquants.push(p);}
+ }));
+ /* vidéo + affiche : tentative silencieuse, succès ou échec sans conséquence */
+ void Promise.all(MEDIAS.map(async p=>{
+   try{const hit=await cache.match(p);if(hit)return;
+       const r=await fetch(new Request(p,{cache:'reload'}));if(r.ok)await cache.put(p,r);}catch(e){}
  }));
  const bloquants=manquants.filter(p=>ESSENTIELS.test(p));
  if(bloquants.length){await caches.delete(CORE_CACHE);throw new Error('Fichiers essentiels indisponibles : '+bloquants.join(', '));}
@@ -239,6 +251,14 @@ self.addEventListener('fetch',event=>{
  if(/\/assets\/fiche-formulaire\.html$/.test(url.pathname)){
   event.respondWith((async()=>{try{const r=await fetch(req,{cache:'reload'});if(r.ok){const c=await caches.open(CORE_CACHE);c.put(req,r.clone());}return r;}
    catch(e){const c=await caches.open(CORE_CACHE);return (await c.match(req,{ignoreSearch:true}))||new Response('Formulaire indisponible hors ligne.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;
+ }
+ /* La vidéo du cours (≈9 Mo) : cache d'abord, réseau ensuite. Elle ne change
+    qu'avec la version du cache, inutile de la retélécharger à chaque visite. */
+ if(/\/Cours%20Ai\/video\//.test(url.pathname)){
+  event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE),hit=await cache.match(req,{ignoreSearch:true});
+   if(hit)return hit;
+   try{const r=await fetch(req);if(r.ok)cache.put(req,r.clone());return r;}
+   catch(e){return new Response('Vidéo pas encore téléchargée. Reconnectez-vous puis ouvrez-la une fois.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}});}})());return;
  }
  if(corePaths.has(url.pathname)){
   /* Cache immédiat + mise à jour silencieuse : au rechargement suivant, le fichier

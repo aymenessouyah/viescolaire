@@ -1,5 +1,15 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Vidéo « Les agents IA en darija » dans Mon cours Ai — `v1.34.13` (mise à jour 2026-11-11, GMT+1)
+
+La page « Mon cours Ai » explique l’architecture d’un agent IA en français ; elle s’ouvre maintenant par une **vidéo de 5 min 57 entièrement narrée en tunisien**. Elle reprend la progression du cours, en trois niveaux, avec des exemples de la classe.
+
+- `Cours Ai/video/agent-ia-darija.mp4` (nouveau, 9 Mo, 1920×1080, 30 i/s, H.264/AAC) : neuf chapitres — introduction, LLM et ses limites, workflow (dont le RAG et l’exemple des absences), agent (but, outils, boucle), comparaison chiffrée, conclusion. Les coupes tombent sur les silences de la narration.
+- `Cours Ai/video/poster.jpg` et `poster-1280.jpg` : affiche et miniature de la carte.
+- `Cours Ai/agent-ia-guide.html` : section **La vidéo : les agents IA en darija** en tête de page, entrée dans la navigation et dans le menu du héros, neuf boutons de chapitres (clic = saut dans la vidéo), sous-titres arabes affichés dans la page (bouton *Sous-titres*), sélecteur de vitesse, téléchargement du MP4 et transcription dépliable par chapitre.
+- `sw.js` : la vidéo et son affiche entrent dans le cache hors ligne, derrière une règle propre (cache d’abord) pour ne pas retélécharger 9 Mo à chaque visite.
+- Version de l’application, version attendue et cache hors ligne synchronisés.
+
 ## Titre de la fiche pédagogique modifiable — `v1.34.12` (mise à jour 2026-11-11, GMT+1)
 
 La fenêtre de formulaire de la fiche pédagogique n’offrait aucun champ pour le titre : une fiche marquée « (modifiée) » continuait donc d’afficher « CSS3 — pseudo-classes, pseudo-éléments et sélecteurs d’attributs » alors que la séance avait changé de contenu.

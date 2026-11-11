@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.12";
+const APP_VER = "v1.34.13";
 const APP_UPDATED_AT = "2026-11-11 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
