@@ -1,15 +1,11 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.34.17';
+const VERSION='sti-espace-v1.34.18';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
   "./Cours%20Ai/agent-ia-guide.html",
   "./Cours%20Ai/video/agent-ia-darija.mp4",
   "./Cours%20Ai/video/poster-1280.jpg",
-  "./Cours%20SQL/groupby-having.html",
-  "./Cours%20SQL/video/groupby-having.mp4",
-  "./Cours%20SQL/video/poster-1280.jpg",
-  "./tools/sql-video-data.js",
   "./politique-confidentialite.html",
   "./assets/carte-visite-site.png",
   "./assets/carte-visite-site.svg",
@@ -258,7 +254,7 @@ self.addEventListener('fetch',event=>{
  }
  /* La vidéo du cours (≈9 Mo) : cache d'abord, réseau ensuite. Elle ne change
     qu'avec la version du cache, inutile de la retélécharger à chaque visite. */
- if(/\/(Cours%20Ai|Cours%20SQL)\/video\//.test(url.pathname)){
+ if(/\/Cours%20Ai\/video\//.test(url.pathname)){
   event.respondWith((async()=>{const cache=await caches.open(CORE_CACHE),hit=await cache.match(req,{ignoreSearch:true});
    if(hit)return hit;
    try{const r=await fetch(req);if(r.ok)cache.put(req,r.clone());return r;}
