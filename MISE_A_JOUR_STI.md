@@ -1,5 +1,13 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## « هوني الحكاية » — `v1.34.15` (mise à jour 2026-11-11, GMT+1)
+
+Dans la scène du workflow, la voix disait « **هنا** الحكاية » à l’arabe standard (*houna al-hikaya*). La phrase est passée en tunisien : « **هوني الحكاية تولّي مفيدة** » (*houni l-ħkēya*), et la scène a été réenregistrée.
+
+- `Cours Ai/video/agent-ia-darija.mp4` : scène 4 réenregistrée (41,3 s au lieu de 43,2 s), film remonté à **6 min 13** ; les 27 plans restent identiques, coupes et barre de progression recalculées.
+- `Cours Ai/agent-ia-guide.html` : horodatages des chapitres et sous-titres recalés sur la nouvelle timeline (décalage de −3,8 s à partir de la scène 5, contrôlé cue par cue).
+- Version de l’application, version attendue et cache hors ligne synchronisés.
+
 ## Narration tunisienne retravaillée — `v1.34.14` (mise à jour 2026-11-11, GMT+1)
 
 La vidéo du cours était lue par une voix égyptienne : le **ج** y sonne « g » dur (*ynaguim*), alors qu’en tunisien il sonne « j » (*ynajjim*). La narration a été **entièrement réenregistrée avec une voix qui prononce le ج « j »**, et le film remonté.
