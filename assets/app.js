@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.18";
+const APP_VER = "v1.34.19";
 const APP_UPDATED_AT = "2026-11-11 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -2612,3 +2612,71 @@ handlePasswordRecoveryRedirect();
 renderAll(true);renderCloudBar();renderCompte();renderLoginInvite();
 if(typeof applyProfil==="function")applyProfil();
 })();
+/* ------------------------------------------------------------------------
+   Diagnostic « les énoncés, ressources et corrections ne s'affichent plus ».
+   Vérifie les trois maillons dans l'ordre où l'application les utilise :
+   projet Cloud → compte connecté → année scolaire → fichiers réellement visibles.
+   Le but est de ne plus jamais afficher « aucun fichier » quand la vérité est
+   « je n'ai pas pu regarder ».
+   ------------------------------------------------------------------------ */
+async function runDocsDiagnostic(btn){
+  const out = document.getElementById("cfg-diag-out");
+  const c = cloudCfg();
+  const lines = [];
+  const add = (ok, txt) => lines.push((ok === true ? "✅ " : ok === false ? "❌ " : "• ") + txt);
+  const draw = () => { if (out) out.textContent = lines.join("\n"); };
+  if (btn) { btn.disabled = true; }
+  lines.length = 0;
+  add(null, "Diagnostic en cours…"); draw();
+  try {
+    /* 1. projet réellement interrogé */
+    const published = (window.STI_SUPABASE || {}).url || "";
+    const ref = c.url ? c.url.replace(/^https?:\/\//, "").split(".")[0] : "";
+    if (!c.url || !c.key) add(false, "Aucun projet Cloud configuré sur cet appareil.");
+    else {
+      add(true, "Projet interrogé : " + ref);
+      if (published && c.url !== published) {
+        add(false, "Ce n'est pas le projet publié dans supabase/config.js (" + published.replace(/^https?:\/\//, "").split(".")[0] + "). Un ancien réglage enregistré dans le navigateur prend le pas.");
+      }
+    }
+    /* 2. compte connecté */
+    const session = authSession();
+    const user = session && session.user;
+    if (!session) add(false, "Aucune session : connectez le profil professeur.");
+    else {
+      const expired = !authValid();
+      add(!expired, "Compte : " + (user && user.email || "inconnu") + (user && user.id ? " · identifiant " + String(user.id).slice(0, 8) + "…" : "") + (expired ? " (session expirée, reconnexion nécessaire)" : ""));
+    }
+    /* 3. profil et année : la clé des documents contient les deux */
+    const profile = activeProfessorProfile();
+    add(!!profile, profile ? "Profil professeur reconnu." : "Profil professeur indisponible : l'application ne peut pas vérifier les documents.");
+    const annee = String((window.SCHOOL || {}).annee || "");
+    add(!!annee, "Année scolaire utilisée : " + (annee || "inconnue"));
+    /* 4. les documents réellement visibles pour la séance testée */
+    if (profile && annee && window.STI_FICHE_DEVOIR_DOCUMENTS) {
+      const cls = (typeof STI_FICHES !== "undefined" && STI_FICHES.clsCourante) ? STI_FICHES.clsCourante() : "4SI2";
+      const sessions = (window.SESSIONS && window.SESSIONS[cls]) || [];
+      const devoirs = sessions.filter(s => window.STI_FICHE_DEVOIR_DOCUMENTS.isDevoir(s));
+      if (!devoirs.length) add(null, "Aucune séance de devoir dans " + cls + " : il n'y a rien à vérifier.");
+      let vus = 0;
+      for (const s of devoirs) {
+        let r;
+        try { r = await window.STI_FICHE_DEVOIR_DOCUMENTS.statusForSessions([{ cls, n: s.n }]); }
+        catch (e) { add(false, cls + " séance " + s.n + " : " + (e.message || "lecture impossible")); continue; }
+        const key = cls + "|" + s.n;
+        const cats = (r.data && r.data[key]) || {};
+        const n = Object.keys(cats).reduce((a, t) => a + (cats[t] || []).length, 0);
+        vus += n;
+        if (r.cloudError) add(false, cls + " séance " + s.n + " : Cloud illisible — " + r.cloudError);
+        else add(true, cls + " séance " + s.n + " : " + n + " fichier(s) visible(s)" + (n ? " (" + Object.keys(cats).filter(t => (cats[t] || []).length).join(", ") + ")" : ""));
+      }
+      if (!vus) add(false, "Aucun document visible. Vérifiez que la migration supabase/migrations/20261108_documents_seance.sql est appliquée au projet affiché ci-dessus.");
+    }
+  } catch (e) {
+    add(false, "Diagnostic interrompu : " + (e && e.message || e));
+  }
+  if (btn) btn.disabled = false;
+  draw();
+  return lines.join("\n");
+}
+window.runDocsDiagnostic = runDocsDiagnostic;

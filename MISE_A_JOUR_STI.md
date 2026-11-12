@@ -1,5 +1,15 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Énoncés, ressources et corrigés : ne plus dire « aucun fichier » à tort — `v1.34.19` (mise à jour 2026-11-11, GMT+1)
+
+Signalement : les documents de devoir semblaient avoir disparu alors qu'ils étaient toujours dans le Cloud.
+
+- `assets/fiche-devoir-documents.js` : quand une seule source échoue (Cloud indisponible ou anciens fichiers locaux illisibles), l'application affichait **« aucun fichier disponible »**. Elle écrit désormais qu'elle n'a pas pu vérifier, avec un bouton « Réessayer ». Le message « aucun fichier » est réservé aux vérifications complètes.
+- `index.html` + `assets/app.js` : bouton **« Diagnostic des documents »** dans les réglages Cloud. Il vérifie, dans l'ordre : projet interrogé (et signale un ancien réglage du navigateur différent de `supabase/config.js`), compte connecté, année scolaire, puis les fichiers réellement visibles séance par séance.
+- `tests/documents-diagnostic.test.js` (nouveau) : verrouille les deux comportements.
+
+État constaté dans le Cloud au moment du diagnostic : les 5 documents sont intacts (4SI2 séance 12 : énoncé, ressources, corrigé ; 3SI1 séance 12 : énoncé, corrigé), avec le bon identifiant de professeur et la bonne année.
+
 ## Retrait du cours SQL — `v1.34.18` (mise à jour 2026-11-11, GMT+1)
 
 Le cours vidéo « Pour mieux comprendre GROUP BY et HAVING » est retiré de la plateforme.
