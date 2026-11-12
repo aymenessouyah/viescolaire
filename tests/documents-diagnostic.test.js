@@ -63,3 +63,67 @@ test('Cloud en panne et aucun fichier local : message de vérification impossibl
   assert.match(host.innerHTML, /Impossible de vérifier les fichiers/);
   assert.match(host.innerHTML, /Cloud inaccessible/);
 });
+
+/* --- Non-régression : le diagnostic doit s'exécuter pour de vrai ---------------- */
+const vmMod = require('node:vm');
+function extraireDiagnostic(source) {
+  const i = source.indexOf('async function runDocsDiagnostic');
+  const marque = 'window.runDocsDiagnostic = runDocsDiagnostic;';
+  const j = source.indexOf(marque) + marque.length;
+  assert.ok(i > 0 && j > i, 'la fonction de diagnostic doit exister');
+  return source.slice(i, j).replace(marque, 'this.runDiag = runDocsDiagnostic;');
+}
+
+function executerDiagnostic(overrides = {}) {
+  let txt = '';
+  const out = { set textContent(v) { txt = v; }, get textContent() { return txt; } };
+  const document = { getElementById: id => (id === 'cfg-diag-out' ? out : null) };
+  const window = Object.assign({
+    STI_SUPABASE: { url: 'https://oaahxobzbnmaohcmdrbu.supabase.co' },
+    SCHOOL: { annee: '2026 - 2027' },
+    STI_FICHES: { clsCourante: () => '4SI2' },
+    SESSIONS: { '4SI2': [{ n: 12, blk: { k: 'dc' } }] },
+    authSession: () => ({ user: { id: 'dabeb3f7-d0ac', email: 'aymenessouyah@gmail.com' }, expires_at: Math.floor(Date.now() / 1000) + 9999 }),
+    authValid: () => true,
+    activeProfessorProfile: () => ({ prof_id: 'dabeb3f7-d0ac' }),
+    STI_FICHE_DEVOIR_DOCUMENTS: {
+      isDevoir: s => s.blk && s.blk.k === 'dc',
+      statusForSessions: async () => ({ data: { '4SI2|12': { enonce: [{ name: 'a.pdf' }], ressources: [{ name: 'b.rar' }] } }, cloudError: '', localError: '' })
+    }
+  }, overrides.window || {});
+  const ctx = { window, document,
+    cloudCfg: overrides.cloudCfg || (() => ({ url: 'https://oaahxobzbnmaohcmdrbu.supabase.co', key: 'k' })),
+    console, JSON, String, Object, Array };
+  vmMod.createContext(ctx);
+  vmMod.runInContext(extraireDiagnostic(read('assets/app.js')), ctx);
+  return ctx.runDiag(null).then(res => ({ res, txt }));
+}
+
+test('le diagnostic s’exécute réellement, va au bout et ne laisse pas « en cours… »', async () => {
+  const { res, txt } = await executerDiagnostic();
+  assert.doesNotMatch(res, /is not defined/, 'aucune référence hors portée');
+  assert.doesNotMatch(res, /interrompu/, 'le diagnostic doit parcourir toutes les étapes');
+  assert.match(res, /Projet interrogé : oaahxobzbnmaohcmdrbu/);
+  assert.match(res, /C'est bien le projet publié/);
+  assert.match(res, /Compte : aymenessouyah@gmail\.com/);
+  assert.match(res, /Profil professeur reconnu/);
+  assert.match(res, /2 fichier\(s\) visible\(s\)/);
+  assert.doesNotMatch(txt, /Diagnostic en cours/, 'le message d’attente doit disparaître');
+  assert.match(txt, /fichier\(s\) visible\(s\)/);
+});
+
+test('une fonction d’authentification absente n’interrompt plus le diagnostic', async () => {
+  // cas réel du rapport : la fonction existait mais hors de portée
+  const { res } = await executerDiagnostic({ window: { authSession: undefined, authValid: undefined, activeProfessorProfile: undefined } });
+  assert.doesNotMatch(res, /is not defined/);
+  assert.match(res, /Projet interrogé/);
+  assert.match(res, /Année scolaire utilisée/);
+  assert.match(res, /Fichiers non vérifiés/);
+});
+
+test('le diagnostic est défini à l’intérieur du module, pas après sa fermeture', () => {
+  const src = read('assets/app.js');
+  const fin = src.lastIndexOf('})();');
+  const debut = src.indexOf('async function runDocsDiagnostic');
+  assert.ok(debut > 0 && debut < fin, 'la fonction doit être dans l’IIFE pour voir cloudCfg et authValid');
+});

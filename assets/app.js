@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.20";
+const APP_VER = "v1.34.21";
 const APP_UPDATED_AT = "2026-11-11 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -2642,7 +2642,7 @@ window.cloudAutoPush = cloudAutoPush;
 window.cloudHasLocalData = cloudHasLocalData;
 window.cloudFirstRunRestore = cloudFirstRunRestore;
 window.cloudInvite = cloudInvite;
-window.authSession = authSession; window.authToken = authToken; window.authUser = authUser;
+window.authSession = authSession; window.authToken = authToken; window.authUser = authUser; window.authValid = authValid; window.authClear = authClear;
 window.authNeeded = authNeeded; window.isProfessorConnected = isProfessorConnected; window.openAuth = openAuth; window.closeAuth = closeAuth; window.openCloud = openCloud;
 window.doLogin = doLogin; window.doSignup = doSignup; window.doLogout = doLogout; window.afterLogin = afterLogin;
 window.sendPasswordRecovery = sendPasswordRecovery; window.updatePasswordFromRecovery = updatePasswordFromRecovery; window.closePasswordReset = closePasswordReset;
@@ -2673,7 +2673,7 @@ window.APP_VER = APP_VER; window.forceMaj = forceMaj; window.clsCoul = clsCoul; 
 handlePasswordRecoveryRedirect();
 renderAll(true);renderCloudBar();renderCompte();renderLoginInvite();
 if(typeof applyProfil==="function")applyProfil();
-})();
+
 /* ------------------------------------------------------------------------
    Diagnostic « les énoncés, ressources et corrections ne s'affichent plus ».
    Vérifie les trois maillons dans l'ordre où l'application les utilise :
@@ -2683,62 +2683,70 @@ if(typeof applyProfil==="function")applyProfil();
    ------------------------------------------------------------------------ */
 async function runDocsDiagnostic(btn){
   const out = document.getElementById("cfg-diag-out");
-  const c = cloudCfg();
   const lines = [];
   const add = (ok, txt) => lines.push((ok === true ? "✅ " : ok === false ? "❌ " : "• ") + txt);
   const draw = () => { if (out) out.textContent = lines.join("\n"); };
-  if (btn) { btn.disabled = true; }
-  lines.length = 0;
+  /* Une étape en échec ne doit jamais interrompre le reste du diagnostic :
+     l'intérêt même de cet écran est de dire où ça bloque. */
+  const etape = (fn, secours) => { try { return fn(); } catch (e) { add(false, "Étape non vérifiable : " + ((e && e.message) || e)); return secours; } };
+  const ref = (u) => String(u || "").replace(/^https?:\/\//, "").split(".")[0];
+  if (btn) btn.disabled = true;
   add(null, "Diagnostic en cours…"); draw();
   try {
     /* 1. projet réellement interrogé */
+    const c = etape(() => cloudCfg(), {}) || {};
     const published = (window.STI_SUPABASE || {}).url || "";
-    const ref = c.url ? c.url.replace(/^https?:\/\//, "").split(".")[0] : "";
+    add(null, "Projet interrogé : " + (c.url ? ref(c.url) : "aucun"));
     if (!c.url || !c.key) add(false, "Aucun projet Cloud configuré sur cet appareil.");
-    else {
-      add(true, "Projet interrogé : " + ref);
-      if (published && c.url !== published) {
-        add(false, "Ce n'est pas le projet publié dans supabase/config.js (" + published.replace(/^https?:\/\//, "").split(".")[0] + "). Un ancien réglage enregistré dans le navigateur prend le pas.");
-      }
-    }
+    else if (published && c.url !== published) {
+      add(false, "Ce n'est pas le projet publié dans supabase/config.js (" + ref(published) + "). Un ancien réglage enregistré dans le navigateur prend le pas.");
+    } else add(true, "C'est bien le projet publié dans supabase/config.js.");
     /* 2. compte connecté */
-    const session = authSession();
+    const session = etape(() => window.authSession && window.authSession(), null);
     const user = session && session.user;
     if (!session) add(false, "Aucune session : connectez le profil professeur.");
     else {
-      const expired = !authValid();
-      add(!expired, "Compte : " + (user && user.email || "inconnu") + (user && user.id ? " · identifiant " + String(user.id).slice(0, 8) + "…" : "") + (expired ? " (session expirée, reconnexion nécessaire)" : ""));
+      const valide = etape(() => typeof window.authValid === "function" ? window.authValid() : null, null);
+      add(valide !== false, "Compte : " + ((user && user.email) || "inconnu") +
+        (user && user.id ? " · identifiant " + String(user.id).slice(0, 8) + "…" : "") +
+        (valide === false ? " (session expirée, reconnexion nécessaire)" : valide === null ? " (validité de session non vérifiable)" : ""));
     }
-    /* 3. profil et année : la clé des documents contient les deux */
-    const profile = activeProfessorProfile();
-    add(!!profile, profile ? "Profil professeur reconnu." : "Profil professeur indisponible : l'application ne peut pas vérifier les documents.");
+    /* 3. profil, année : la clé des documents contient les deux */
+    const profile = etape(() => window.activeProfessorProfile ? window.activeProfessorProfile() : null, null);
+    add(!!profile, profile ? "Profil professeur reconnu." : "Profil professeur indisponible : les documents ne peuvent pas être vérifiés.");
     const annee = String((window.SCHOOL || {}).annee || "");
     add(!!annee, "Année scolaire utilisée : " + (annee || "inconnue"));
-    /* 4. les documents réellement visibles pour la séance testée */
-    if (profile && annee && window.STI_FICHE_DEVOIR_DOCUMENTS) {
-      const cls = (typeof STI_FICHES !== "undefined" && STI_FICHES.clsCourante) ? STI_FICHES.clsCourante() : "4SI2";
+    /* 4. fichiers réellement visibles, séance par séance */
+    const docs = window.STI_FICHE_DEVOIR_DOCUMENTS;
+    if (!docs) add(false, "Module des documents non chargé (assets/fiche-devoir-documents.js).");
+    else if (profile && annee) {
+      const cls = (window.STI_FICHES && window.STI_FICHES.clsCourante) ? window.STI_FICHES.clsCourante() : "4SI2";
       const sessions = (window.SESSIONS && window.SESSIONS[cls]) || [];
-      const devoirs = sessions.filter(s => window.STI_FICHE_DEVOIR_DOCUMENTS.isDevoir(s));
-      if (!devoirs.length) add(null, "Aucune séance de devoir dans " + cls + " : il n'y a rien à vérifier.");
+      const devoirs = sessions.filter(s => etape(() => docs.isDevoir(s), false));
+      if (!devoirs.length) add(null, "Aucune séance de devoir dans " + cls + ".");
       let vus = 0;
       for (const s of devoirs) {
-        let r;
-        try { r = await window.STI_FICHE_DEVOIR_DOCUMENTS.statusForSessions([{ cls, n: s.n }]); }
-        catch (e) { add(false, cls + " séance " + s.n + " : " + (e.message || "lecture impossible")); continue; }
-        const key = cls + "|" + s.n;
-        const cats = (r.data && r.data[key]) || {};
+        const r = await etape(async () => await docs.statusForSessions([{ cls, n: s.n }]), null);
+        if (!r) { add(false, cls + " séance " + s.n + " : lecture impossible"); continue; }
+        const cats = (r.data && r.data[cls + "|" + s.n]) || {};
         const n = Object.keys(cats).reduce((a, t) => a + (cats[t] || []).length, 0);
         vus += n;
         if (r.cloudError) add(false, cls + " séance " + s.n + " : Cloud illisible — " + r.cloudError);
-        else add(true, cls + " séance " + s.n + " : " + n + " fichier(s) visible(s)" + (n ? " (" + Object.keys(cats).filter(t => (cats[t] || []).length).join(", ") + ")" : ""));
+        else add(true, cls + " séance " + s.n + " : " + n + " fichier(s) visible(s)" +
+          (n ? " (" + Object.keys(cats).filter(t => (cats[t] || []).length).join(", ") + ")" : ""));
       }
-      if (!vus) add(false, "Aucun document visible. Vérifiez que la migration supabase/migrations/20261108_documents_seance.sql est appliquée au projet affiché ci-dessus.");
-    }
+      if (!vus) add(false, "Aucun document visible : vérifiez que la migration supabase/migrations/20261108_documents_seance.sql est appliquée au projet affiché ci-dessus.");
+    } else add(null, "Fichiers non vérifiés : profil ou année manquant.");
   } catch (e) {
-    add(false, "Diagnostic interrompu : " + (e && e.message || e));
+    add(false, "Diagnostic interrompu : " + ((e && e.message) || e));
   }
+  /* le message d'attente ne doit jamais rester affiché */
+  const attente = lines.indexOf(lines.find(l => l.indexOf("Diagnostic en cours") >= 0));
+  if (attente >= 0 && lines.length > 1) lines.splice(attente, 1);
   if (btn) btn.disabled = false;
   draw();
   return lines.join("\n");
 }
 window.runDocsDiagnostic = runDocsDiagnostic;
+window.runDocsDiagnostic = runDocsDiagnostic;
+})();
