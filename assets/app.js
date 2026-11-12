@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.19";
+const APP_VER = "v1.34.20";
 const APP_UPDATED_AT = "2026-11-11 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -2379,7 +2379,69 @@ function cloudCard(){
     </div>
   </div>`;
 }
+/* Un appareil peut garder une configuration Cloud saisie à la main avant que
+   supabase/config.js ne désigne le bon projet. Rien n'était signalé : les
+   documents de devoir semblaient alors « disparus », alors qu'ils étaient
+   stockés dans l'autre projet. On avertit, sans jamais changer le réglage
+   dans le dos du professeur. */
+const CLOUD_WARN_KEY = "sti_cloud_project_warn_dismissed";
+const WARN_DISMISS_MS = 3 * 24 * 3600 * 1000;
+function publishedProject(){
+  const w = window.STI_SUPABASE || {};
+  return w.url ? String(w.url).replace(/\/$/, "") : "";
+}
+function localProject(){
+  try { const cfg = JSON.parse(localStorage.getItem(CLOUD_KEY) || "{}") || {}; return cfg.url ? String(cfg.url).replace(/\/$/, "") : ""; }
+  catch(e){ return ""; }
+}
+function cloudProjectMismatch(){
+  const pub = publishedProject(), loc = localProject();
+  if (!pub || !loc) return null;
+  if (pub === loc) return null;
+  try { if (+(localStorage.getItem(CLOUD_WARN_KEY) || 0) > Date.now()) return null; } catch(e){}
+  const ref = u => u.replace(/^https?:\/\//, "").split(".")[0];
+  return {pub, loc, pubRef: ref(pub), locRef: ref(loc)};
+}
+function renderCloudProjectWarning(){
+  const box = document.getElementById("cloud-project-warning");
+  if (!box) return;
+  const m = cloudProjectMismatch();
+  if (!m) { box.hidden = true; return; }
+  const txt = document.getElementById("cloud-project-warning-text");
+  if (txt) txt.textContent = " Cet appareil consulte « " + m.locRef + " » au lieu de « " + m.pubRef + " ». Les documents joints, les fiches et les sauvegardes peuvent sembler absents alors qu'ils sont dans l'autre projet.";
+  box.hidden = false;
+}
+/* Reprendre exactement la configuration publiée : c'est le seul moyen de
+   retrouver les documents stockés dans le projet du dépôt. */
+function adoptPublishedCloud(){
+  const w = window.STI_SUPABASE || {};
+  if (!w.url) { if (typeof toast === "function") toast("Aucun projet publié dans supabase/config.js."); return; }
+  let cfg = {};
+  try { cfg = JSON.parse(localStorage.getItem(CLOUD_KEY) || "{}") || {}; } catch(e){ cfg = {}; }
+  cfg.url = String(w.url).replace(/\/$/, "");
+  if (w.anonKey) cfg.key = w.anonKey;
+  if (w.table) cfg.table = w.table;
+  if (w.auth === true) cfg.auth = true;
+  if (w.admin) cfg.admin = w.admin;
+  if (cfg.auto === undefined) cfg.auto = true;
+  try { localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg)); localStorage.removeItem(CLOUD_WARN_KEY); } catch(e){}
+  if (typeof toast === "function") toast("Projet Cloud : " + String(cfg.url).replace(/^https?:\/\//, "").split(".")[0] + ". Reconnexion et vérification des documents…");
+  renderCloudBar();
+  /* la session appartenait peut-être à l'autre projet : on repart proprement */
+  try { authClear(); } catch(e){}
+  if (typeof openAuth === "function") openAuth();
+}
+function dismissCloudProjectWarning(){
+  try { localStorage.setItem(CLOUD_WARN_KEY, String(Date.now() + WARN_DISMISS_MS)); } catch(e){}
+  renderCloudProjectWarning();
+}
+window.adoptPublishedCloud = adoptPublishedCloud;
+window.dismissCloudProjectWarning = dismissCloudProjectWarning;
+window.cloudProjectMismatch = cloudProjectMismatch;
+window.renderCloudProjectWarning = renderCloudProjectWarning;
+
 function renderCloudBar(){
+  try { renderCloudProjectWarning(); } catch(e){}
   if(window.STI_SYNC){ window.STI_SYNC.renderStatus(); return; }
   const t = (cloudReady() ? "" : "") + cloudBadge() +
     ' <span class="tiny muted">' + (cloudReady() ? "projet : " + cloudCfg().url.replace(/^https?:\/\//,"").split(".")[0] : "aucun projet configuré") + " • dernier envoi : " + cloudTime() + "</span>";

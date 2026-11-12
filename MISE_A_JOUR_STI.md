@@ -1,5 +1,14 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Alerte quand l'appareil ne consulte pas le projet Cloud publié — `v1.34.20` (mise à jour 2026-11-12, GMT+1)
+
+Cause profonde du signalement « énoncés, ressources et corrigés indisponibles » : un réglage Cloud saisi à la main dans le navigateur primait silencieusement sur `supabase/config.js`. L'appareil interrogeait un autre projet Supabase, qui répondait sans erreur mais ne contenait aucun document.
+
+- Bandeau d'alerte sur toutes les vues : il nomme les deux projets et explique que les documents, fiches et sauvegardes peuvent sembler absents.
+- Trois actions : **Revenir au projet publié** (reprend l'URL et la clé du dépôt, puis demande la reconnexion — la session de l'ancien projet est effacée), **Voir les réglages**, **Me le rappeler plus tard** (masqué 3 jours).
+- Rien n'est modifié sans accord : la configuration n'est jamais remplacée automatiquement.
+- `tests/cloud-project-warning.test.js` (nouveau, 7 cas).
+
 ## Énoncés, ressources et corrigés : ne plus dire « aucun fichier » à tort — `v1.34.19` (mise à jour 2026-11-11, GMT+1)
 
 Signalement : les documents de devoir semblaient avoir disparu alors qu'ils étaient toujours dans le Cloud.
