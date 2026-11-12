@@ -125,7 +125,7 @@
 </div>
 <script>
 (function () {
-  var ATTENDU = "v1.34.19";
+  var ATTENDU = "v1.34.20";
   window.MAJ_ATTENDUE = ATTENDU;
   /* vide service worker + caches puis recharge : utile quand un ancien bundle reste servi */
   window.majViderCache = function () {
@@ -174,6 +174,15 @@
 </aside>
 
 <main class="wrap">
+  <div id="cloud-project-warning" class="no-print" role="alert" hidden style="margin:0 0 14px;padding:11px 14px;border:1px solid #b98a2e;border-left:4px solid #b98a2e;border-radius:10px;background:#fdf6e6;color:#4a3a12;font-size:13px;line-height:1.5">
+    <strong id="cloud-project-warning-title">Cet appareil ne consulte pas le projet Cloud publié.</strong>
+    <span id="cloud-project-warning-text"></span>
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn btn-xs btn-blue" onclick="adoptPublishedCloud()">Revenir au projet publié</button>
+      <button type="button" class="btn btn-xs btn-line" onclick="openCloudSettings()">Voir les réglages</button>
+      <button type="button" class="btn btn-xs btn-line" onclick="dismissCloudProjectWarning()">Me le rappeler plus tard</button>
+    </div>
+  </div>
   <section id="v-dash" class="view on ref-ui"></section>
 <section id="v-cours" class="view ref-ui"></section>
 <section id="v-fiche" class="view ref-ui"></section>
@@ -243,7 +252,7 @@
     </div>
     <div>
       Année scolaire 2026-2027 &bull; Données locales + sauvegarde distante Supabase &bull; <span id="ft-year"></span>
-      &bull; <span id="app-release">Plateforme v1.34.19 · mise à jour 2026-11-11 (GMT+1)</span>
+      &bull; <span id="app-release">Plateforme v1.34.20 · mise à jour 2026-11-12 (GMT+1)</span>
       &bull; <a href="politique-confidentialite.html">Politique de confidentialité</a>
     </div>
   </div>
