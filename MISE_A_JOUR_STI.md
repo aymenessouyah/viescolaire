@@ -1,5 +1,17 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Diagnostic des documents réparé — `v1.34.21` (mise à jour 2026-11-12, GMT+1)
+
+Le diagnostic ajouté en 1.34.19 s'arrêtait sur « authValid is not defined » et laissait « Diagnostic en cours… » affiché.
+
+- `assets/app.js` : le bloc du diagnostic avait été ajouté **après la fermeture du module** de l'application ; il ne voyait donc ni `cloudCfg`, ni `authValid`, ni `activeProfessorProfile`. Il est désormais à l'intérieur.
+- `authValid` et `authClear` sont exposés sur `window`, comme les autres fonctions d'authentification.
+- Chaque étape est isolée : une fonction manquante ou en échec n'interrompt plus le reste, elle est signalée sur sa propre ligne.
+- Le message « Diagnostic en cours… » est retiré à la fin — il l'était mal, et restait donc affiché.
+- `tests/documents-diagnostic.test.js` : trois cas ajoutés, dont une **exécution réelle** du diagnostic (256 tests au total).
+
+Vérifié aussi sur la page complète chargée dans un DOM : aucune erreur JavaScript au lancement, diagnostic complet de bout en bout.
+
 ## Alerte quand l'appareil ne consulte pas le projet Cloud publié — `v1.34.20` (mise à jour 2026-11-12, GMT+1)
 
 Cause profonde du signalement « énoncés, ressources et corrigés indisponibles » : un réglage Cloud saisi à la main dans le navigateur primait silencieusement sur `supabase/config.js`. L'appareil interrogeait un autre projet Supabase, qui répondait sans erreur mais ne contenait aucun document.
