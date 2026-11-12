@@ -32,3 +32,34 @@ test('le diagnostic des documents teste projet, compte, année et séances', () 
   // un projet local différent du fichier publié doit être signalé
   assert.match(app, /Ce n'est pas le projet publié/);
 });
+
+test('Cloud en panne et aucun fichier local : message de vérification impossible, jamais « aucun fichier »', async () => {
+  const vm = require('node:vm');
+  const records = new Map(); let init = false;
+  const db = () => ({ createObjectStore() {}, close() {}, transaction() {
+    const tx = { error: null, objectStore() { return {
+      get() { const r = {}; setImmediate(() => { r.result = undefined; r.onsuccess?.(); setImmediate(() => tx.oncomplete?.()); }); return r; },
+      put() {}
+    }; } };
+    return tx;
+  } });
+  const idb = { open() { const r = {}; setImmediate(() => { r.result = db(); if (!init) { init = true; r.onupgradeneeded?.(); } r.onsuccess?.(); }); return r; } };
+  const fakeWindow = {
+    indexedDB: idb,
+    STI_FICHE_CLOUD: { async listMany() { throw new Error('Cloud inaccessible. Vérifiez la connexion et réessayez.'); } },
+    activeProfessorProfile: () => ({ prof_id: 'prof-a' }),
+    seanceVerrouillee: () => false,
+    renderCahier() {},
+    URL: { createObjectURL: () => 'blob:x', revokeObjectURL() {} },
+    setTimeout
+  };
+  const fakeDocument = { createElement: () => ({ setAttribute() {}, click() {}, remove() {} }), body: { appendChild() {} } };
+  vm.runInNewContext(read('assets/fiche-devoir-documents.js'), { window: fakeWindow, document: fakeDocument, setTimeout, console, Blob });
+  const host = { isConnected: true, innerHTML: '', addEventListener() {} };
+  fakeWindow.STI_FICHE_DEVOIR_DOCUMENTS.mount(host, { cls: '4SI2', n: 12, blk: { k: 'dc' } }, { forceDevoir: true });
+  await new Promise(r => setTimeout(r, 40));
+  await new Promise(r => setTimeout(r, 40));
+  assert.doesNotMatch(host.innerHTML, /aucun fichier disponible/);
+  assert.match(host.innerHTML, /Impossible de vérifier les fichiers/);
+  assert.match(host.innerHTML, /Cloud inaccessible/);
+});
