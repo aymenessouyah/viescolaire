@@ -1,5 +1,17 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Carnet de liens utiles — `v1.34.22` (mise à jour 2026-11-13, GMT+1)
+
+Nouvelle page **Mon carnet de liens**, dans le menu juste après « Mon cours Ai ».
+
+- `Carnet de liens/carnet.html` (nouveau) : formulaire d'ajout, liste recherchable, modification et suppression avec confirmation. Chaque lien s'ouvre dans un nouvel onglet (`rel="noopener noreferrer"`).
+- `assets/liens-cloud.js` (nouveau) : lecture et écriture dans la table Supabase `liens_utiles`. Validation locale avant tout appel réseau : seules les adresses `http`/`https` sont acceptées, `javascript:`, `data:` et `file:` sont refusés ; titre obligatoire, longueurs bornées aux limites de la base.
+- `supabase/migrations/20261112_liens_utiles.sql` (nouveau) : table par professeur, RLS, quatre politiques, `anon` exclu, contrainte SQL refusant elle aussi les URL non http(s), et date de modification tenue par un trigger.
+- `sw.js` : page et module ajoutés au cache hors ligne.
+- `tests/carnet-liens.test.js` (nouveau, 8 cas) : lien du menu, migration, validation, cycle ajout/modification/suppression, remontée des erreurs Cloud, échappement du rendu.
+
+La base du projet `oaahxobzbnmaohcmdrbu` a été mise à jour et contrôlée : RLS active, 4 politiques, `anon` sans accès, trigger présent, injections `javascript:`, titre vide et catégorie inconnue rejetées.
+
 ## Diagnostic des documents réparé — `v1.34.21` (mise à jour 2026-11-12, GMT+1)
 
 Le diagnostic ajouté en 1.34.19 s'arrêtait sur « authValid is not defined » et laissait « Diagnostic en cours… » affiché.
