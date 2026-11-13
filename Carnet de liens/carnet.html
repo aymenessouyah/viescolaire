@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mon carnet de liens — Espace pédagogique STI</title>
+<meta name="description" content="Carnet de liens utiles du professeur : ajouter, modifier et supprimer des ressources, enregistrées dans le Cloud privé.">
+<link rel="stylesheet" href="../assets/color-mode.css">
+<style>
+:root{--bg:#f4f7f3;--card:#fff;--ink:#16221c;--muted:#6b7c72;--line:#dde6df;--accent:#27643f;--accent-soft:#eaf4ec;--amber:#a9772a;--rose:#a33b30;--rose-soft:#fbeceb;--r:12px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 "Segoe UI",system-ui,-apple-system,Arial,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:940px;margin:0 auto;padding:26px 20px 60px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.3px}
+.brand .mark{width:34px;height:34px;border-radius:9px;background:var(--accent);color:#eaf4ec;display:grid;place-items:center}
+h1{font-size:26px;line-height:1.25;margin:0 0 6px;letter-spacing:-.6px}
+.lead{color:var(--muted);margin:0 0 22px;max-width:70ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:18px}
+.card h2{font-size:16px;margin:0 0 4px}
+.card .hint{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;font-size:14px}
+textarea{resize:vertical;min-height:64px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:2fr 1fr 1fr}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:#1f5033;color:#fff}
+.btn-danger{color:var(--rose);border-color:#e3cfcc}
+.btn-danger:hover{background:var(--rose-soft);border-color:var(--rose)}
+.btn-xs{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.msg{margin-top:14px;padding:10px 13px;border-radius:8px;font-size:13.5px;display:none}
+.msg.on{display:block}
+.msg.ok{background:var(--accent-soft);color:#1e5334;border:1px solid #c6e0cd}
+.msg.err{background:var(--rose-soft);color:#7d2c24;border:1px solid #e8cbc7}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.tools input{max-width:300px}
+.count{color:var(--muted);font-size:12.5px;margin-left:auto}
+.lien{display:flex;gap:12px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;background:#fcfdfb}
+.lien:hover{border-color:#c4d6c8}
+.lien .meta{flex:1;min-width:0}
+.lien .titre{font-weight:650;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lien .titre a{text-decoration:none}
+.lien .titre a:hover{text-decoration:underline}
+.lien .adr{font-size:11.5px;color:var(--muted);word-break:break-all;margin-top:1px}
+.lien .desc{font-size:12.5px;color:#3f5147;margin-top:4px}
+.lien .ops{display:flex;gap:6px;flex-shrink:0}
+.tag{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 7px;border-radius:5px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.empty{color:var(--muted);font-size:13.5px;padding:14px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+.state{padding:12px;border-radius:9px;font-size:13.5px;margin-bottom:14px}
+.state.warn{background:#fdf6e6;border:1px solid #e5d3a6;color:#6b4f13}
+.state.err{background:var(--rose-soft);border:1px solid #e8cbc7;color:#7d2c24}
+.foot{color:var(--muted);font-size:11.5px;text-align:center;margin-top:26px;line-height:1.8}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      </span>
+      <span>STI V2.0 By A'e</span>
+    </div>
+    <a class="btn btn-xs" href="../index.html">← Retour à la plateforme</a>
+  </div>
+
+  <h1>Mon carnet de liens</h1>
+  <p class="lead">Vos ressources utiles, enregistrées dans votre Cloud privé et accessibles sur tous vos appareils connectés. Vous pouvez ajouter, modifier et supprimer chaque lien.</p>
+
+  <div id="etat"></div>
+
+  <!-- ---------------- formulaire ---------------- -->
+  <section class="card" aria-labelledby="form-titre">
+    <h2 id="form-titre">Ajouter un lien</h2>
+    <p class="hint" id="form-hint">Titre, adresse complète (https://…) et, si vous voulez, une catégorie et une description.</p>
+    <form id="form" novalidate>
+      <div class="grid g3">
+        <div>
+          <label class="f" for="f-titre">Titre *</label>
+          <input id="f-titre" name="titre" maxlength="120" required autocomplete="off" placeholder="MDN — Référence HTML">
+        </div>
+        <div>
+          <label class="f" for="f-categorie">Catégorie</label>
+          <select id="f-categorie" name="categorie">
+            <option>Cours</option><option>Exercices</option><option>Outils</option><option>Références</option><option selected>Autre</option>
+          </select>
+        </div>
+        <div>
+          <label class="f" for="f-url">Adresse *</label>
+          <input id="f-url" name="url" maxlength="2048" required autocomplete="off" inputmode="url" placeholder="https://developer.mozilla.org/fr/">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <label class="f" for="f-description">Description <span class="sr">(facultative)</span></label>
+        <textarea id="f-description" name="description" maxlength="300" rows="2" placeholder="À quoi ce lien vous sert (facultatif)"></textarea>
+      </div>
+      <div class="msg" id="form-msg" role="status" aria-live="polite"></div>
+      <div class="actions">
+        <button class="btn btn-primary" type="submit" id="f-submit">Ajouter le lien</button>
+        <button class="btn" type="button" id="f-cancel" hidden>Annuler la modification</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ---------------- liste ---------------- -->
+  <section class="card" aria-labelledby="liste-titre">
+    <h2 id="liste-titre">Mes liens</h2>
+    <p class="hint">Recherchez par titre, adresse ou description. Chaque lien s'ouvre dans un nouvel onglet.</p>
+    <div class="tools">
+      <label class="sr" for="q">Rechercher un lien</label>
+      <input id="q" type="search" placeholder="Rechercher un lien…" autocomplete="off">
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+    <div id="liste" aria-busy="true"><div class="empty">Chargement…</div></div>
+  </section>
+
+  <p class="foot">
+    Les liens sont stockés dans votre base Supabase privée (table <code>liens_utiles</code>) et protégés par les règles d'accès de la base.<br>
+    Connexion Internet requise. Seules les adresses <b>http</b> et <b>https</b> sont acceptées.
+  </p>
+</div>
+
+<script src="../supabase/config.js"></script>
+<script src="../assets/liens-cloud.js"></script>
+<script>
+(function () {
+  'use strict';
+  var API = window.STI_LIENS;
+  var lienEnCours = null;               /* null = création, sinon modification */
+  var cache = [];                        /* dernière liste connue du serveur */
+
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('form'), msgBox = $('form-msg'), liste = $('liste'), etat = $('etat');
+  var btnSubmit = $('f-submit'), btnCancel = $('f-cancel'), champQ = $('q'), compteur = $('count');
+
+  function esc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function afficher(texte, kind) {
+    msgBox.textContent = texte || '';
+    msgBox.className = 'msg' + (texte ? ' on ' + (kind || 'ok') : '');
+  }
+  function etatMessage(html, kind) {
+    etat.innerHTML = html ? '<div class="state ' + kind + '">' + html + '</div>' : '';
+  }
+
+  /* ---------- rendu ---------- */
+  function rendre() {
+    var q = (champQ.value || '').trim().toLowerCase();
+    var vus = cache.filter(function (l) {
+      if (!q) return true;
+      return (l.titre + ' ' + l.url + ' ' + l.description + ' ' + l.categorie).toLowerCase().indexOf(q) >= 0;
+    });
+    compteur.textContent = vus.length + (vus.length > 1 ? ' liens' : ' lien') +
+      (cache.length !== vus.length ? ' sur ' + cache.length : '');
+    liste.setAttribute('aria-busy', 'false');
+    if (!vus.length) {
+      liste.innerHTML = '<div class="empty">' + (cache.length
+        ? 'Aucun lien ne correspond à cette recherche.'
+        : 'Votre carnet est vide. Ajoutez votre premier lien ci-dessus.') + '</div>';
+      return;
+    }
+    liste.innerHTML = vus.map(function (l) {
+      return '<article class="lien" data-id="' + esc(l.id) + '">' +
+        '<div class="meta">' +
+          '<div class="titre"><a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer">' + esc(l.titre) + '</a>' +
+            '<span class="tag">' + esc(l.categorie) + '</span></div>' +
+          '<div class="adr">' + esc(l.url) + '</div>' +
+          (l.description ? '<div class="desc">' + esc(l.description) + '</div>' : '') +
+        '</div>' +
+        '<div class="ops">' +
+          '<button type="button" class="btn btn-xs" data-modifier="' + esc(l.id) + '">Modifier</button>' +
+          '<button type="button" class="btn btn-xs btn-danger" data-supprimer="' + esc(l.id) + '">Supprimer</button>' +
+        '</div>' +
+      '</article>';
+    }).join('');
+  }
+
+  /* ---------- chargement ---------- */
+  function charger() {
+    liste.setAttribute('aria-busy', 'true');
+    liste.innerHTML = '<div class="empty">Chargement…</div>';
+    return API.lister().then(function (liens) {
+      cache = liens; etatMessage('', 'warn'); rendre();
+    }).catch(function (e) {
+      cache = [];
+      liste.innerHTML = '<div class="empty">Liste indisponible.</div>';
+      compteur.textContent = '';
+      etatMessage('<b>Le carnet ne peut pas être chargé.</b><br>' + esc(e.message) +
+        '<br><button type="button" class="btn btn-xs" id="retry" style="margin-top:8px">Réessayer</button>', 'err');
+      var b = $('retry'); if (b) b.onclick = charger;
+    });
+  }
+
+  /* ---------- formulaire ---------- */
+  function reinitialiser(garderMessage) {
+    lienEnCours = null;
+    form.reset();
+    $('f-categorie').value = 'Autre';
+    btnSubmit.textContent = 'Ajouter le lien';
+    btnCancel.hidden = true;
+    $('form-titre').textContent = 'Ajouter un lien';
+    if (!garderMessage) afficher('');
+  }
+  function chargerDansFormulaire(lien) {
+    lienEnCours = lien.id;
+    $('f-titre').value = lien.titre;
+    $('f-url').value = lien.url;
+    $('f-categorie').value = lien.categorie;
+    $('f-description').value = lien.description || '';
+    btnSubmit.textContent = 'Enregistrer les modifications';
+    btnCancel.hidden = false;
+    $('form-titre').textContent = 'Modifier le lien';
+    afficher('');
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('f-titre').focus();
+  }
+
+  form.addEventListener('submit', function (evenement) {
+    evenement.preventDefault();
+    var donnees = {
+      titre: $('f-titre').value,
+      url: $('f-url').value,
+      categorie: $('f-categorie').value,
+      description: $('f-description').value
+    };
+    /* validation locale d'abord : message immédiat, sans aller-retour réseau */
+    try { API.valider(donnees); }
+    catch (e) { afficher(e.message, 'err'); return; }
+
+    var modification = !!lienEnCours;
+    btnSubmit.disabled = true;
+    afficher(modification ? 'Enregistrement…' : 'Ajout…', 'ok');
+    var action = modification ? API.modifier(lienEnCours, donnees) : API.ajouter(donnees);
+    action.then(function () {
+      reinitialiser(true);
+      afficher(modification ? 'Lien modifié.' : 'Lien ajouté.', 'ok');
+      return charger();
+    }).catch(function (e) {
+      afficher(e.message, 'err');
+    }).then(function () { btnSubmit.disabled = false; });
+  });
+  btnCancel.addEventListener('click', reinitialiser);
+  champQ.addEventListener('input', rendre);
+
+  /* ---------- actions sur la liste ---------- */
+  liste.addEventListener('click', function (evenement) {
+    var cible = evenement.target.closest ? evenement.target.closest('[data-modifier],[data-supprimer]') : null;
+    if (!cible) return;
+    var idModifier = cible.getAttribute('data-modifier');
+    var idSupprimer = cible.getAttribute('data-supprimer');
+    if (idModifier) {
+      var lien = cache.filter(function (l) { return l.id === idModifier; })[0];
+      if (lien) chargerDansFormulaire(lien);
+      return;
+    }
+    var aSupprimer = cache.filter(function (l) { return l.id === idSupprimer; })[0];
+    if (!aSupprimer) return;
+    if (!window.confirm('Supprimer « ' + aSupprimer.titre + ' » ?\n\nCette suppression est définitive.')) return;
+    cible.disabled = true;
+    API.supprimer(idSupprimer).then(function () {
+      afficher('Lien supprimé.', 'ok');
+      if (lienEnCours === idSupprimer) reinitialiser();
+      return charger();
+    }).catch(function (e) {
+      cible.disabled = false;
+      afficher(e.message, 'err');
+    });
+  });
+
+  charger();
+})();
+</script>
+</body>
+</html>
