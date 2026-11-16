@@ -302,10 +302,27 @@ function barreNotion(t, largeurPct, moy){
 
 /* ---------- interface ---------- */
 function elSel(cid, idBase){
-  return `<select id="${idBase}" onchange="${idBase==='sel-classe'?'renderEleves(elClasse=this.value,elEpreuve=null,elEleve=null)':'renderEleves()'}">
+  return `<select id="${idBase}" onchange="${idBase==='sel-classe'?'elEtat({classe:this.value,epreuve:null,eleve:null})':'renderEleves()'}">
     ${mesClasses().map(c => `<option value="${c.id}" ${c.id===cid?"selected":""}>${escapeHtml(c.nom)}</option>`).join("")}
   </select>`;
 }
+
+/* Applique une modification d'état de l'onglet puis redessine.
+   Les gestionnaires inline passaient par une copie (window.elVue…), si bien que
+   l'onglet, la classe, la date ou l'épreuve affichés ne changeaient jamais. */
+function elEtat(champs){
+  if (!champs || typeof champs !== "object") return;
+  if (Object.prototype.hasOwnProperty.call(champs, "vue")) elVue = champs.vue;
+  if (Object.prototype.hasOwnProperty.call(champs, "classe")) elClasse = champs.classe;
+  if (Object.prototype.hasOwnProperty.call(champs, "date")) elDate = champs.date;
+  if (Object.prototype.hasOwnProperty.call(champs, "epreuve")) elEpreuve = champs.epreuve;
+  if (Object.prototype.hasOwnProperty.call(champs, "eleve")) elEleve = champs.eleve;
+  if (Object.prototype.hasOwnProperty.call(champs, "triCompetence")) elTriCompetence = champs.triCompetence;
+  if (Object.prototype.hasOwnProperty.call(champs, "triBulletin")) elTriBulletin = champs.triBulletin;
+  renderEleves();
+}
+window.elEtat = elEtat;
+
 function renderEleves(){
   const zone = document.getElementById("v-eleves");
   if (!zone) return;
@@ -331,7 +348,7 @@ function renderEleves(){
       <p class="lead">Votre espace personnel : classes, élèves, numéro de PC, présences, notes par épreuve et <strong>analyse des points faibles</strong> par notion. Ces données sont <strong>privées</strong> — les autres professeurs ne les voient pas — et suivent votre sauvegarde distante comme le reste.</p>
     </div>
     <div class="row no-print" style="gap:6px">
-      ${vues.map(v => `<button class="btn btn-xs ${elVue===v[0]?"btn-blue":"btn-line"}" onclick="renderEleves(elVue='${v[0]}')">${ic(v[2])} ${v[1]}</button>`).join("")}
+      ${vues.map(v => `<button class="btn btn-xs ${elVue===v[0]?"btn-blue":"btn-line"}" onclick="elEtat({vue:'${v[0]}'})">${ic(v[2])} ${v[1]}</button>`).join("")}
     </div>
   </div>
   ${!c ? `<div class="note warn">${ic("pin")} Créez d'abord une classe ci-dessous.</div>` : `
@@ -466,6 +483,109 @@ function exporterNotesCSV(cid,eid){
   const exam = epreuvesDe(cid).find(item => item.id === eid); if (!exam) return;
   telechargerCSV("notes-" + cid + "-" + eid + "-" + todayISO() + ".csv",window.STI_STUDENT_CSV.exportGrades(exam,triEleves(elevesDe(cid)),store.notes[eid] || {}));
 }
+/* Import d'un classeur Excel du lycée (العدد | القسم | الاسم واللقب | DC1…).
+   Le classeur est converti en tableau « une colonne par épreuve », puis
+   traité exactement comme un CSV : aperçu d'abord, écriture à la confirmation. */
+function importerClasseurNotes(cid,fichier,input){
+  const finir = () => { if (input) input.value = ""; };
+  if (!fichier || typeof fichier.arrayBuffer !== "function"){
+    toast("Ce navigateur ne sait pas lire un classeur Excel."); return;
+  }
+  fichier.arrayBuffer().then(tampon => window.STI_XLSX.lireFeuilles(new Uint8Array(tampon)))
+    .then(resultat => {
+      const feuille = (resultat.feuilles || [])[0];
+      if (!feuille) throw new Error("Ce classeur ne contient aucune feuille.");
+      const conversion = window.STI_XLSX.classeurVersEpreuves(feuille, elevesDe(cid));
+      const analyse = window.STI_STUDENT_CSV.analyserColonnesEpreuves(conversion.csv, elevesDe(cid));
+      const rows = analyse.lignes.map(ligne => ({
+        cells:[
+          (ligne.eleve.nom || "") + " " + (ligne.eleve.prenom || ""),
+          analyse.epreuves.map(e => ligne.cellules[e.cle] || "—").join("  |  ")
+        ]
+      }));
+      const titres = analyse.epreuves.map(e => e.titre).join(", ");
+      afficherApercuCSV({
+        title:"Importer le classeur — " + classeDe(cid).nom,
+        summary:fichier.name + " (feuille « " + feuille.nom + " ») — "
+          + analyse.lignes.length + " élève(s) reconnu(s) sur " + (analyse.total || conversion.lignes)
+          + ". Épreuves détectées : " + (titres || "aucune") + ". ABS et * deviennent des absences ;"
+          + " les épreuves manquantes sont créées à la confirmation.",
+        headers:["Élève"].concat(analyse.epreuves.map(e => e.cle.toUpperCase())),
+        rows,errors:analyse.errors.concat(conversion.avertissements || []),
+        applyLabel:"Créer les épreuves et importer",
+        onApply:() => appliquerImportNotes(cid, analyse)
+      });
+    })
+    .catch(erreur => toast(erreur && erreur.message ? erreur.message : "Classeur illisible."))
+    .then(finir, finir);
+}
+
+/* Import d'un fichier à une colonne par épreuve (dc1, dc2, ds1…).
+   Rien n'est écrit avant la confirmation ; les épreuves manquantes sont
+   créées au moment de la confirmation, jamais avant l'aperçu. */
+/* Écrit les notes d'un import par épreuve : crée les épreuves manquantes,
+   n'écrase jamais une cellule vide, compte les absences à part.
+   Partagé par l'import CSV et l'import de classeur pour qu'ils ne divergent pas. */
+function appliquerImportNotes(cid, analyse){
+  if (!requireStudentAccount()) return false;
+  if (!analyse.epreuves.length){ toast("Aucune colonne d’épreuve reconnue."); return false; }
+  const existantes = epreuvesDe(cid);
+  analyse.epreuves.forEach(def => {
+    if (!existantes.some(e => String(e.titre || "") === def.titre))
+      existantes.push({ id:uidEl(), titre:def.titre, type:def.type.toLowerCase(), date:todayISO(), bareme:20, tags:[] });
+  });
+  const parTitre = new Map(epreuvesDe(cid).map(e => [String(e.titre || ""), e]));
+  let notees = 0, absents = 0, ignorees = 0;
+  analyse.lignes.forEach(ligne => {
+    analyse.epreuves.forEach(def => {
+      const brut = ligne.cellules[def.cle];
+      if (brut == null || brut === "") return;              // vide : on ne touche à rien
+      const epreuve = parTitre.get(def.titre);
+      if (!epreuve) return;
+      store.notes[epreuve.id] = store.notes[epreuve.id] || {};
+      if (brut === "ABS"){ store.notes[epreuve.id][ligne.eleve.id] = {abs:true}; absents++; return; }
+      const note = Number(String(brut).replace(",", "."));
+      if (!Number.isFinite(note) || note < 0 || note > (Number(epreuve.bareme) || 20)){ ignorees++; return; }
+      store.notes[epreuve.id][ligne.eleve.id] = {n:note};
+      notees++;
+    });
+  });
+  save(true); elVue = "epreuves"; renderEleves();
+  toast(notees + " note(s) et " + absents + " absence(s) importée(s)"
+    + (ignorees ? " ; " + ignorees + " valeur(s) hors barème ignorée(s)" : ""));
+  return true;
+}
+
+function estClasseurExcel(nom){
+  return /\.xlsx$/i.test(String(nom || ""));
+}
+function importerNotesLot(cid,input){
+  if (!requireStudentAccount()) return;
+  const fichier = input && input.files && input.files[0];
+  if (!fichier) return;
+  if (estClasseurExcel(fichier.name)) return importerClasseurNotes(cid,fichier,input);
+  lireFichierCSV(input,(text,file) => {
+    const analyse = window.STI_STUDENT_CSV.analyserColonnesEpreuves(text,elevesDe(cid));
+    const rows = analyse.lignes.map(ligne => ({
+      cells:[
+        (ligne.eleve.nom || "") + " " + (ligne.eleve.prenom || ""),
+        analyse.epreuves.map(e => ligne.cellules[e.cle] || "—").join("  |  ")
+      ]
+    }));
+    const titres = analyse.epreuves.map(e => e.titre).join(", ");
+    afficherApercuCSV({
+      title:"Importer des notes — " + classeDe(cid).nom,
+      summary:file.name + " — " + analyse.lignes.length + " élève(s) reconnu(s) sur " + analyse.total
+        + ". Épreuves détectées : " + (titres || "aucune") + ". Les épreuves absentes seront créées à la confirmation."
+        + " Une valeur ABS ou * est enregistrée comme absence ; une cellule vide ne change rien.",
+      headers:["Élève"].concat(analyse.epreuves.map(e => e.cle.toUpperCase())),
+      rows,errors:analyse.errors,
+      applyLabel:"Créer les épreuves et importer",
+      onApply:() => appliquerImportNotes(cid, analyse)
+    });
+  });
+}
+
 function importerNotesCSV(cid,eid,input){
   if (!requireStudentAccount()) return;
   const exam = epreuvesDe(cid).find(item => item.id === eid); if (!exam) return;
@@ -491,12 +611,49 @@ function importerNotesCSV(cid,eid,input){
     });
   });
 }
+/* Contrôle des noms avant les bulletins : on signale, on ne renomme jamais
+   tout seul. Chaque correction reste un choix explicite du professeur. */
+function verifierNoms(cid){
+  if (!requireStudentAccount()) return;
+  const eleves = elevesDe(cid);
+  const controles = eleves.map(eleve => ({ eleve, controle: window.STI_STUDENT_CSV.controlerNom(eleve.nom, eleve.prenom) }))
+    .filter(item => item.controle.aCorriger);
+  if (!controles.length){ toast("Tous les noms sont propres : rien à corriger."); return; }
+
+  const rows = controles.map(item => ({
+    cells:[
+      (item.controle.avant.nom || "") + " " + (item.controle.avant.prenom || ""),
+      (item.controle.apres.nom || "") + " " + (item.controle.apres.prenom || ""),
+      item.controle.raisons.join(", ")
+    ]
+  }));
+  afficherApercuCSV({
+    title:"Vérifier les noms — " + classeDe(cid).nom,
+    summary:controles.length + " nom(s) sur " + eleves.length + " demandent une retouche. Rien n’est modifié avant votre confirmation ; "
+      + "les élèves ne sont jamais fusionnés, même si deux noms se ressemblent.",
+    headers:["Actuel","Proposé","Motif"],
+    rows,errors:[],
+    applyLabel:"Appliquer les " + controles.length + " correction(s)",
+    onApply:() => {
+      if (!requireStudentAccount()) return false;
+      controles.forEach(item => {
+        item.eleve.nom = item.controle.apres.nom;
+        item.eleve.prenom = item.controle.apres.prenom;
+      });
+      save(true); renderEleves();
+      toast(controles.length + " nom(s) corrigé(s)");
+      return true;
+    }
+  });
+}
+
 function vueRoster(cid){
   const c = classeDe(cid);
   const els = triEleves(elevesDe(cid));
   return `<div class="card">
     <div class="card-h"><h3>${ic("users")} Élèves — ${escapeHtml(c.nom)}</h3>
       <div class="row" style="gap:6px;flex-wrap:wrap;justify-content:flex-end"><span class="badge b-grey">${els.length} inscrit(s)</span>
+        <button class="btn btn-xs btn-line" onclick="verifierNoms('${cid}')" title="Repérer les minuscules et les espaces avant impression des bulletins">${ic("check")} Vérifier les noms</button>
         <button class="btn btn-xs btn-line" onclick="exporterRosterCSV('${cid}')">Exporter CSV</button>
         <button class="btn btn-xs btn-soft" onclick="document.getElementById('roster-csv-${cid}').click()">Importer CSV</button>
         <input id="roster-csv-${cid}" type="file" accept=".csv,text/csv" style="display:none" onchange="importerRosterCSV('${cid}',this)">
@@ -559,7 +716,7 @@ function vuePresence(cid){
     <div class="card-h"><h3>${ic("check")} Présences — ${escapeHtml(c.nom)}</h3>
       <div class="row" style="gap:8px">
       <button class="btn btn-xs" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="vocOuvrir('${cid}',document.getElementById('pr-date').value)" title="Dictée des états : absent, exclu, sorti, entrée par billet, présent, retard">🎤 Pointer à la voix</button>
-      <input type="date" id="pr-date" value="${iso}" onchange="renderEleves(elDate=this.value)">
+      <input type="date" id="pr-date" value="${iso}" onchange="elEtat({date:this.value})">
       <button class="btn btn-xs btn-blue" onclick="setAllPresent('${cid}',document.getElementById('pr-date').value)">Tous présents</button>
       <button class="btn btn-xs btn-line" onclick="clearPresence('${cid}',document.getElementById('pr-date').value)">Vider</button></div></div>
     <div class="card-b">
@@ -574,7 +731,7 @@ function vuePresence(cid){
       <div class="row" style="gap:8px;margin-top:10px">
         <span class="badge b-green">${nb.p} présent(s)</span><span class="badge" style="background:var(--rose-bg);color:#a51f38;border-color:var(--rose-line)">${nb.a} absent(s)</span>${nb.e?'<span class="badge" style="background:#a51f38;color:#fff;border-color:#a51f38">'+nb.e+' exclu(s)</span>':""}${nb.s?'<span class="badge b-amber">'+nb.s+' sorti(s)</span>':""}${nb.b?'<span class="badge b-blue">'+nb.b+' par billet</span>':""}<span class="badge b-amber">${nb.r} retard(s)</span>
       </div>` : '<p class="tiny muted">Ajoutez d\'abord des élèves (vue « Élèves »).</p>'}
-      ${dates.length ? `<div class="tiny muted" style="margin-top:12px">Dernières séances pointées : ${dates.map(d => `<button class="btn btn-xs btn-line" style="margin:2px" onclick="renderEleves(elDate='${d}')">${fmtShort(d)}</button>`).join(" ")}</div>` : ""}
+      ${dates.length ? `<div class="tiny muted" style="margin-top:12px">Dernières séances pointées : ${dates.map(d => `<button class="btn btn-xs btn-line" style="margin:2px" onclick="elEtat({date:'${d}'})">${fmtShort(d)}</button>`).join(" ")}</div>` : ""}
     </div></div>`;
 }
 function vueEpreuves(cid){
@@ -583,9 +740,11 @@ function vueEpreuves(cid){
   const nbEl = elevesDe(cid).length;
   const btnPreset = ["3SI1","4SI2"].includes(cid)
     ? `<button class="btn btn-xs btn-blue" onclick="presetsOfficiels('${cid}')">${ic("calendar")} Pré-remplir DC / DS officiels</button>` : "";
+  const btnImport = `<button class="btn btn-xs btn-line" onclick="document.getElementById('notes-lot-${cid}').click()" title="Importer un fichier avec une colonne par épreuve (dc1, dc2, ds1…)">${ic("file")} Importer des notes (DC1, DC2, DS1…)</button>
+      <input id="notes-lot-${cid}" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none" onchange="importerNotesLot('${cid}',this)">`;
   return `<div class="card">
     <div class="card-h"><h3>${ic("pen")} Épreuves &amp; notes — ${escapeHtml(c.nom)}</h3>
-      <div class="row" style="gap:6px">${btnPreset}</div></div>
+      <div class="row" style="gap:6px">${btnPreset}${btnImport}</div></div>
     <div class="card-b">
       <details class="acc" style="margin-bottom:12px"><summary>Nouvelle épreuve</summary>
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px 0">
@@ -613,7 +772,7 @@ function vueEpreuves(cid){
             <div class="row" style="gap:6px;flex-wrap:wrap">
               ${moyC !== null ? '<span class="badge b-blue">moy. classe ' + moyC.toFixed(2) + ' /' + e.bareme + '</span>' : ""}
               <span class="tiny muted">${vals.length}/${nbEl} notés</span>
-              <button class="btn btn-xs ${ouverte?"btn-blue":"btn-soft"}" onclick="renderEleves(elEpreuve='${ouverte?"":e.id}')">${ouverte?"Fermer":"Saisir les notes"}</button>
+              <button class="btn btn-xs ${ouverte?"btn-blue":"btn-soft"}" onclick="elEtat({epreuve:'${ouverte?"":e.id}')">${ouverte?"Fermer":"Saisir les notes"}</button>
               <button class="btn btn-xs btn-line" onclick="exporterNotesCSV('${cid}','${e.id}')" title="Exporter le modèle de notes CSV">Exporter CSV</button>
               <button class="btn btn-xs btn-line" onclick="document.getElementById('notes-csv-${e.id}').click()" title="Prévisualiser un fichier de notes avant import">Importer CSV</button>
               <input id="notes-csv-${e.id}" type="file" accept=".csv,text/csv" style="display:none" onchange="importerNotesCSV('${cid}','${e.id}',this)">
@@ -634,7 +793,7 @@ function vueEpreuves(cid){
     </div></div>`;
 }
 function elSelEleve(cid, sel){
-  return `<select onchange="renderEleves(elEleve=this.value)">
+  return `<select onchange="elEtat({eleve:this.value})">
     ${triEleves(elevesDe(cid)).map(e => `<option value="${e.id}" ${sel && sel.id===e.id?"selected":""}>${escapeHtml(e.nom + " " + (e.prenom||""))}</option>`).join("")}
   </select>`;
 }
@@ -654,7 +813,7 @@ function vueCompetences(cid){
   });
   return `<div class="card">
     <div class="card-h"><h3>${ic("target")} Progression par compétence — ${escapeHtml(classeDe(cid).nom)}</h3><div class="row" style="gap:8px;flex-wrap:wrap">
-      <label class="tiny muted" for="competence-term">Trimestre</label><select id="competence-term" style="width:auto" onchange="renderEleves(elTriCompetence=Number(this.value))">${[1,2,3].map(n=>`<option value="${n}" ${tri===n?"selected":""}>T${n}${n===trimestreCourantEleve(cid)?" — en cours":""}</option>`).join("")}</select>
+      <label class="tiny muted" for="competence-term">Trimestre</label><select id="competence-term" style="width:auto" onchange="elEtat({triCompetence:Number(this.value)})">${[1,2,3].map(n=>`<option value="${n}" ${tri===n?"selected":""}>T${n}${n===trimestreCourantEleve(cid)?" — en cours":""}</option>`).join("")}</select>
       ${student ? elSelEleve(cid,student) : ""}</div></div>
     <div class="card-b">
       ${!student ? '<p class="tiny muted">Ajoutez d’abord des élèves dans la vue « Élèves ».</p>' : !definitions.length ? '<p class="tiny muted">Ajoutez des notions aux épreuves de cette classe pour les suivre ici par élève.</p>' : `
@@ -689,7 +848,7 @@ function vueBulletins(cid){
   const statusLabel={acquis:'Acquis','en-cours':'En cours',renforcer:'À renforcer','':'Non évaluée'};
   return `<div class="card">
     <div class="card-h"><h3>${ic("file")} Bulletins trimestriels — ${escapeHtml(classeDe(cid).nom)}</h3><div class="row" style="gap:8px;flex-wrap:wrap">
-      <label class="tiny muted" for="bulletin-term">Trimestre</label><select id="bulletin-term" style="width:auto" onchange="renderEleves(elTriBulletin=Number(this.value))">${[1,2,3].map(n=>`<option value="${n}" ${tri===n?"selected":""}>T${n}${n===trimestreCourantEleve(cid)?" — en cours":""}</option>`).join("")}</select>
+      <label class="tiny muted" for="bulletin-term">Trimestre</label><select id="bulletin-term" style="width:auto" onchange="elEtat({triBulletin:Number(this.value)})">${[1,2,3].map(n=>`<option value="${n}" ${tri===n?"selected":""}>T${n}${n===trimestreCourantEleve(cid)?" — en cours":""}</option>`).join("")}</select>
       ${student?elSelEleve(cid,student):""}</div></div>
     <div class="card-b">
       ${!student?'<p class="tiny muted">Ajoutez d’abord des élèves dans la vue « Élèves ».</p>':`
@@ -1385,6 +1544,7 @@ window.presetsOfficiels = presetsOfficiels; window.enregistrerNotes = enregistre
 window.setCompetenceEleve = setCompetenceEleve; window.saveBulletinComment = saveBulletinComment; window.imprimerBulletin = imprimerBulletin;
 window.exporterRosterCSV = exporterRosterCSV; window.importerRosterCSV = importerRosterCSV;
 window.exporterNotesCSV = exporterNotesCSV; window.importerNotesCSV = importerNotesCSV;
+window.importerNotesLot = importerNotesLot; window.verifierNoms = verifierNoms;
 window.statsEleve = statsEleve; window.classementClasse = classementClasse; window.rangDe = rangDe;
 window.moyennesParNotion = moyennesParNotion; window.renderEleves = renderEleves;
 window.triEleves = triEleves; window.elClasseCourante = elClasseCourante;

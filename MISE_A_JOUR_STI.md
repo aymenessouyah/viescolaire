@@ -1,5 +1,21 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Mes classes & élèves — onglets réparés et imports réels — `v1.34.23` (mise à jour 2026-11-16, GMT+1)
+
+Révision de la partie « Mes classes &amp; élèves » à partir des fichiers réels du lycée.
+
+**Défaut bloquant corrigé.** Les huit gestionnaires de la page (`elVue`, `elClasse`, `elDate`, `elEpreuve`, `elEleve`, `elTriCompetence`, `elTriBulletin`) écrivaient dans une copie exposée sur `window`, alors que le rendu lisait la variable interne du module. Conséquence : **les onglets Présences, Épreuves, Points faibles, Compétences et Bulletins ne s’ouvraient jamais**, et changer de classe, de date ou de trimestre ne faisait rien. Une fonction unique `elEtat(...)` remplace ces huit gestionnaires et modifie le véritable état. Vérifié par de vrais clics dans un DOM : les six vues s’ouvrent, sans erreur JavaScript.
+
+**Import d’un fichier « une colonne par épreuve »** (`dc1`, `dc2`, `ds1`…), format des relevés du lycée. L’aperçu s’affiche avant toute écriture ; les épreuves manquantes sont créées à la confirmation seulement. `ABS` et `*` deviennent des absences, une cellule vide ne change rien, une valeur hors barème est ignorée et comptée.
+
+**Import du classeur Excel du lycée** (`.xlsx` : العدد | القسم | الاسم واللقب | DC1…DS3). Nouveau module `assets/xlsx-lire.js`, sans bibliothèque externe : il ouvre l’archive ZIP, décompresse avec un `inflate` écrit sur place, puis lit le XML des feuilles. Un élève est rapproché par son nom arabe **mot par mot**, l’ordre des mots variant d’une source à l’autre ; un élève non reconnu est **conservé et signalé**, jamais supprimé silencieusement.
+
+**Contrôle des noms** (bouton « Vérifier les noms ») : les minuscules et les espaces surnuméraires sont détectés et proposés, jamais appliqués d’office. Deux noms proches ne sont jamais fusionnés.
+
+**Nettoyage** : le tatweel et les caractères invisibles sont retirés, les particules (`ben`, `el`, `bou`…) restent en minuscules, et le contrôle porte sur le nom comme sur le prénom.
+
+**Tests** : `tests/eleves-imports.test.js` (11 cas) et `tests/xlsx-lire.test.js` (10 cas, avec un vrai classeur en fixture). Total **285/285**.
+
 ## Carnet de liens utiles — `v1.34.22` (mise à jour 2026-11-13, GMT+1)
 
 Nouvelle page **Mon carnet de liens**, dans le menu juste après « Mon cours Ai ».

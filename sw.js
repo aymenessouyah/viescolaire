@@ -1,5 +1,5 @@
 /* Cache atomique par version. Aucun jeton ni appel Cloud n'est mis en cache. */
-const VERSION='sti-espace-v1.34.22';
+const VERSION='sti-espace-v1.34.23';
 const CORE_CACHE=VERSION+'-core',DOCS_CACHE='sti-espace-offline-documents-v1';
 const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./index.html",
@@ -20,6 +20,7 @@ const CORE_ASSETS=["./assets/color-mode.css","./assets/color-mode.js",
   "./assets/cahier-defaults.js",
   "./assets/calendar-ics.js",
   "./assets/student-csv.js",
+  "./assets/xlsx-lire.js",
   "./assets/student-reports.js",
   "./assets/app.js",
   "./assets/professeur-badge.js",
