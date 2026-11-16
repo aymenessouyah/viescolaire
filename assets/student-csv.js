@@ -86,6 +86,46 @@
     return String(value || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ');
   }
 
+  /* ---------- nettoyage et contrôle des noms ----------
+     Les fichiers réels du lycée contiennent des minuscules, des espaces
+     surnuméraires et des espaces finales (« ben ahmed », « Ezzine »). On ne
+     renomme jamais d'office : on propose une graphie et on signale l'écart. */
+
+  const PARTICULES = ['ben', 'bin', 'el', 'al', 'bou', 'bel', 'abou', 'ould', 'mohamed'];
+
+  function nomPropre(value){
+    return String(value || '')
+      .normalize('NFC')
+      .replace(/[\u0640\u200b\u200c\u200d\ufeff]/g, '')  // tatweel et caractères invisibles
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function majusculesNom(value){
+    return nomPropre(value).split(' ').map(function(mot, index){
+      const bas = mot.toLowerCase();
+      if (index > 0 && PARTICULES.indexOf(bas) >= 0) return bas;
+      return bas.charAt(0).toUpperCase() + bas.slice(1);
+    }).join(' ');
+  }
+
+  /* Retourne la liste des retouches à faire valider, sans les appliquer. */
+  function controlerNom(nom, prenom){
+    const n = nomPropre(nom), p = nomPropre(prenom);
+    const attenduN = majusculesNom(n), attenduP = majusculesNom(p);
+    const raisons = [];
+    if (String(nom || '') !== n) raisons.push('espace surnuméraire');
+    if (String(prenom || '') !== p) raisons.push('espace surnuméraire');
+    if (n !== attenduN) raisons.push('majuscules');
+    if (p !== attenduP) raisons.push('majuscules');
+    return {
+      avant: { nom: String(nom || ''), prenom: String(prenom || '') },
+      apres: { nom: attenduN, prenom: attenduP },
+      raisons: Array.from(new Set(raisons)),
+      aCorriger: raisons.length > 0
+    };
+  }
+
   const ROSTER_COLUMNS = {
     id:['id','ideleve','eleveid','identifiant'],
     nom:['nom','lastname','familyname','nomfamille'],
@@ -198,6 +238,78 @@
     return false;
   }
 
+  /* ---------- import « une colonne par épreuve » ----------
+     Les fichiers réels du lycée (classeur Excel exporté en CSV) portent
+     dc1, dc2, ds1… ABS et * signifient « absent ». Une colonne reconnue
+     devient une épreuve, créée à la volée si necessary. */
+
+  const COLONNES_EPREUVE = /^(dc|ds)\s*([0-9]{1,2})$/;
+  const VALEURS_ABSENCE = new Set(['abs', 'absent', 'absente', 'absence', 'nonjustifie', 'nonjustifiee']);
+
+  function colonnesEpreuves(headers){
+    const trouvees = [];
+    headers.forEach(function(header, index){
+      const m = COLONNES_EPREUVE.exec(header);
+      if (m) trouvees.push({ index, cle: m[1] + m[2], type: m[1].toUpperCase(), num: Number(m[2]) });
+    });
+    return trouvees;
+  }
+
+  /* « * » est l'astérisque utilisé dans les relevés du lycée pour marquer
+     une absence, exactement comme « ABS ». */
+  function valeurAbsente(texte){
+    const brut = String(texte == null ? '' : texte).trim();
+    if (brut === '*') return true;
+    return VALEURS_ABSENCE.has(normalizeName(brut));
+  }
+
+  function analyserColonnesEpreuves(text, students){
+    let table;
+    try { table = readTable(text); }
+    catch (error){ return { epreuves:[], lignes:[], errors:[error.message], total:0 }; }
+
+    const colonnes = colonnesEpreuves(table.headers);
+    if (!colonnes.length)
+      return { epreuves:[], lignes:[], errors:['Aucune colonne d’épreuve (dc1, dc2, ds1…).'], total:table.rows.length };
+
+    const colonnesIdent = columnIndexes(table.headers, ROSTER_COLUMNS);
+    const roster = Array.isArray(students) ? students : [];
+    const parId = new Map(roster.map(function(e){ return [String(e.id), e]; }));
+    const parNom = new Map();
+    roster.forEach(function(e){
+      const k = normalizeName(e.nom) + '|' + normalizeName(e.prenom);
+      parNom.set(k, parNom.has(k) ? null : e);   // null = homonyme, ambigu
+    });
+
+    const lignes = [], errors = [];
+    table.rows.forEach(function(cells, index){
+      const ligne = index + 2;
+      const identifiant = colonnesIdent.id >= 0 ? String(cells[colonnesIdent.id] || '').trim() : '';
+      const nom = colonnesIdent.nom >= 0 ? String(cells[colonnesIdent.nom] || '').trim() : '';
+      const prenom = colonnesIdent.prenom >= 0 ? String(cells[colonnesIdent.prenom] || '').trim() : '';
+      let eleve = identifiant ? parId.get(identifiant) : null;
+      if (!eleve && nom){
+        const k = normalizeName(nom) + '|' + normalizeName(prenom);
+        const candidat = parNom.get(k);
+        if (candidat === null){ errors.push('Ligne ' + ligne + ' : plusieurs élèves portent « ' + nom + ' ' + prenom + ' » ; ajoutez leur ID.'); return; }
+        eleve = candidat || null;
+      }
+      if (!eleve){ errors.push('Ligne ' + ligne + ' : élève introuvable dans cette classe (' + (nom || identifiant || 'sans nom') + ').'); return; }
+
+      const cellules = {};
+      colonnes.forEach(function(col){
+        const brut = String(cells[col.index] == null ? '' : cells[col.index]).trim();
+        cellules[col.cle] = valeurAbsente(brut) ? 'ABS' : brut;
+      });
+      lignes.push({ eleve, cellules, ligne });
+    });
+
+    const epreuves = colonnes.map(function(col){
+      return { cle: col.cle, type: col.type, numero: col.num, titre: (col.type === 'DC' ? 'Devoir de contrôle n°' : 'Devoir de synthèse n°') + col.num };
+    });
+    return { epreuves, lignes, errors, total: table.rows.length };
+  }
+
   function planGradeImport(text, exam, students){
     let table;
     try { table = readTable(text); }
@@ -238,7 +350,8 @@
   }
 
   const api = Object.freeze({
-    parseRows, readTable, exportRoster, planRosterImport, exportGrades, planGradeImport, normalizeHeader
+    parseRows, readTable, exportRoster, planRosterImport, exportGrades, planGradeImport, normalizeHeader,
+    nomPropre, majusculesNom, controlerNom, analyserColonnesEpreuves, colonnesEpreuves
   });
   root.STI_STUDENT_CSV = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
