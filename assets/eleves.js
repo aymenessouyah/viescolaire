@@ -132,13 +132,82 @@ function nbAbsences(cid, eid){
 }
 
 /* ---------- épreuves et notes ---------- */
+/* Porte d'entrée unique pour ajouter un devoir daté, depuis n'importe quelle
+   fiche. La classe peut être passée par la fiche appelante ; sinon elle est
+   choisie dans le formulaire. La date est toujours libre : aucune date
+   officielle n'est imposée. Le type enregistré est le code canonique, si bien
+   que la répartition et le carnet de notes affichent le même libellé. */
+function ajouterDevoir(cid, options){
+  if (!requireStudentAccount()) return;
+  const opts = options || {};
+  const classes = mesClasses();
+  if (!classes.length){ toast("Créez d’abord une classe"); return; }
+  const choisi = cid && classeDe(cid) ? cid : (elClasseCourante() || classes[0].id);
+
+  const boite = studentCsvDialog();
+  const choixClasses = classes.map(c => `<option value="${c.id}" ${c.id === choisi ? "selected" : ""}>${escapeHtml(c.nom)}</option>`).join("");
+  const choixTypes = ["dc","ds","tp","dm","autre"]
+    .map(t => `<option value="${t}" ${t === (opts.type || "dc") ? "selected" : ""}>${window.libEpreuve ? window.libEpreuve(t) : t}</option>`).join("");
+
+  boite.innerHTML = `<div class="student-csv-box">
+    <div class="student-csv-head"><div><div class="student-csv-kicker">NOUVEAU DEVOIR</div>
+      <h2 id="student-csv-title">Ajouter un devoir daté</h2></div>
+      <button class="btn btn-xs btn-line" type="button" data-dev-annuler>Fermer</button></div>
+    <div class="student-csv-body">
+      <p>La date est libre : les dates du pré-remplissage officiel ne sont que des suggestions. Le devoir apparaît ensuite dans la répartition des devoirs et dans Mes classes &amp; élèves.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;padding:8px 0">
+        <div><label class="f">Classe</label><select id="dev-classe">${choixClasses}</select></div>
+        <div style="min-width:230px;flex:1"><label class="f">Titre</label><input id="dev-titre" placeholder="${escapeHtml(opts.titre || "Devoir de contrôle n°2")}" value="${escapeHtml(opts.titre || "")}"></div>
+        <div><label class="f">Type</label><select id="dev-type">${choixTypes}</select></div>
+        <div><label class="f">Date</label><input id="dev-date" type="date" value="${escapeHtml(opts.date || todayISO())}"></div>
+        <div><label class="f">Barème</label><input id="dev-bareme" type="number" min="1" value="20" style="width:80px"></div>
+        <div style="min-width:200px;flex:1"><label class="f">Notions (séparées par des virgules)</label><input id="dev-tags" placeholder="SQL, requêtes de sélection"></div>
+      </div>
+      <p class="tiny muted" id="dev-message" role="alert"></p>
+    </div>
+    <div class="student-csv-actions">
+      <button class="btn btn-line" type="button" data-dev-annuler>Annuler</button>
+      <button class="btn btn-blue" type="button" data-dev-enregistrer>${ic("check")} Enregistrer le devoir</button>
+    </div></div>`;
+
+  const champ = id => document.getElementById(id);
+  const fermer = () => { boite.close(); };
+  boite.querySelectorAll("[data-dev-annuler]").forEach(b => b.addEventListener("click", fermer));
+  boite.querySelector("[data-dev-enregistrer]").addEventListener("click", () => {
+    const cible = champ("dev-classe").value;
+    const titre = champ("dev-titre").value.trim();
+    const date = champ("dev-date").value;
+    const bareme = parseFloat(champ("dev-bareme").value) || 20;
+    const message = champ("dev-message");
+    if (!titre){ message.textContent = "Indiquez le titre du devoir."; champ("dev-titre").focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ message.textContent = "Choisissez une date valide."; champ("dev-date").focus(); return; }
+    if (!(bareme > 0)){ message.textContent = "Le barème doit être supérieur à zéro."; return; }
+    if (epreuvesDe(cible).some(e => String(e.titre || "") === titre && e.date === date)){
+      message.textContent = "Ce devoir existe déjà pour cette classe et cette date.";
+      return;
+    }
+    epreuvesDe(cible).push({
+      id:uidEl(), titre:titre,
+      type:(window.typeEpreuveCanonique ? window.typeEpreuveCanonique(champ("dev-type").value) : champ("dev-type").value),
+      date:date, bareme:bareme,
+      tags:champ("dev-tags").value.split(/[,;]+/).map(x => x.trim()).filter(Boolean)
+    });
+    elClasse = cible; elVue = "epreuves"; elEpreuve = null;
+    save(true); renderEleves(); fermer();
+    toast("Devoir « " + titre + " » ajouté le " + fmtShort(date));
+  });
+  if (!boite.open) boite.showModal();
+  champ("dev-titre").focus();
+}
+window.ajouterDevoir = ajouterDevoir;
+
 function addEpreuve(cid){
   const g = id => (document.getElementById(id) || {}).value || "";
   const titre = g("ep-titre").trim();
   if (!titre){ toast("Indiquez le titre de l'épreuve"); return; }
   const tags = g("ep-tags").split(/[,;]+/).map(x => x.trim()).filter(Boolean);
   epreuvesDe(cid).push({
-    id:uidEl(), titre:titre, type:g("ep-type"), date:g("ep-date"),
+    id:uidEl(), titre:titre, type:(window.typeEpreuveCanonique ? window.typeEpreuveCanonique(g("ep-type")) : g("ep-type")), date:g("ep-date"),
     bareme:parseFloat(g("ep-bareme")) || 20, tags:tags
   });
   save(); renderEleves(); toast("Épreuve ajoutée");
@@ -171,7 +240,7 @@ function modifierEpreuve(cid, eid){
     horsBareme.forEach(id => { notes[id] = { n: bareme }; });
   }
   epreuve.titre = titre;
-  epreuve.type = g("ep-mod-type") || epreuve.type;
+  epreuve.type = window.typeEpreuveCanonique ? window.typeEpreuveCanonique(g("ep-mod-type")) : (g("ep-mod-type") || epreuve.type);
   epreuve.date = date;
   epreuve.bareme = bareme;
   epreuve.tags = g("ep-mod-tags").split(/[,;]+/).map(x => x.trim()).filter(Boolean);
@@ -560,7 +629,7 @@ function appliquerImportNotes(cid, analyse){
   const existantes = epreuvesDe(cid);
   analyse.epreuves.forEach(def => {
     if (!existantes.some(e => String(e.titre || "") === def.titre))
-      existantes.push({ id:uidEl(), titre:def.titre, type:def.type.toLowerCase(), date:todayISO(), bareme:20, tags:[] });
+      existantes.push({ id:uidEl(), titre:def.titre, type:(window.typeEpreuveCanonique ? window.typeEpreuveCanonique(def.type) : String(def.type).toLowerCase()), date:todayISO(), bareme:20, tags:[] });
   });
   const parTitre = new Map(epreuvesDe(cid).map(e => [String(e.titre || ""), e]));
   let notees = 0, absents = 0, ignorees = 0;
@@ -777,7 +846,7 @@ function vueEpreuves(cid){
       <details class="acc" style="margin-bottom:12px"><summary>Nouvelle épreuve</summary>
         <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end;padding:10px 0">
           <div><label class="f">Titre</label><input id="ep-titre" placeholder="TP PHP — insertion"></div>
-          <div><label class="f">Type</label><select id="ep-type"><option value="dc">Devoir de contrôle</option><option value="ds">Devoir de synthèse</option><option value="tp" selected>TP / pratique</option><option value="autre">Autre</option></select></div>
+          <div><label class="f">Type</label><select id="ep-type"><option value="dc">Devoir de contrôle</option><option value="ds">Devoir de synthèse</option><option value="tp" selected>TP / pratique</option><option value="dm">Devoir maison</option><option value="autre">Autre</option></select></div>
           <div><label class="f">Date</label><input id="ep-date" type="date" value="${todayISO()}"></div>
           <div><label class="f">Barème</label><input id="ep-bareme" type="number" value="20" min="1" style="width:80px"></div>
           <div style="min-width:220px;flex:1"><label class="f">Notions (séparées par des virgules — pour l'analyse des points faibles)</label><input id="ep-tags" placeholder="SQL / LDD, requêtes de sélection"></div>
@@ -796,10 +865,7 @@ function vueEpreuves(cid){
             <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
               <div><label class="f">Titre</label><input id="ep-mod-titre" value="${escapeHtml(e.titre)}"></div>
               <div><label class="f">Type</label><select id="ep-mod-type">
-                <option value="dc" ${e.type==="dc"?"selected":""}>Devoir de contrôle</option>
-                <option value="ds" ${e.type==="ds"?"selected":""}>Devoir de synthèse</option>
-                <option value="tp" ${e.type==="tp"?"selected":""}>TP / pratique</option>
-                <option value="autre" ${e.type==="autre"?"selected":""}>Autre</option>
+                ${["dc","ds","tp","dm","autre"].map(t => `<option value="${t}" ${(window.typeEpreuveCanonique?window.typeEpreuveCanonique(e.type):e.type)===t?"selected":""}>${window.libEpreuve?window.libEpreuve(t):t}</option>`).join("")}
               </select></div>
               <div><label class="f">Date de l’épreuve</label><input id="ep-mod-date" type="date" value="${e.date||""}"></div>
               <div><label class="f">Barème</label><input id="ep-mod-bareme" type="number" min="1" value="${e.bareme||20}" style="width:80px"></div>
@@ -808,7 +874,7 @@ function vueEpreuves(cid){
             </div>
             <p class="tiny muted" style="margin-top:10px">Changer la date ne touche ni aux notes déjà saisies ni aux présences. La date proposée par le pré-remplissage officiel n’est qu’une suggestion.</p>
           </div></div>`;
-        const tyLib = { dc:"Contrôle", ds:"Synthèse", tp:"TP / pratique", autre:"Autre" }[e.type] || e.type;
+        const tyLib = window.libEpreuve ? window.libEpreuve(e.type) : e.type;
         return `<div class="card" style="margin:10px 0">
           <div class="spread" style="gap:10px;flex-wrap:wrap">
             <div>
