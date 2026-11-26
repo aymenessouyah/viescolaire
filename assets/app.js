@@ -12,7 +12,7 @@
 (function () {
 'use strict';
 
-const APP_VER = "v1.34.23";
+const APP_VER = "v1.34.25";
 const APP_UPDATED_AT = "2026-11-11 (GMT+1)";
 /* Version stockée sans effacer le cache hors ligne ni les données. */
 try { localStorage.setItem("sti_appver",APP_VER); } catch(e){}
@@ -186,6 +186,34 @@ const ICONS = {
   lock:'<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1.4"/>',
   out:'<path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 12H8"/><path d="m12 9 3 3-3 3"/><path d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-2"/>'
 };
+/* Libellé unique des types d'épreuve. Trois formats coexistaient dans
+   l'application (« dc », « DC », « Devoir de contrôle ») : un même devoir
+   pouvait s'afficher « dc » dans la répartition et « Contrôle » dans
+   Mes classes & élèves. Une seule table fait foi désormais. */
+const TYPES_EPREUVE = {
+  dc: "Devoir de contrôle",
+  ds: "Devoir de synthèse",
+  tp: "TP / pratique",
+  dm: "Devoir maison",
+  autre: "Autre"
+};
+function libEpreuve(type){
+  const cle = String(type == null ? "" : type).trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (TYPES_EPREUVE[cle]) return TYPES_EPREUVE[cle];
+  // « Devoir de contrôle », « devoir de synthese », « contrôle »…
+  if (/^d[ce]v?o?i?r? ?de ?contr/.test(cle) || cle === "controle") return TYPES_EPREUVE.dc;
+  if (/synthese/.test(cle)) return TYPES_EPREUVE.ds;
+  if (cle === "tp" || /pratique/.test(cle)) return TYPES_EPREUVE.tp;
+  if (cle === "dm" || /maison/.test(cle)) return TYPES_EPREUVE.dm;
+  return cle ? String(type).trim() : TYPES_EPREUVE.autre;
+}
+function typeEpreuveCanonique(type){
+  const libelle = libEpreuve(type);
+  const entree = Object.keys(TYPES_EPREUVE).find(k => TYPES_EPREUVE[k] === libelle);
+  return entree || "autre";
+}
+
 function ic(n, cls){ return '<svg class="'+(cls||'')+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[n]||"")+'</svg>'; }
 
 const TABS = [
@@ -2566,6 +2594,7 @@ window.between = between;
 window.inRange = inRange;
 window.fmtLong = fmtLong;
 window.fmtShort = fmtShort;
+window.libEpreuve = libEpreuve; window.typeEpreuveCanonique = typeEpreuveCanonique;
 window.SCHOOL = SCHOOL; window.JALONS = JALONS; window.CLASSES = CLASSES; window.VACANCES = VACANCES; window.DATA = DATA;
 window.fmtJM = fmtJM;
 window.jour = jour;
