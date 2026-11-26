@@ -151,6 +151,34 @@ function delEpreuve(cid, eid){
   if (elEpreuve === eid) elEpreuve = null;
   save(); renderEleves();
 }
+/* Le professeur reste maître des dates : celles proposées par le
+   pré-remplissage officiel ne sont que des suggestions. Modifier une épreuve
+   ne touche ni aux notes déjà saisies ni aux présences. */
+function modifierEpreuve(cid, eid){
+  const epreuve = epreuvesDe(cid).find(x => x.id === eid);
+  if (!epreuve){ toast("Épreuve introuvable"); return; }
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+  const titre = g("ep-mod-titre").trim();
+  if (!titre){ toast("Indiquez le titre de l'épreuve"); return; }
+  const date = g("ep-mod-date");
+  const bareme = parseFloat(g("ep-mod-bareme")) || 20;
+  const notes = store.notes[eid] || {};
+  const horsBareme = Object.keys(notes).filter(id => !notes[id].abs && Number(notes[id].n) > bareme);
+  if (horsBareme.length){
+    const noms = horsBareme.map(id => { const el = elevesDe(cid).find(x => x.id === id); return el ? el.nom + " " + (el.prenom || "") : ""; }).filter(Boolean);
+    if (!confirm(horsBareme.length + " note(s) dépassent le nouveau barème (" + noms.slice(0,3).join(", ")
+      + (noms.length > 3 ? "…" : "") + "). Elles seront abaissées au barème. Continuer ?")) return;
+    horsBareme.forEach(id => { notes[id] = { n: bareme }; });
+  }
+  epreuve.titre = titre;
+  epreuve.type = g("ep-mod-type") || epreuve.type;
+  epreuve.date = date;
+  epreuve.bareme = bareme;
+  epreuve.tags = g("ep-mod-tags").split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+  elEpreuve = eid; save(true); renderEleves();
+  toast("Épreuve modifiée — notes et présences conservées");
+}
+
 /* épreuves officielles pré-remplies (classes 3SI1 / 4SI2 uniquement) */
 function presetsOfficiels(cid){
   const dc = SESSIONS[cid].filter(s => s.blk && s.blk.k === "dc");
@@ -760,6 +788,26 @@ function vueEpreuves(cid){
         const vals = elevesDe(cid).map(el => notesE[el.id]).filter(n => n && !n.abs).map(n => parseFloat(n.n)).filter(v => !isNaN(v));
         const moyC = vals.length ? vals.reduce((a,b) => a+b, 0) / vals.length : null;
         const ouverte = elEpreuve === e.id;
+        const enModification = elEpreuve === "mod:" + e.id;
+        if (enModification) return `<div class="card" style="margin:10px 0">
+          <div class="card-h"><h3>${ic("edit")} Modifier l’épreuve</h3>
+            <button class="btn btn-xs btn-line" onclick="elEtat({epreuve:'${e.id}'})">Annuler</button></div>
+          <div class="card-b">
+            <div class="row" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div><label class="f">Titre</label><input id="ep-mod-titre" value="${escapeHtml(e.titre)}"></div>
+              <div><label class="f">Type</label><select id="ep-mod-type">
+                <option value="dc" ${e.type==="dc"?"selected":""}>Devoir de contrôle</option>
+                <option value="ds" ${e.type==="ds"?"selected":""}>Devoir de synthèse</option>
+                <option value="tp" ${e.type==="tp"?"selected":""}>TP / pratique</option>
+                <option value="autre" ${e.type==="autre"?"selected":""}>Autre</option>
+              </select></div>
+              <div><label class="f">Date de l’épreuve</label><input id="ep-mod-date" type="date" value="${e.date||""}"></div>
+              <div><label class="f">Barème</label><input id="ep-mod-bareme" type="number" min="1" value="${e.bareme||20}" style="width:80px"></div>
+              <div style="min-width:200px;flex:1"><label class="f">Notions</label><input id="ep-mod-tags" value="${escapeHtml((e.tags||[]).join(", "))}"></div>
+              <button class="btn btn-blue" onclick="modifierEpreuve('${cid}','${e.id}')">${ic("check")} Enregistrer</button>
+            </div>
+            <p class="tiny muted" style="margin-top:10px">Changer la date ne touche ni aux notes déjà saisies ni aux présences. La date proposée par le pré-remplissage officiel n’est qu’une suggestion.</p>
+          </div></div>`;
         const tyLib = { dc:"Contrôle", ds:"Synthèse", tp:"TP / pratique", autre:"Autre" }[e.type] || e.type;
         return `<div class="card" style="margin:10px 0">
           <div class="spread" style="gap:10px;flex-wrap:wrap">
@@ -776,6 +824,7 @@ function vueEpreuves(cid){
               <button class="btn btn-xs btn-line" onclick="exporterNotesCSV('${cid}','${e.id}')" title="Exporter le modèle de notes CSV">Exporter CSV</button>
               <button class="btn btn-xs btn-line" onclick="document.getElementById('notes-csv-${e.id}').click()" title="Prévisualiser un fichier de notes avant import">Importer CSV</button>
               <input id="notes-csv-${e.id}" type="file" accept=".csv,text/csv" style="display:none" onchange="importerNotesCSV('${cid}','${e.id}',this)">
+              <button class="btn btn-xs btn-line" onclick="elEtat({epreuve:'mod:${e.id}'})" title="Changer la date, le titre, le barème ou les notions">${ic("edit")} Modifier</button>
               <button class="btn btn-xs btn-line" style="color:#b02a3a" onclick="delEpreuve('${cid}','${e.id}')">✕</button>
             </div>
           </div>
@@ -1544,7 +1593,7 @@ window.presetsOfficiels = presetsOfficiels; window.enregistrerNotes = enregistre
 window.setCompetenceEleve = setCompetenceEleve; window.saveBulletinComment = saveBulletinComment; window.imprimerBulletin = imprimerBulletin;
 window.exporterRosterCSV = exporterRosterCSV; window.importerRosterCSV = importerRosterCSV;
 window.exporterNotesCSV = exporterNotesCSV; window.importerNotesCSV = importerNotesCSV;
-window.importerNotesLot = importerNotesLot; window.verifierNoms = verifierNoms;
+window.importerNotesLot = importerNotesLot; window.verifierNoms = verifierNoms; window.modifierEpreuve = modifierEpreuve;
 window.statsEleve = statsEleve; window.classementClasse = classementClasse; window.rangDe = rangDe;
 window.moyennesParNotion = moyennesParNotion; window.renderEleves = renderEleves;
 window.triEleves = triEleves; window.elClasseCourante = elClasseCourante;

@@ -1,5 +1,19 @@
 # Vie scolaire — hors ligne et synchronisation dans les deux sens
 
+## Dates des devoirs modifiables — `v1.34.24` (mise à jour 2026-11-16, GMT+1)
+
+Le professeur reste maître des dates. Celles du pré-remplissage « DC / DS officiels » ne sont que des propositions.
+
+**Défaut corrigé.** Une épreuve créée ne pouvait plus être modifiée : aucun écran, aucune fonction. Changer une date supposait de **supprimer l’épreuve et toutes ses notes**. Le bouton **Modifier** ouvre désormais un formulaire pré-rempli (titre, type, date, barème, notions).
+
+**Rien n’est perdu.** Modifier une épreuve ne touche ni aux notes déjà saisies, ni aux présences, et ne crée aucun doublon. Vérifié dans un DOM : la date passe de `2026-10-20` à `2026-10-27`, les notes (`17`, `ABS`) et les présences restent identiques.
+
+**Garde-fou sur le barème.** Ramener le barème sous une note existante (20 → 10 avec une note de 17) demande une confirmation nommant les élèves concernés, puis abaisse ces notes au nouveau barème.
+
+**Annuler** referme le formulaire sans rien changer.
+
+`tests/epreuves-dates.test.js` (7 cas) verrouille : existence de la modification, pré-remplissage, absence de suppression de notes, confirmation du barème, et validité syntaxique. Total **292/292**.
+
 ## Mes classes & élèves — onglets réparés et imports réels — `v1.34.23` (mise à jour 2026-11-16, GMT+1)
 
 Révision de la partie « Mes classes &amp; élèves » à partir des fichiers réels du lycée.
